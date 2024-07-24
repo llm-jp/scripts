@@ -25,7 +25,7 @@ pyenv install 3.10.14
 ```shell
 git clone git@github.com:llm-jp/llm-jp-scripts
 cp -a llm-jp-scripts/installers/v3-megatron-sakura ~/myspace
-cd myspace # ワーキングディレクトリ
+cd ~/myspace # ワーキングディレクトリ
 
 pyenv local 3.10.14
 which python # Pythonのパスを確認

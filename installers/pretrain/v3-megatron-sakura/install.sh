@@ -27,3 +27,4 @@ pip install git+https://github.com/NVIDIA/TransformerEngine.git@v1.4
 git clone git@github.com:llm-jp/Megatron-LM -b nii-geniac
 cd Megatron-LM/megatron/core/datasets/
 make
+

@@ -11,7 +11,7 @@ pyenv上にPython 3.10.14をインストールしてください。ここから�
 ```shell
 curl https://pyenv.run | bash
 
-echo 'export PATH="/home/user/.pyenv/bin:$PATH"' >> ~/.bashrc
+echo 'export PATH="/home/$(whoami)/.pyenv/bin:$PATH"' >> ~/.bashrc
 echo 'eval "$(pyenv init -)"' >> ~/.bashrc
 echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 

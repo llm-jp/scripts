@@ -30,7 +30,7 @@ pip install flash-attn==2.4.2 --no-build-isolation
 pip install git+https://github.com/NVIDIA/TransformerEngine.git@v1.4
 
 # download our Megatron and build helper library
-git clone https://github.com:llm-jp/Megatron-LM -b nii-geniac
+git clone https://github.com/llm-jp/Megatron-LM -b nii-geniac
 cd Megatron-LM/megatron/core/datasets/
 make
 

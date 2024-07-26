@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# This script compares the file size of each checkpoint between gcp cloud storage and local storage.
+# This script compares the file size of each checkpoint between Google Cloud Storage and local storage.
 # If the file sizes are different, an error is output.
 # 
 # How to use:
@@ -11,7 +11,7 @@
 # > Error: iter_xxxx file sizes are different.
  
 LOCAL_CKPT_DIR="/lustre/checkpoints/llama-2-172b-exp2/tp4-pp16-cp1" # FIXME: DIR_PATH to checkpoint on local storage
-CLOUD_CKPT_DIR="gs://llama2-172b-checkpoint-exp2" # FIXME: DIR_PATH to checkpoint on gcp cloud storage
+CLOUD_CKPT_DIR="gs://llama2-172b-checkpoint-exp2" # FIXME: DIR_PATH to checkpoint on Google Cloud Storage
 
 for iter in $(ls ${LOCAL_CKPT_DIR} | grep iter_); do
 	local_size=$(du -scb ${LOCAL_CKPT_DIR}/${iter}/*/*.pt | tail -n1 | cut -f1)

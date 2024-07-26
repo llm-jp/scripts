@@ -2,9 +2,6 @@
 
 set -eu -o pipefail
 
-# Load environment modules
-module load cuda/12.5 nccl/2.22.3 hpcx/2.17.1-gcc-cuda12/hpcx
-
 # See manual's "4-3 OpenMPI / UCX / NCCL 環境変数パラメータ" section for detail
 
 if [[ $HOSTNAME =~ ^a[0-9]{3}$ ]]; then

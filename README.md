@@ -1,1 +1,1 @@
-# llm-jp-scripts
+# llm-jp-pretrain-scripts

@@ -23,8 +23,8 @@ pyenv install 3.10.14
 ### Build
 
 ```shell
-git clone https://github.com/llm-jp/llm-jp-scripts
-cp -a llm-jp-scripts/installers/pretrain/v3-megatron-sakura ~/myspace
+git clone https://github.com/llm-jp/llm-jp-pretrain-scripts
+cp -a llm-jp-pretrain-scripts/v3-megatron-sakura/installer ~/myspace
 cd ~/myspace # ワーキングディレクトリ
 
 pyenv local 3.10.14

@@ -17,6 +17,8 @@ echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 
 exec bash
 
+# Optional
+# Python 3.10.14 がインストールされていない場合、 install.sh が自動でインストールします。
 pyenv install 3.10.14
 ```
 
@@ -24,17 +26,9 @@ pyenv install 3.10.14
 
 ```shell
 git clone https://github.com/llm-jp/llm-jp-pretrain-scripts
-cp -a llm-jp-pretrain-scripts/v3-megatron-sakura/installer ~/myspace
-cd ~/myspace # ワーキングディレクトリ
 
-pyenv local 3.10.14
-which python # Pythonのパスを確認
-python --version # Pythonのバージョンを確認
-
-python -m venv venv
-source venv/bin/activate
-
-bash install.sh
-# ワーキングディレクトリにツール一式がインストールされます。時間がかかるので気長に待って下さい。
+# ~/myspace に環境をインストールします。
+# 時間がかかるので気長に待って下さい。
+bash llm-jp-pretrain-scripts/v3-megatron-sakura/installer/install.sh ~/myspace 2>&1 | tee install.log
 ```
 

@@ -43,21 +43,26 @@ pushd apex
 MAX_JOBS=32 pip install \
     -v \
     --disable-pip-version-check \
-    --no-cache-dir \
     --no-build-isolation \
+    --no-cache-dir \
     --config-settings "--build-option=--cpp_ext" \
     --config-settings "--build-option=--cuda_ext" \
-    ./
+    .
 popd
 
 # install flash attention
+git clone https://github.com/Dao-AILab/flash-attention -b v$INSTALLER_FLASH_ATTENTION_VERSION
+pushd flash-attention
 pip install \
     -v \
     --disable-pip-version-check \
     --no-build-isolation \
-    flash-attn==$INSTALLER_FLASH_ATTENTION_VERSION
+    --no-cache-dir \
+    .
+popd
 
 # install transformer engine
+
 pip install \
     -v \
     --disable-pip-version-check \

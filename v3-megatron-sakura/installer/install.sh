@@ -6,12 +6,15 @@ set -euxo pipefail
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 INSTALL_DIR=$1; shift
 
-source ${SCRIPT_DIR}/environment.sh
+source ${SCRIPT_DIR}/scripts/environment.sh
 
 set  # print environment variables
 
 mkdir $INSTALL_DIR
 pushd $INSTALL_DIR
+
+# copy common scripts
+cp -a ${SCRIPT_DIR}/scripts .
 
 # install Python
 if ! which pyenv; then
@@ -31,9 +34,6 @@ python -m pip install -U -r ${SCRIPT_DIR}/requirements.txt
 
 mkdir src
 pushd src
-
-# copy common scripts
-cp ${SCRIPT_DIR}/environment.sh .
 
 # install apex
 git clone https://github.com/NVIDIA/apex -b $INSTALLER_APEX_VERSION

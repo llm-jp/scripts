@@ -8,14 +8,15 @@ TARGET_DIR=$1; shift
 INSTALLER_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
 SCRIPTS_DIR=${INSTALLER_DIR}/../../scripts/v3-megatron-sakura
 
-source ${SCRIPTS_DIR}/environment.sh
-set  # print environment variables
-
 mkdir $TARGET_DIR
 pushd $TARGET_DIR
 
 # copy common scripts
-cp -a ${SCRIPTS_DIR} .
+cp -a ${INSTALLER_DIR} installer
+cp -a ${SCRIPTS_DIR} scripts
+
+source scripts/environment.sh
+set  # print environment variables
 
 # install Python
 if ! which pyenv; then
@@ -31,7 +32,7 @@ fi
 python -m venv venv
 source venv/bin/activate
 python -m pip install -U pip==$INSTALLER_PIP_VERSION
-python -m pip install -U -r ${INSTALLER_DIR}/requirements.txt
+python -m pip install -U -r installer/requirements.txt
 
 mkdir src
 pushd src

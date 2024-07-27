@@ -50,10 +50,18 @@ MAX_JOBS=32 pip install \
 popd
 
 # install flash attention
-pip install flash-attn==$INSTALLER_FLASH_ATTENTION_VERSION --no-build-isolation
+pip install \
+    -v \
+    --disable-pip-version-check \
+    --no-build-isolation \
+    flash-attn==$INSTALLER_FLASH_ATTENTION_VERSION
 
 # install transformer engine
-pip install git+https://github.com/NVIDIA/TransformerEngine.git@v$INSTALLER_TRANSFORMER_ENGINE_VERSION
+pip install \
+    -v \
+    --disable-pip-version-check \
+    --no-build-isolation \
+    git+https://github.com/NVIDIA/TransformerEngine.git@v$INSTALLER_TRANSFORMER_ENGINE_VERSION
 
 # download our Megatron and build helper library
 git clone https://github.com/llm-jp/Megatron-LM -b $INSTALLER_MEGATRON_TAG

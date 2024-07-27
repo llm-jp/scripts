@@ -3,19 +3,19 @@
 # Usage: bash install.sh /path/to/myspace
 set -euxo pipefail
 
-SCRIPT_RELPATH=../../scripts/v3-megatron-sakura
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/${SCRIPT_RELPATH}" &> /dev/null && pwd)
-INSTALL_DIR=$1; shift
+TARGET_DIR=$1; shift
 
-source ${SCRIPT_DIR}/scripts/environment.sh
+INSTALLER_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPTS_DIR=${INSTALLER_DIR}/../../scripts/v3-megatron-sakura
 
+source ${SCRIPTS_DIR}/environment.sh
 set  # print environment variables
 
-mkdir $INSTALL_DIR
-pushd $INSTALL_DIR
+mkdir $TARGET_DIR
+pushd $TARGET_DIR
 
 # copy common scripts
-cp -a ${SCRIPT_DIR}/scripts .
+cp -a ${SCRIPTS_DIR} .
 
 # install Python
 if ! which pyenv; then
@@ -31,7 +31,7 @@ fi
 python -m venv venv
 source venv/bin/activate
 python -m pip install -U pip==$INSTALLER_PIP_VERSION
-python -m pip install -U -r ${SCRIPT_DIR}/requirements.txt
+python -m pip install -U -r ${INSTALLER_DIR}/requirements.txt
 
 mkdir src
 pushd src
@@ -74,4 +74,4 @@ popd
 git clone git@github.com:llm-jp/llm-jp-tokenizer -b $INSTALLER_TOKENIZER_TAG
 
 popd  # src
-popd  # $INSTALL_DIR
+popd  # $TARGET_DIR

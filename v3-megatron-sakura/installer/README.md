@@ -29,6 +29,6 @@ git clone https://github.com/llm-jp/llm-jp-pretrain-scripts
 
 # ~/myspace に環境をインストールします。
 # 時間がかかるので気長に待って下さい。
-bash llm-jp-pretrain-scripts/v3-megatron-sakura/installer/install.sh ~/myspace 2>&1 | tee install.log
+bash llm-jp-pretrain-scripts/v3-megatron-sakura/installer/install.sh ~/myspace 2>&1 | tee myspace_install.log
 ```
 

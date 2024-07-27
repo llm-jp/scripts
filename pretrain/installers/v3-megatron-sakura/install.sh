@@ -3,7 +3,8 @@
 # Usage: bash install.sh /path/to/myspace
 set -euxo pipefail
 
-SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_RELPATH=../../scripts/v3-megatron-sakura
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/${SCRIPT_RELPATH}" &> /dev/null && pwd)
 INSTALL_DIR=$1; shift
 
 source ${SCRIPT_DIR}/scripts/environment.sh

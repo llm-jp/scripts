@@ -1,8 +1,6 @@
 #!/bin/bash
 # Definitions of common environment variables.
 # Usage: source environment.sh
-set -euxo pipefail
-
 export INSTALLER_PYTHON_VERSION=3.10.14
 export INSTALLER_CUDA_VERSION_MAJOR=12
 export INSTALLER_CUDA_VERSION_MINOR=1

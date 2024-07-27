@@ -25,10 +25,11 @@ pyenv install 3.10.14
 ### Build
 
 ```shell
-git clone https://github.com/llm-jp/llm-jp-pretrain-scripts
+git clone https://github.com/llm-jp/llm-jp-scripts
+cd llm-jp-scripts/pretrain/installers/v3-megatron-sakura
 
 # ~/myspace に環境をインストールします。
 # 時間がかかるので気長に待って下さい。
-bash llm-jp-pretrain-scripts/pretrain/installers/v3-megatron-sakura/install.sh ~/myspace 2>&1 | tee myspace_install.log
+bash install.sh ~/myspace 2>&1 | tee myspace_install.log
 ```
 

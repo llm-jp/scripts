@@ -17,19 +17,19 @@ echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
 
 exec bash
 
-# Optional
-# Python 3.10.14 がインストールされていない場合、 install.sh が自動でインストールします。
 pyenv install 3.10.14
 ```
 
 ### Build
+
+インストール処理のためにSakuraクラスタのCPUノードを1個使用します。
+時間がかかるので気長に待って下さい。
 
 ```shell
 git clone https://github.com/llm-jp/llm-jp-scripts
 cd llm-jp-scripts/pretrain/installers/v3-megatron-sakura
 
 # ~/myspace に環境をインストールします。
-# 時間がかかるので気長に待って下さい。
-bash install.sh ~/myspace 2>&1 | tee myspace_install.log
+sbatch install.sh ~/myspace
 ```
 

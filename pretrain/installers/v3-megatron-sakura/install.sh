@@ -1,104 +1,101 @@
 #!/bin/bash
-# Installation script for LLM-jp Megatron-LM on Sakura cluster
-# Usage: bash install.sh /path/to/myspace
+#
+# Megatron installation script for pretrain jobs on the Sakura cluster
+#
+# Usage:
+# 1. Set the working directory to the directory this file is located.
+# 2. Run `sbatch install.sh TARGET_DIR` with setting TARGET_DIR to the actual path.
+#
+# This script consumes 1 CPU node on the cluster.
+
+#SBATCH --nodes=1
+#SBATCH --partition=cpu
+#SBATCH --job-name=megatron-install
+#SBATCH --output=%x-%j.out
+#SBATCH --error=%x-%j.err
+#SBATCH --ntasks-per-node=1
+
 set -eux -o pipefail
 
+if [ $# != 1 ]; then
+    >&2 echo Usage: sbatch install.sh TARGET_DIR
+    exit 1
+fi
+
+INSTALLER_DIR=$(pwd)
 TARGET_DIR=$1; shift
 
-INSTALLER_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-SCRIPTS_DIR=${INSTALLER_DIR}/../../scripts/v3-megatron-sakura
+echo INSTALLER_DIR=$INSTALLER_DIR
+echo TARGET_DIR=$TARGET_DIR
 
-mkdir $TARGET_DIR
-pushd $TARGET_DIR
+mkdir ${TARGET_DIR}
+pushd ${TARGET_DIR}
 
-# copy common scripts
-cp -a ${INSTALLER_DIR} installer
-cp -a ${SCRIPTS_DIR} scripts
+cp -a ${INSTALLER_DIR}/* .
 
 source scripts/environment.sh
-set  # print environment variables
+
+# record current environment variables
+set > installer_envvar.log
 
 # install Python
 if ! which pyenv; then
     >&2 echo ERROR: pyenv not found.
     exit 1
 fi
-pyenv install -s $INSTALLER_PYTHON_VERSION
-pyenv local $INSTALLER_PYTHON_VERSION
-if [ "$(python --version)" != "Python $INSTALLER_PYTHON_VERSION" ]; then
-    >&2 echo ERROR: Python version mismatch: $(python --version) != $INSTALLER_PYTHON_VERSION
+pyenv install -s ${PRETRAIN_PYTHON_VERSION}
+pyenv local ${PRETRAIN_PYTHON_VERSION}
+if [ "$(python --version)" != "Python ${PRETRAIN_PYTHON_VERSION}" ]; then
+    >&2 echo ERROR: Python version mismatch: $(python --version) != ${PRETRAIN_PYTHON_VERSION}
     exit 1
 fi
 python -m venv venv
 source venv/bin/activate
+python -m pip install -U pip
 
-python -m pip install -U pip==$INSTALLER_PIP_VERSION
-python -m pip install -U -r installer/requirements_initial.txt
+# install PyTorch
+python -m pip install \
+    --find-links https://download.pytorch.org/whl/torch_stable.html \
+    torch==${PRETRAIN_TORCH_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT} \
+    torchvision==${PRETRAIN_TORCHVISION_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT}
+
+# install other requirements
+pip install -U -r requirements.txt
 
 mkdir src
 pushd src
 
-# pytorch
-git clone git@github.com:pytorch/pytorch -b v$PYTORCH_VERSION
-pushd pytorch
-git submodule update --init --recursive
-export PYTORCH_BUILD_VERSION=${PYTORCH_VERSION}+cu${CUDA_VERSION_SHORT}
-export PYTORCH_BUILD_NUMBER=1
-python setup.py install
-popd
-
-# torchvision
-git clone git@github.com:pytorch/vision -b v$TORCHVISION_VERSION
-pushd vision
-python setup.py install
-popd
-
-# install pytorch
-#python -m pip install \
-#    --find-links https://download.pytorch.org/whl/torch_stable.html \
-#    torch==${INSTALLER_PYTORCH_VERSION}+cu${INSTALLER_CUDA_VERSION_SHORT}
-#python -m pip install \
-#    --find-links https://download.pytorch.org/whl/torch_stable.html \
-#    torchvision==${INSTALLER_TORCHVISION_VERSION}+cu${INSTALLER_CUDA_VERSION_SHORT}
-
-popd  # src
-
-# install other requirements
-python -m pip install -U -r installer/requirements_final.txt
-
-pushd src
-
 # install apex
-git clone https://github.com/NVIDIA/apex -b $INSTALLER_APEX_VERSION
+git clone https://github.com/NVIDIA/apex -b ${PRETRAIN_APEX_VERSION}
 pushd apex
-MAX_JOBS=32 python -m pip install \
+MAX_JOBS=32 pip install \
+    -v \
+    --no-cache-dir \
     --no-build-isolation \
     --config-settings "--build-option=--cpp_ext" \
     --config-settings "--build-option=--cuda_ext" \
-    .
+    ./
 popd
 
 # install transformer engine
-MAX_JOBS=32 python -m pip install \
+git clone https://github.com/NVIDIA/TransformerEngine -b v${PRETRAIN_TRANSFORMER_ENGINE_VERSION}
+pushd TransformerEngine
+MAX_JOBS=32 NVTE_FRAMEWORK=pytorch pip install \
+    -v \
+    --no-cache-dir \
     --no-build-isolation \
-    git+https://github.com/NVIDIA/TransformerEngine.git@v$INSTALLER_TRANSFORMER_ENGINE_VERSION
-
-# reinstall flash attention
-#python -m pip uninstall -y flash-attn
-#git clone https://github.com/Dao-AILab/flash-attention -b v$INSTALLER_FLASH_ATTENTION_VERSION
-#pushd flash-attention
-#MAX_JOBS=32 pip install --no-build-isolation -e .
-#popd
+    ./
+popd
 
 # download our Megatron and build helper library
-git clone https://github.com/llm-jp/Megatron-LM -b $INSTALLER_MEGATRON_TAG
+git clone https://github.com/llm-jp/Megatron-LM -b ${PRETRAIN_MEGATRON_TAG}
 pushd Megatron-LM/megatron/core/datasets/
 make
 popd
 
 # download our tokeniser
 # Tokenizer
-git clone git@github.com:llm-jp/llm-jp-tokenizer -b $INSTALLER_TOKENIZER_TAG
+git clone https://github.com/llm-jp/llm-jp-tokenizer -b ${PRETRAIN_TOKENIZER_TAG}
 
 popd  # src
-popd  # $TARGET_DIR
+popd  # ${TARGET_DIR}

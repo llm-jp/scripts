@@ -33,3 +33,11 @@ cd llm-jp-scripts/pretrain/installers/v3-megatron-sakura
 sbatch install.sh ~/myspace
 ```
 
+### Check
+
+インストール終了後、正常に事前学習ジョブを起動できるかどうかを確認します。
+
+```shell
+# デフォルトでは1ノードを専有し、GPUを8枚全て使うジョブが起動します。
+sbatch example/sbatch.sh
+```

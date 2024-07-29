@@ -68,7 +68,8 @@ pushd src
 # install apex
 git clone https://github.com/NVIDIA/apex -b ${PRETRAIN_APEX_VERSION}
 pushd apex
-MAX_JOBS=32 pip install \
+git submodule update --init --recursive
+pip install \
     -v \
     --no-cache-dir \
     --no-build-isolation \
@@ -80,7 +81,8 @@ popd
 # install transformer engine
 git clone https://github.com/NVIDIA/TransformerEngine -b v${PRETRAIN_TRANSFORMER_ENGINE_VERSION}
 pushd TransformerEngine
-MAX_JOBS=32 NVTE_FRAMEWORK=pytorch pip install \
+git submodule update --init --recursive
+NVTE_FRAMEWORK=pytorch pip install \
     -v \
     --no-cache-dir \
     --no-build-isolation \

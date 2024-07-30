@@ -53,7 +53,7 @@ TRAIN_STEPS=$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))
 
 # model config
 TOKENIZER_MODEL=src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
-CHECKPOINT_SAVE_DIR=checkpoints4
+CHECKPOINT_SAVE_DIR=checkpoints
 
 mkdir -p ${CHECKPOINT_SAVE_DIR}
 

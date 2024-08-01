@@ -38,6 +38,10 @@ sbatch install.sh ~/myspace
 インストール終了後、正常に事前学習ジョブを起動できるかどうかを確認します。
 
 ```shell
+cd ~/myspace
+
 # デフォルトでは1ノードを専有し、GPUを8枚全て使うジョブが起動します。
 sbatch example/sbatch.sh
+
+# W&Bにtrain lossが記録されるのを確認したらジョブを止めてください。
 ```

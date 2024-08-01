@@ -62,7 +62,7 @@ DATA_PATH=""
 DATA_PATH="${DATA_PATH} 2563804308 ${DATASET_DIR}/train/ja/wiki_0000.jsonl_text_document"
 
 # job name
-JOB_NAME="test-odashi"
+JOB_NAME="test-$(whoami)"
 
 # checkpoint load
 # first training

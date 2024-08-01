@@ -25,12 +25,11 @@ export CUDNN_LOGERR_DBG=1
 NUM_GPUS=$((${NUM_NODES} * ${NUM_GPUS_PER_NODE}))
 
 # model config
-HIDDEN_SIZE=2048
-FFN_HIDDEN_SIZE=7168
-NUM_LAYERS=24
-NUM_HEADS=16
-NUM_QUERY_GROUPS=8
-SEQ_LENGTH=4096
+HIDDEN_SIZE=1024
+FFN_HIDDEN_SIZE=4096
+NUM_LAYERS=12
+NUM_HEADS=8
+SEQ_LENGTH=2048
 
 # distributed settings
 TENSOR_PARALLEL_SIZE=1
@@ -39,7 +38,7 @@ CONTEXT_PARALLEL_SIZE=1
 DATA_PARALLEL_SIZE=$((${NUM_GPUS} / (${TENSOR_PARALLEL_SIZE} * ${PIPELINE_PARALLEL_SIZE})))
 
 # training config
-MICRO_BATCH_SIZE=2
+MICRO_BATCH_SIZE=8
 GLOBAL_BATCH_SIZE=1024
 
 LR=1e-4
@@ -69,6 +68,10 @@ JOB_NAME="test-odashi"
 # first training
 CHECKPOINT_ARGS="" #"--load ${CHECKPOINT_SAVE_DIR} --no-load-rng --no-load-optim"
 
+# NOTE(odashi):
+# Fused attention doesn't work on the Sakura cluster for some reason.
+export NVTE_FUSED_ATTN=0
+
 python src/Megatron-LM/pretrain_gpt.py \
   --tensor-model-parallel-size ${TENSOR_PARALLEL_SIZE} \
   --pipeline-model-parallel-size ${PIPELINE_PARALLEL_SIZE} \
@@ -79,8 +82,6 @@ python src/Megatron-LM/pretrain_gpt.py \
   --hidden-size ${HIDDEN_SIZE} \
   --ffn-hidden-size ${FFN_HIDDEN_SIZE} \
   --num-attention-heads ${NUM_HEADS} \
-  --group-query-attention \
-  --num-query-groups ${NUM_QUERY_GROUPS} \
   --seq-length ${SEQ_LENGTH} \
   --max-position-embeddings ${SEQ_LENGTH} \
   --micro-batch-size ${MICRO_BATCH_SIZE} \

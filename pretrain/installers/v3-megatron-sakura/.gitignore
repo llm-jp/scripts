@@ -1,2 +1,2 @@
-megatron-install-*.err
-megatron-install-*.out
+*.err
+*.out

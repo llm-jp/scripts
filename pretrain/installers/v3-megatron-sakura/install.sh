@@ -8,18 +8,18 @@
 #
 # This script consumes 1 CPU node on the cluster.
 
-#SBATCH --nodes=1
+#SBATCH --job-name=pretrain-install
 #SBATCH --partition=cpu
-#SBATCH --job-name=megatron-install
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
-#SBATCH --ntasks-per-node=1
 
 set -eux -o pipefail
 
 if [ $# != 1 ]; then
-    >&2 echo Usage: sbatch install.sh TARGET_DIR
-    exit 1
+  >&2 echo Usage: sbatch install.sh TARGET_DIR
+  exit 1
 fi
 
 INSTALLER_DIR=$(pwd)
@@ -40,14 +40,14 @@ set > installer_envvar.log
 
 # install Python
 if ! which pyenv; then
-    >&2 echo ERROR: pyenv not found.
-    exit 1
+  >&2 echo ERROR: pyenv not found.
+  exit 1
 fi
 pyenv install -s ${PRETRAIN_PYTHON_VERSION}
 pyenv local ${PRETRAIN_PYTHON_VERSION}
 if [ "$(python --version)" != "Python ${PRETRAIN_PYTHON_VERSION}" ]; then
-    >&2 echo ERROR: Python version mismatch: $(python --version) != ${PRETRAIN_PYTHON_VERSION}
-    exit 1
+  >&2 echo ERROR: Python version mismatch: $(python --version) != ${PRETRAIN_PYTHON_VERSION}
+  exit 1
 fi
 python -m venv venv
 source venv/bin/activate
@@ -55,9 +55,9 @@ python -m pip install -U pip
 
 # install PyTorch
 python -m pip install \
-    --find-links https://download.pytorch.org/whl/torch_stable.html \
-    torch==${PRETRAIN_TORCH_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT} \
-    torchvision==${PRETRAIN_TORCHVISION_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT}
+  --find-links https://download.pytorch.org/whl/torch_stable.html \
+  torch==${PRETRAIN_TORCH_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT} \
+  torchvision==${PRETRAIN_TORCHVISION_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT}
 
 # install other requirements
 pip install -U -r requirements.txt
@@ -70,24 +70,19 @@ git clone https://github.com/NVIDIA/apex -b ${PRETRAIN_APEX_VERSION}
 pushd apex
 git submodule update --init --recursive
 pip install \
-    -v \
-    --no-cache-dir \
-    --no-build-isolation \
-    --config-settings "--build-option=--cpp_ext" \
-    --config-settings "--build-option=--cuda_ext" \
-    ./
+  -v \
+  --no-cache-dir \
+  --no-build-isolation \
+  --config-settings "--build-option=--cpp_ext" \
+  --config-settings "--build-option=--cuda_ext" \
+  ./
 popd
 
 # install transformer engine
-git clone https://github.com/NVIDIA/TransformerEngine -b v${PRETRAIN_TRANSFORMER_ENGINE_VERSION}
-pushd TransformerEngine
-git submodule update --init --recursive
-NVTE_FRAMEWORK=pytorch pip install \
-    -v \
-    --no-cache-dir \
-    --no-build-isolation \
-    ./
-popd
+# NOTE(odashi):
+# This implicitly installs flash-attn with their recommended version.
+# If the auto-installed flash-attn causes some problems, we need to re-install it.
+pip install git+https://github.com/NVIDIA/TransformerEngine.git@v${PRETRAIN_TRANSFORMER_ENGINE_VERSION}
 
 # download our Megatron and build helper library
 git clone https://github.com/llm-jp/Megatron-LM -b ${PRETRAIN_MEGATRON_TAG}

@@ -22,5 +22,15 @@ for iter in $(ls ${LOCAL_CKPT_DIR} | grep iter_); do
 	if [ "$local_size" -ne "$cloud_size" ]; then
 		echo "Error: ${iter} file sizes are different."
 	fi
+
+	local_combine_md5=$(bash calculate_combined_md5.sh ${LOCAL_CKPT_DIR}/${iter})
+	cloud_combine_md5=$(bash calculate_gcloud_combined_md5.sh ${CLOUD_CKPT_DIR}/${iter})
+
+	echo "${iter} Local md5sum:$local_combine_md5 Cloud md5sum:$cloud_combine_md5"
+
+	if [ "$local_combine_md5" != "$cloud_combine_md5" ]; then
+		echo "Error: ${iter} md5 checksums are different."
+	fi
+
 done
 

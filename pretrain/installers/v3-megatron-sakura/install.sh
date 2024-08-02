@@ -83,7 +83,7 @@ popd
 # This implicitly installs flash-attn with their recommended version.
 # If the auto-installed flash-attn causes some problems, we need to re-install it.
 pip install \
-  --recurse-submodules \
+  --recursive \
   git+https://github.com/NVIDIA/TransformerEngine.git@v${PRETRAIN_TRANSFORMER_ENGINE_VERSION}
 
 # download our Megatron and build helper library

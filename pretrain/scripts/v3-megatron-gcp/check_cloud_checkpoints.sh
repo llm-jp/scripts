@@ -4,7 +4,7 @@
 # If the file sizes are different, an error is output.
 # 
 # How to use:
-# $ bash check_cloud_filesize.sh
+# $ bash check_cloud_checkpoints.sh
 # > iter_xxxx Local size:yyyy Cloud size:yyyy
 # > iter_xxx Local md5sum:hogehoge Cloud md5sum:hogehoge
 # If the file sizes are different

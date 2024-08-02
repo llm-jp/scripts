@@ -31,25 +31,30 @@ echo TARGET_DIR=$TARGET_DIR
 mkdir ${TARGET_DIR}
 pushd ${TARGET_DIR}
 
-cp -a ${INSTALLER_DIR}/* .
+# copy basic scripts
+cp -a ${INSTALLER_DIR}/{install.sh,requirements.txt,scripts,example} .
 
 source scripts/environment.sh
 
 # record current environment variables
 set > installer_envvar.log
 
+# src is used to store all resources for from-scratch builds
+mkdir src
+pushd src
+
 # install Python
-if ! which pyenv; then
-  >&2 echo ERROR: pyenv not found.
-  exit 1
-fi
-pyenv install -s ${PRETRAIN_PYTHON_VERSION}
-pyenv local ${PRETRAIN_PYTHON_VERSION}
-if [ "$(python --version)" != "Python ${PRETRAIN_PYTHON_VERSION}" ]; then
-  >&2 echo ERROR: Python version mismatch: $(python --version) != ${PRETRAIN_PYTHON_VERSION}
-  exit 1
-fi
-python -m venv venv
+git clone https://github.com/python/cpython -b v${PRETRAIN_PYTHON_VERSION}
+pushd cpython
+./configure --prefix="${TARGET_DIR}/python" --enable-optimizations
+make -j 64
+make install
+popd
+
+popd  # src
+
+# prepare venv
+python/bin/python3 -m venv venv
 source venv/bin/activate
 python -m pip install -U pip
 
@@ -62,7 +67,6 @@ python -m pip install \
 # install other requirements
 pip install -U -r requirements.txt
 
-mkdir src
 pushd src
 
 # install apex

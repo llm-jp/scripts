@@ -1,24 +1,9 @@
 # Megatron installation script for Sakura/LLM-jp v3 models
 
 LLM-jp v3モデルを作成するためのMegatron環境をSakuraクラスタにインストールするためのスクリプトです。
+System Pythonやpyenvに依存しない閉じた環境を指定したディレクトリ上に構築します。
 
 ## Usage
-
-### Prerequisites
-
-pyenv上にPython 3.10.14をインストールしてください。ここから派生させたvenv上に環境を構築します。
-
-```shell
-curl https://pyenv.run | bash
-
-echo 'export PATH="/home/$(whoami)/.pyenv/bin:$PATH"' >> ~/.bashrc
-echo 'eval "$(pyenv init -)"' >> ~/.bashrc
-echo 'eval "$(pyenv virtualenv-init -)"' >> ~/.bashrc
-
-exec bash
-
-pyenv install 3.10.14
-```
 
 ### Build
 
@@ -35,7 +20,21 @@ sbatch install.sh ~/myspace
 
 ### Check
 
-インストール終了後、正常に事前学習ジョブを起動できるかどうかを確認します。
+インストール終了後、下記のようなディレクトリ構造が構築されています。
+
+```
+~/myspace/
+    example/              サンプルスクリプト
+    installer_envvar.log  インストール開始後に記録した環境変数の一覧
+    install.sh            使用したインストールスクリプト
+    python/               Python実行環境
+    requirements.txt      venvに事前インストールされたライブラリ一覧
+    scripts/              各種の環境設定用スクリプト
+    src/                  個別ダウンロードされたライブラリ
+    venv/                 Python仮想環境 (python/ にリンク)
+```
+
+インストールした環境で正常に事前学習ジョブを起動できるかどうかを確認します。
 
 ```shell
 cd ~/myspace

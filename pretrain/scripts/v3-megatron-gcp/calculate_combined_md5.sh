@@ -7,7 +7,7 @@
 # bash calculate_combined_md5.sh $LOCAL_DIR
 # > xxxxxxxxxxx(md5sum)
 
-if [ -z "$1" ]; then
+if [ $# -ne 1 ]; then
   echo "Usage: $0 <directory>"
   exit 1
 fi

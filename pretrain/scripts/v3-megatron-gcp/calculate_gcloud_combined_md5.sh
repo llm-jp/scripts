@@ -8,7 +8,7 @@
 # bash calculate_gcloud_combined_md5.sh $GOOGLE_CLOUD_DIR
 # > xxxxxxxxxxx(md5sum)
 
-if [ -z "$1" ]; then
+if [ $# -ne 1 ]; then
   echo "Usage: $0 <gcs-directory>"
   exit 1
 fi

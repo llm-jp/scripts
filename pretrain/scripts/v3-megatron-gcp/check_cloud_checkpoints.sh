@@ -6,10 +6,13 @@
 # How to use:
 # $ bash check_cloud_filesize.sh
 # > iter_xxxx Local size:yyyy Cloud size:yyyy
+# > iter_xxx Local md5sum:hogehoge Cloud md5sum:hogehoge
 # If the file sizes are different
 # > iter_xxxx Local size:yyyy Cloud size:zzzz
 # > Error: iter_xxxx file sizes are different.
- 
+# > iter_xxxx Local md5sum:hogehoge Cloud md5sum:hugehuge
+# > Error: iter_xxx md5 checksums are different.
+
 LOCAL_CKPT_DIR="/lustre/checkpoints/llama-2-172b-exp2/tp4-pp16-cp1" # FIXME: DIR_PATH to checkpoint on local storage
 CLOUD_CKPT_DIR="gs://llama2-172b-checkpoint-exp2" # FIXME: DIR_PATH to checkpoint on Google Cloud Storage
 

@@ -1,6 +1,6 @@
 # GENIAC Official Evaluation
 
-This project provides instructions to submit models and tokenizers as W&B artifacts for the GENIAC official evaluation.
+This document provides instructions to submit models and tokenizers as W&B artifacts for the GENIAC official evaluation.
 
 ## Prerequisites
 
@@ -32,9 +32,9 @@ Run the following script to submit a model directory that contains a Hugging Fac
 python submit.py \
    --entity <wandb entity> \
    --project <wandb project> \
-   --model_path <model path> \
-   --model_name <model name> \
-   --model_version <model version>
+   --model-path <model path> \
+   --model-name <model name> \
+   --model-version <model version>
 ```
 
 For example:
@@ -43,8 +43,7 @@ For example:
 python submit.py \
    --entity nii-geniac \
    --project Llama-2-175B-hf-checkpoints \
-   --model_path /home/ext_kiyomaru_nii_ac_jp/checkpoints/megatron-to-hf/Llama-2-172b-hf/iter_0242000 \
-   --model_name Llama-2-175B \
-   --model_version 0242000
+   --model-path /home/ext_kiyomaru_nii_ac_jp/checkpoints/megatron-to-hf/Llama-2-172b-hf/iter_0242000 \
+   --model-name Llama-2-175B \
+   --model-version 0242000
 ```
-

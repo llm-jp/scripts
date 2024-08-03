@@ -16,20 +16,20 @@ parser.add_argument(
     help="The W&B project to which the model will be uploaded.",
 )
 parser.add_argument(
-    "--model_path",
+    "--model-path",
     type=str,
     required=True,
     help="The path to the model directory to be uploaded.",
 )
 parser.add_argument(
-    "--model_name",
+    "--model-name",
     type=str,
     required=True,
     help="The name of the model to be uploaded.",
 )
 parser.add_argument(
     "-v",
-    "--model_version",
+    "--model-version",
     type=str,
     required=True,
     help="The version of the model to be uploaded.",

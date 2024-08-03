@@ -26,7 +26,7 @@ wandb login
 
 ## Submission
 
-Run the following script to submit a model directory that contains a Hugging Face model checkpoint and corresponding tokenizer.
+Run the following script to submit a model directory that contains a Hugging Face model checkpoint and a corresponding tokenizer.
 
 ```bash
 python submit.py \

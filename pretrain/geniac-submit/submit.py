@@ -39,9 +39,9 @@ args = parser.parse_args()
 with wandb.init(entity=args.entity, project=args.project, job_type="upload_data") as run:
     model_artifact = wandb.Artifact(
         name=args.model_name,
-        type="model", 
+        type="model",
         metadata={"version": args.model_version},
-        description=f"{args.model_name} (version: {args.model_version})"
+        description=f"{args.model_name} (version: {args.model_version})",
     )
     model_artifact.add_dir(args.model_path, skip_cache=True, policy="immutable")
     run.log_artifact(model_artifact)

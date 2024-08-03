@@ -1,6 +1,6 @@
 # GENIAC Official Evaluation
 
-This document provides instructions to submit models and tokenizers as W&B artifacts for the GENIAC official evaluation.
+This document provides instructions to submit models and tokenizers as W&B artifacts to the GENIAC official evaluation.
 
 ## Prerequisites
 

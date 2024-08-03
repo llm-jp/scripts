@@ -26,8 +26,8 @@ pyenv install 3.10.14
 時間がかかるので気長に待って下さい。
 
 ```shell
-git clone https://github.com/llm-jp/llm-jp-scripts
-cd llm-jp-scripts/pretrain/installers/v3-megatron-sakura
+git clone https://github.com/llm-jp/scripts
+cd scripts/pretrain/installers/v3-megatron-sakura
 
 # ~/myspace に環境をインストールします。
 sbatch install.sh ~/myspace

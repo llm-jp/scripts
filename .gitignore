@@ -1,0 +1,9 @@
+*.err
+*.out
+*.pyc
+*.pyi
+
+__pycache__
+.venv
+venv
+wandb

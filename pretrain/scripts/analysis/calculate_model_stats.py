@@ -7,7 +7,7 @@
 #
 # Usage:
 #     source {venv used to train model}/bin/activate
-#     python dump_model_stats.py \
+#     python calculate_model_stats.py \
 #         --megatron /path/to/Megatron-LM \
 #         --checkpoint /path/to/checkpoints/iter_XXXXXXX \
 #         --output /path/to/output.json
@@ -53,10 +53,12 @@ class MegatronCheckpointV3(TypedDict):
 @dataclasses.dataclass(frozen=True)
 class WeightStats:
     shape: list[int]
-    min: float
-    max: float
-    sums: list[float]
-    abs_sums: list[float]
+    min: list[float]
+    max: list[float]
+    sum: list[float]
+    abs_min: list[float]
+    abs_max: list[float]
+    abs_sum: list[float]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -113,8 +115,6 @@ def load_checkpoint(path: pathlib.Path) -> MegatronCheckpointV3:
     Returns:
         Statistics calculated from the checkpoint file
     """
-    logging.info(f"Loading checkpoint from {path}")
-
     if torch.cuda.is_available():
         device = torch.device("cuda:0")
     else:
@@ -141,25 +141,26 @@ def calculate_stats(weight: torch.Tensor) -> WeightStats:
     """
     shape = weight.shape
     w = weight.flatten().double()
+    w2 = w * w
+    w3 = w2 * w
+    w4 = w2 * w2
+    w_list = [w, w2, w3, w4]
     a = w.abs()
+    a2 = a * a
+    a3 = a2 * a
+    a4 = a2 * a2
+    a_list = [a, a2, a3, a4]
+    
     del weight
 
     return WeightStats(
         shape=list(shape),
-        min=float(w.min()),
-        max=float(w.max()),
-        sums=[
-            float(w.sum()),
-            float((w*w).sum()),
-            float((w*w*w).sum()),
-            float((w*w*w*w).sum()),
-        ],
-        abs_sums=[
-            float(a.sum()),
-            float((a*a).sum()),
-            float((a*a*a).sum()),
-            float((a*a*a*a).sum()),
-        ],
+        min=[float(x.min()) for x in w_list],
+        max=[float(x.max()) for x in w_list],
+        sum=[float(x.sum()) for x in w_list],
+        abs_min=[float(x.min()) for x in a_list],
+        abs_max=[float(x.max()) for x in a_list],
+        abs_sum=[float(x.sum()) for x in a_list],
     )
 
 
@@ -182,7 +183,10 @@ def process_split(path: pathlib.Path) -> SplitStats:
     tp_rank = int(m.group(1))
     pp_rank = int(m.group(2))
 
+    logging.info(f"Loading checkpoint from {path}")
     ckpt = load_checkpoint(path / "model_optim_rng.pt")
+    
+    logging.info(f"Calculating statistics for {path}")
     model_weights = {
         k: v
         for k, v in ckpt["model"].items()
@@ -241,10 +245,12 @@ def aggregate_weight_stats(name: str, a: WeightStats, b: WeightStats) -> WeightS
                         a.shape[i] + b.shape[i] if i == d else a.shape[i]
                         for i in range(ndims)
                     ],
-                    min=min(a.min, b.min),
-                    max=max(a.max, b.max),
-                    sums=[x + y for x, y in zip(a.sums, b.sums)],
-                    abs_sums=[x + y for x, y in zip(a.abs_sums, b.abs_sums)],
+                    min=[min(x, y) for x, y in zip(a.min, b.min)],
+                    max=[max(x, y) for x, y in zip(a.max, b.max)],
+                    sum=[x + y for x, y in zip(a.sum, b.sum)],
+                    abs_min=[min(x, y) for x, y in zip(a.abs_min, b.abs_min)],
+                    abs_max=[max(x, y) for x, y in zip(a.abs_max, b.abs_max)],
+                    abs_sum=[x + y for x, y in zip(a.abs_sum, b.abs_sum)],
                 )
 
     raise ValueError(f"No matches for the weight name {name}.")

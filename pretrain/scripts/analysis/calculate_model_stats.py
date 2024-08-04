@@ -385,8 +385,10 @@ def main() -> None:
     assert len(stats) == 1
 
     logging.info("Writing outputs")
-    weight_stats = stats[0].weight_stats
-    weight_stats_json = {k: dataclasses.asdict(v) for k, v in weight_stats.items()}
+    weight_stats_json = {
+        k: dataclasses.asdict(v)
+        for k, v in stats[0].weight_stats.items()
+    }
 
     with args.output.open("w") as fp:
         json.dump(weight_stats_json, fp, indent=2)

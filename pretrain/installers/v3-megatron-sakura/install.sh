@@ -6,7 +6,11 @@
 # 1. Set the working directory to the directory this file is located.
 # 2. Run `sbatch install.sh TARGET_DIR` with setting TARGET_DIR to the actual path.
 #
-# This script consumes 1 CPU node on the cluster.
+# This script consumes 1 node on the `cpu` partition on the cluster.
+#
+# CAUTION:
+# DO NOT change the content of this file and any other materials in the installer
+# directory while the installation is being processed.
 
 #SBATCH --job-name=pretrain-install
 #SBATCH --partition=cpu
@@ -17,7 +21,7 @@
 
 set -eux -o pipefail
 
-if [ $# != 1 ]; then
+if [ $# -ne 1 ]; then
   >&2 echo Usage: sbatch install.sh TARGET_DIR
   exit 1
 fi
@@ -25,8 +29,8 @@ fi
 INSTALLER_DIR=$(pwd)
 TARGET_DIR=$1; shift
 
-echo INSTALLER_DIR=$INSTALLER_DIR
-echo TARGET_DIR=$TARGET_DIR
+>&2 echo INSTALLER_DIR=$INSTALLER_DIR
+>&2 echo TARGET_DIR=$TARGET_DIR
 
 mkdir ${TARGET_DIR}
 pushd ${TARGET_DIR}
@@ -51,25 +55,25 @@ if [ "$(python --version)" != "Python ${PRETRAIN_PYTHON_VERSION}" ]; then
 fi
 python -m venv venv
 source venv/bin/activate
-python -m pip install -U pip
+python -m pip install --no-cache-dir -U pip
 
 # install PyTorch
 python -m pip install \
+  --no-cache-dir \
   --find-links https://download.pytorch.org/whl/torch_stable.html \
   torch==${PRETRAIN_TORCH_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT} \
   torchvision==${PRETRAIN_TORCHVISION_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT}
 
 # install other requirements
-pip install -U -r requirements.txt
+python -m pip install --no-cache-dir -U -r requirements.txt
 
 mkdir src
 pushd src
 
 # install apex
-git clone https://github.com/NVIDIA/apex -b ${PRETRAIN_APEX_VERSION}
+git clone --recurse-submodules https://github.com/NVIDIA/apex -b ${PRETRAIN_APEX_VERSION}
 pushd apex
-git submodule update --init --recursive
-pip install \
+python -m pip install \
   -v \
   --no-cache-dir \
   --no-build-isolation \
@@ -82,8 +86,10 @@ popd
 # NOTE(odashi):
 # This implicitly installs flash-attn with their recommended version.
 # If the auto-installed flash-attn causes some problems, we need to re-install it.
-pip install \
-  --recurse-submodules \
+python -m pip install \
+  -v \
+  --no-cache-dir \
+  --no-build-isolation \
   git+https://github.com/NVIDIA/TransformerEngine.git@v${PRETRAIN_TRANSFORMER_ENGINE_VERSION}
 
 # download our Megatron and build helper library

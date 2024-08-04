@@ -150,7 +150,7 @@ def calculate_stats(weight: torch.Tensor) -> WeightStats:
     a3 = a2 * a
     a4 = a2 * a2
     a_list = [a, a2, a3, a4]
-    
+
     del weight
 
     return WeightStats(
@@ -185,7 +185,7 @@ def process_split(path: pathlib.Path) -> SplitStats:
 
     logging.info(f"Loading checkpoint from {path}")
     ckpt = load_checkpoint(path / "model_optim_rng.pt")
-    
+
     logging.info(f"Calculating statistics for {path}")
     model_weights = {
         k: v
@@ -288,8 +288,9 @@ def aggregate_tensor_parallel(stats: list[SplitStats]) -> list[SplitStats]:
         stats: List of statistics for each split
 
     Returns:
-        Aggregated statistics. Since tensor parallel splits are aggregated, `tp_rank`
-        filed of returned statistics should be 0.
+        Aggregated statistics. Since tensor parallel splits are aggregated, the
+        `tp_rank` fileds of returned statistics becomes 0, while `pp_rank` is
+        maintained.
     """
     logging.info("Aggregating tensor parallel splits")
 
@@ -306,19 +307,89 @@ def aggregate_tensor_parallel(stats: list[SplitStats]) -> list[SplitStats]:
     return list(pp_stats.values())
 
 
+def add_offset_to_decoder(stats: SplitStats, offset: int) -> tuple[SplitStats, int]:
+    """Rename decoder weights according to offset.
+
+    Thsi function renames all weights with name `decoder.layers.n` to
+    `decoder.layers.(n+offset)` and returns new offset number.
+
+    Args:
+        stats: SplitStats to transform.
+        offset: Offset number, representing the number of preceding decoder layers.
+
+    Returns:
+        Transformed SplitStats.
+    """
+    weight_stats: dict[str, WeightStats] = {}
+    new_offset = 0
+
+    for k, v in stats.weight_stats.items():
+        if k.startswith("decoder.layers."):
+            k_splits = k.split(".")
+            new_layer_id = int(k_splits[2]) + offset
+            new_offset = max(new_offset, new_layer_id + 1)
+            new_k = ".".join(k_splits[:2] + [str(new_layer_id)] + k_splits[3:])
+            weight_stats[new_k] = v
+        else:
+            # Other weights
+            weight_stats[k] = v
+
+    return (
+        SplitStats(tp_rank=stats.tp_rank, pp_rank=0, weight_stats=weight_stats),
+        new_offset,
+    )
+
+
+def aggregate_pipeline_parallel(stats: list[SplitStats]) -> list[SplitStats]:
+    """Integrate pipeline parallel splits into one statistics.
+
+    Args:
+        stats: List of statistics for each split
+
+    Returns:
+        Aggregated statistics. Since pipeline parallel splits are aggregated, the
+        `pp_rank` fileds of returned statistics becomes 0, while `tp_rank` is
+        maintained.
+    """
+    logging.info("Aggregating pipeline parallel splits")
+
+    # {tp_rank: (aggregated_stats, decoder_offset)}
+    tp_stats: dict[int, tuple[SplitStats, int]] = {}
+
+    # Aggregate PP splits from smaller ranks.
+    for s in sorted(stats, key=lambda x: x.pp_rank):
+        tp_rank = s.tp_rank
+        if tp_rank not in tp_stats:
+            tp_stats[tp_rank] = add_offset_to_decoder(s, 0)
+        else:
+            old_s, offset = tp_stats[tp_rank]
+            new_s, new_offset = add_offset_to_decoder(s, offset)
+            weight_stats = {**old_s.weight_stats, **new_s.weight_stats}
+            tp_stats[tp_rank] = (
+                SplitStats(tp_rank=tp_rank, pp_rank=0, weight_stats=weight_stats),
+                new_offset,
+            )
+
+    return [x[0] for x in tp_stats.values()]
+
+
 def main() -> None:
     """Main routine."""
     args = parse_args()
     sys.path.append(str(args.megatron))
 
-    split_stats = [process_split(p) for p in args.checkpoint.glob("mp_rank_??_???")]
-    aggregated_stats = sorted(
-        aggregate_tensor_parallel(split_stats),
-        key=lambda x: x.pp_rank
-    )
+    stats = [process_split(p) for p in args.checkpoint.glob("mp_rank_??_???")]
+    stats = aggregate_tensor_parallel(stats)
+    stats = aggregate_pipeline_parallel(stats)
+
+    assert len(stats) == 1
+
+    logging.info("Writing outputs")
+    weight_stats = stats[0].weight_stats
+    weight_stats_json = {k: dataclasses.asdict(v) for k, v in weight_stats.items()}
 
     with args.output.open("w") as fp:
-        json.dump([dataclasses.asdict(s) for s in aggregated_stats], fp, indent=2)
+        json.dump(weight_stats_json, fp, indent=2)
 
 
 if __name__ == "__main__":

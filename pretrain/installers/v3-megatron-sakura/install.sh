@@ -35,25 +35,30 @@ TARGET_DIR=$1; shift
 mkdir ${TARGET_DIR}
 pushd ${TARGET_DIR}
 
-cp -a ${INSTALLER_DIR}/* .
+# copy basic scripts
+cp -a ${INSTALLER_DIR}/{install.sh,requirements.txt,scripts,example} .
 
 source scripts/environment.sh
 
 # record current environment variables
 set > installer_envvar.log
 
+# src is used to store all resources for from-scratch builds
+mkdir src
+pushd src
+
 # install Python
-if ! which pyenv; then
-  >&2 echo ERROR: pyenv not found.
-  exit 1
-fi
-pyenv install -s ${PRETRAIN_PYTHON_VERSION}
-pyenv local ${PRETRAIN_PYTHON_VERSION}
-if [ "$(python --version)" != "Python ${PRETRAIN_PYTHON_VERSION}" ]; then
-  >&2 echo ERROR: Python version mismatch: $(python --version) != ${PRETRAIN_PYTHON_VERSION}
-  exit 1
-fi
-python -m venv venv
+git clone https://github.com/python/cpython -b v${PRETRAIN_PYTHON_VERSION}
+pushd cpython
+./configure --prefix="${TARGET_DIR}/python" --enable-optimizations
+make -j 64
+make install
+popd
+
+popd  # src
+
+# prepare venv
+python/bin/python3 -m venv venv
 source venv/bin/activate
 python -m pip install --no-cache-dir -U pip
 
@@ -67,7 +72,6 @@ python -m pip install \
 # install other requirements
 python -m pip install --no-cache-dir -U -r requirements.txt
 
-mkdir src
 pushd src
 
 # install apex
@@ -95,7 +99,15 @@ python -m pip install \
 # download our Megatron and build helper library
 git clone https://github.com/llm-jp/Megatron-LM -b ${PRETRAIN_MEGATRON_TAG}
 pushd Megatron-LM/megatron/core/datasets/
-make
+# NOTE(odashi):
+# Original makefile in the above directory uses the system's (or pyenv's) python3-config.
+# But we need to invoke python3-config installed on our target directory.
+MEGATRON_HELPER_CPPFLAGS=(
+  -O3 -Wall -shared -std=c++11 -fPIC -fdiagnostics-color
+  $(python -m pybind11 --includes)
+)
+MEGATRON_HELPER_EXT=$(${TARGET_DIR}/python/bin/python3-config --extension-suffix)
+g++ ${MEGATRON_HELPER_CPPFLAGS[@]} helpers.cpp -o helpers${MEGATRON_HELPER_EXT}
 popd
 
 # download our tokeniser

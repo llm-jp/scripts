@@ -32,8 +32,8 @@ TARGET_DIR=$1; shift
 >&2 echo INSTALLER_DIR=$INSTALLER_DIR
 >&2 echo TARGET_DIR=$TARGET_DIR
 
-mkdir ${TARGET_DIR}
-pushd ${TARGET_DIR}
+mkdir $TARGET_DIR
+pushd $TARGET_DIR
 
 # copy basic scripts
 cp -a ${INSTALLER_DIR}/{install.sh,scripts} .
@@ -64,23 +64,23 @@ pip install poetry
 
 # download & install llm-jp-eval
 pushd src
-git clone https://github.com/llm-jp/llm-jp-eval -b ${LLM_JP_EVAL_TAG}
-git cherry-pick ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
+git clone https://github.com/llm-jp/llm-jp-eval -b v${LLM_JP_EVAL_TAG}
 pushd llm-jp-eval
+git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
 poetry install
 
 # downlaod & preprocess dataset
 poetry run python scripts/preprocess_dataset.py  \
   --dataset-name all  \
-  --output-dir ${TARGET_DIR}/llm-jp-eval/dataset \
-  --version-name ${LLM_JP_EVAL_TAG}
+  --output-dir ${TARGET_DIR}/dataset/llm-jp-eval \
+  --version-name $LLM_JP_EVAL_TAG
 
 popd  # src
 popd  # ${TARGET_DIR}
 
 # check sha256sum on evaluation dataset
 HASH_FILE=scripts/hash.tsv
-DEV_DATASET_DIR=$TARGET_DIR/llm-jp-eval/dataset/$LLM_JP_EVAL_TAG/evaluation/dev
+DEV_DATASET_DIR=${TARGET_DIR}/dataset/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
 
 declare -A hash_map
 
@@ -88,7 +88,7 @@ while IFS=$'\t' read -r filename hash; do
   hash_map["$filename"]="$hash"
 done < "$HASH_FILE"
 
-for file in "$DEV_DATASET_DIR/*"; do
+for file in "${DEV_DATASET_DIR}/*"; do
   filename=$(basename "$file")
   calculated_hash=$(sha256sum "$file" | awk '{print $1}')
 

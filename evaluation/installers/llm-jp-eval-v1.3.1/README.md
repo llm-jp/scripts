@@ -17,44 +17,37 @@ llm-jp-eval の v1.3.1 で評価するためスクリプト
   ```
 
 2. インストール（例：~/myspace）
-  -  SLURMが入っているクラスタ
-    ```shell
-    sbatch --partition {partition} install.sh ~/myspace
-    ```
-  - そのほかのクラスタ
-    ```shell
-    bash install.sh ~/myspace > logs/install.out 2> logs/install.err
-    ```
+```shell
+# For a cluster with SLURM
+sbatch --partition {partition} install.sh ~/myspace
+# For a cluster without SLURM
+bash install.sh ~/myspace > logs/install.out 2> logs/install.err
+```
 
 3. (Optional) 設定：wandb, huggingface
-  - SLURMが入っているクラスタでの追加処理
-    ```shell
-    srun --partition {partition} --nodes 1 --pty bash
-    ```
-  ```shell
-  cd ~/myspace
-  source venv/bin/activate
-  wandb login
-  huggingface-cli login
-  ```
-- SLURMが入っているクラスタでの追加処理
-    ```shell
-    exit
-    ```
+```shell
+# Additional process for a cluster with SLURM    
+srun --partition {partition} --nodes 1 --pty bash
+```
+```shell
+cd ~/myspace
+source venv/bin/activate
+wandb login
+huggingface-cli login
+```
+```shell
+# Additional process for a cluster with SLURM
+exit
+```
 
 ### Evaluation
 ```shell
 cd ~/myspace
+# For a cluster with SLURM
+sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name} 
+# For a cluster without SLURM
+CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name}
 ```
--  SLURMが入っているクラスタ
-  ```shell
-  sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name} 
-  ```
-- そのほかのクラスタ
-  ```shell
-  CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name}
-  ```
-
 
 ### Check
 

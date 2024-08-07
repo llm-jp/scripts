@@ -11,17 +11,16 @@
 set -e
 
 # module load
-ENV_DIR=environment
-source ${ENV_DIR}/scripts/environment.sh
+source scripts/environment.sh
 
 # open file limit
 ulimit -n 65536 1048576
 
 # python virtualenv
-source ${ENV_DIR}/venv/bin/activate
+source venv/bin/activate
 
 # script path
-SCRIPT_PATH=${ENV_DIR}/src/llm-jp-eval/scripts/evaluate_llm.py
+SCRIPT_PATH=src/llm-jp-eval/scripts/evaluate_llm.py
 
 # run llm-jp-eval
 python $SCRIPT_PATH \

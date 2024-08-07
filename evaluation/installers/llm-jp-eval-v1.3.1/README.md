@@ -51,7 +51,7 @@ cd ~/myspace
   ```
 - そのほかのクラスタ
   ```
-  bash run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name}
+  CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name}
   ```
 
 
@@ -64,6 +64,7 @@ cd ~/myspace
     installer_envvar.log  インストール開始後に記録した環境変数の一覧
     install.sh            使用したインストールスクリプト
     run_llm-jp-eval.sh    評価を実行するスクリプト
+    dataset/llm-jp-eval   llm-jp-eval評価用データセット
     python/               Python実行環境
     scripts/              各種の環境設定用スクリプト
     src/                  個別ダウンロードされたライブラリ

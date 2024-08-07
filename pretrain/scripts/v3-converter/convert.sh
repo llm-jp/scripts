@@ -12,11 +12,11 @@
 # This script requires 1 node on the `cpu` partition on the cluster.
 
 #SBATCH --job-name=ckpt-convert
-#SBATCH --partition=cpu
+#SBATCH --partition=<FIX ME>
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --output=logs/%x-%j.out
-#SBATCH --error=ologs/%x-%j.err
+#SBATCH --error=logs/%x-%j.err
 
 set -e
 

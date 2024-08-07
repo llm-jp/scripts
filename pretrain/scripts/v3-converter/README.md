@@ -3,7 +3,7 @@
 このスクリプトは、Megatron形式のチェックポイントをHugging Face形式に変換します。
 
 ## スペック
-- 必要リソース: cpu 1ノード
+- 必要リソース: gpu 1ノード
 
 ## 実行方法
 
@@ -18,9 +18,10 @@
     cd /data/experiments/{exp-id}
     ```
 
-2. スクリプトを実行環境と同じディレクトリにコピーします：
+2. スクリプトを実行環境と同じディレクトリにコピーし、ログ出力フォルダを作成します：
     ```shell
-    cp {this directory} .
+    cp {this directory}/convert.sh .
+    mkdir logs
     ```
 
 3. スクリプトを実行します：
@@ -30,7 +31,7 @@
     ```
   - そのほかのクラスタ
     ```shell
-    bash convert.sh SOURCE_DIR TARGET_DIR
+    bash convert.sh SOURCE_DIR TARGET_DIR > install-log.out 2> install-log.err
     ```
 
 

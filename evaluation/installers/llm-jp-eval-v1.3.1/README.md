@@ -1,6 +1,7 @@
-# Megatron installation script for Sakura/LLM-jp v3 models
+# llm-jp-eval v1.3.1 installation and execution script for any environment
 
-llm-jp-eval の v1.3.1 で評価するための環境インストールします
+llm-jp-eval の v1.3.1 で評価するためスクリプト
+環境構築のためのスクリプト・評価実行のためのスクリプトを含みます
 
 ## Usage
 
@@ -17,16 +18,16 @@ llm-jp-eval の v1.3.1 で評価するための環境インストールします
 
 2. インストール（例：~/myspace）
   -  SLURMが入っているクラスタ
-    ```
+    ```shell
     sbatch --partition {partition} install.sh ~/myspace
     ```
   - そのほかのクラスタ
-    ```
+    ```shell
     bash install.sh ~/myspace > logs/install.out 2> logs/install.err
     ```
 
-3. (Optironal) 設定（wandb, huggingface）
-  - SLURMが入っているクラスタ
+3. (Optional) 設定：wandb, huggingface
+  - SLURMが入っているクラスタでの追加処理
     ```shell
     srun --partition {partition} --nodes 1 --pty bash
     ```
@@ -36,7 +37,7 @@ llm-jp-eval の v1.3.1 で評価するための環境インストールします
   wandb login
   huggingface-cli login
   ```
-- SLURMが入っているクラスタ
+- SLURMが入っているクラスタでの追加処理
     ```shell
     exit
     ```
@@ -46,11 +47,11 @@ llm-jp-eval の v1.3.1 で評価するための環境インストールします
 cd ~/myspace
 ```
 -  SLURMが入っているクラスタ
-  ```
+  ```shell
   sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name} 
   ```
 - そのほかのクラスタ
-  ```
+  ```shell
   CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name}
   ```
 

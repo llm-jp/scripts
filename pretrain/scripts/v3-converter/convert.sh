@@ -3,17 +3,18 @@
 #
 # Usage:
 # On a cluster with SLURM:
-#   Run `sbatch convert.sh SOURCE_DIR TARGET_DIR` 
+#   Run `sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR` 
 # On a cluster without SLURM:
-#   Run `bash convert.sh SOURCE_DIR TARGET_DIR TEMPORAL_DIR` 
+#   Run `bash convert.sh SOURCE_DIR TARGET_DIR TEMPORAL_DIR > logs/convert.out 2> logs/convert.err` 
 # - SOURCE_DIR: Megatron checkpoint directory including `iter_NNNNNNN`
 # - TARGET_DIR: Output directory for the Hugging Face format
 #
-# This script requires 1 node on the `cpu` partition on the cluster.
+# This script requires 1 node on the `gpu` partition on the cluster.
 
 #SBATCH --job-name=ckpt-convert
 #SBATCH --partition=<FIX ME>
 #SBATCH --nodes=1
+#SBATCH --gpus-per-node=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err

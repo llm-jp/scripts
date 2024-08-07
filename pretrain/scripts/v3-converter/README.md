@@ -25,14 +25,13 @@
     ```
 
 3. スクリプトを実行します：
-  - SLURMが入っている && cpu partionがあるクラスタ
+  - SLURMが入っているクラスタ
     ```shell
-    sbatch convert.sh SOURCE_DIR TARGET_DIR
+    sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR
     ```
   - そのほかのクラスタ
     ```shell
-    bash convert.sh SOURCE_DIR TARGET_DIR > install-log.out 2> install-log.err
-    ```
+    bash convert.sh SOURCE_DIR TARGET_DIR > logs/convert.out 2> logs/convert.err
 
 
 ### パラメータ

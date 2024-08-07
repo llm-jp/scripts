@@ -1,28 +1,35 @@
 #!/bin/bash
 #
-# Megatron installation script for pretrain jobs on the Sakura cluster
+# llm-jp-eval v1.3.1 installation script on any cluster
 #
 # Usage:
-# 1. Set the working directory to the directory this file is located.
-# 2. Run `sbatch install.sh TARGET_DIR` with setting TARGET_DIR to the actual path.
-#
+# On a cluster with SLURM:
+#   Run `sbatch --paratition {partition} install.sh TARGET_DIR`
+# On a cluster without SLURM:
+#   Run `bash install.sh TARGET_DIR > logs/install-eval.out 2> logs/install-eval.err`
+# - TARGET_DIR: Instalation directory
+# 
 # This script consumes 1 node on the `cpu` partition on the cluster.
 #
-# CAUTION:
-# DO NOT change the content of this file and any other materials in the installer
-# directory while the installation is being processed.
-
 #SBATCH --job-name=install-llm-jp-eval
-#SBATCH --partition=cpu
+#SBATCH --partition={partition}
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --output=%x-%j.out
-#SBATCH --error=%x-%j.err
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --error=logs/%x-%j.err
 
-set -eux -o pipefail
+set -eux 
+
+source scripts/environment.sh
 
 if [ $# -ne 1 ]; then
-  >&2 echo Usage: sbatch install.sh TARGET_DIR
+  case "$HOSTNAME" in
+    "login2" | "llm-jp-nvlink")
+      >&2 echo Usage: sbatch install.sh TARGET_DIR
+      ;;
+    "llm-jp")
+      >&2 echo Usage: bash install.sh TARGET_DIR
+  esac 
   exit 1
 fi
 
@@ -36,9 +43,7 @@ mkdir $TARGET_DIR
 pushd $TARGET_DIR
 
 # copy basic scripts
-cp -a ${INSTALLER_DIR}/{install.sh,scripts} .
-
-source scripts/environment.sh
+cp -a ${INSTALLER_DIR}/{install.sh,run_llm-jp-eval.sh,scripts} .
 
 # record current environment variables
 set > installer_envvar.log
@@ -48,7 +53,7 @@ mkdir src
 pushd src
 
 # install Python
-git clone https://github.com/python/cpython -b v${PRETRAIN_PYTHON_VERSION}
+git clone https://github.com/python/cpython -b v${PYTHON_VERSION}
 pushd cpython
 ./configure --prefix="${TARGET_DIR}/python" --enable-optimizations
 make -j 64
@@ -62,39 +67,43 @@ source venv/bin/activate
 python -m pip install --no-cache-dir -U pip setuptools
 pip install poetry
 
-# download & install llm-jp-eval
+# install llm-jp-eval
 pushd src
 git clone https://github.com/llm-jp/llm-jp-eval -b v${LLM_JP_EVAL_TAG}
 pushd llm-jp-eval
-git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
+if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
+  git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
+fi
 poetry install
 
-# downlaod & preprocess dataset
+# preprocess dataset
 poetry run python scripts/preprocess_dataset.py  \
   --dataset-name all  \
   --output-dir ${TARGET_DIR}/dataset/llm-jp-eval \
   --version-name $LLM_JP_EVAL_TAG
-
+# set config
+cp ${INSTALLER_DIR}/configs/config.yaml ./configs/
 popd  # src
 popd  # ${TARGET_DIR}
 
 # check sha256sum on evaluation dataset
-HASH_FILE=scripts/hash.tsv
+HASH_FILE=${INSTALLER_DIR}/configs/hashs.tsv
 DEV_DATASET_DIR=${TARGET_DIR}/dataset/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
 
+set +x
 declare -A hash_map
 
 while IFS=$'\t' read -r filename hash; do
   hash_map["$filename"]="$hash"
 done < "$HASH_FILE"
 
-for file in "${DEV_DATASET_DIR}/*"; do
+for file in ${DEV_DATASET_DIR}/*; do
   filename=$(basename "$file")
   calculated_hash=$(sha256sum "$file" | awk '{print $1}')
 
-  if [[ "${hash_map[$filename]}" ~= "$calculated_hash" ]]; then
-    echo "NG: $filename"
-    echo "Expected: ${hash_map[$filename]}"
-    echo "Got: $calculated_hash"
+  if [[ "${hash_map[$filename]}" != "$calculated_hash" ]]; then
+    >&2 echo "NG: $filename"
+    >&2 echo "Expected: ${hash_map[$filename]}"
+    >&2 echo "Got: $calculated_hash"
   fi
 done

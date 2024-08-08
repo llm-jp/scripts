@@ -11,9 +11,9 @@ Experiment: https://github.com/llm-jp/experiments/issues/9
 
 ## 実行方法
 
-事前に v3-megatron-sakura インストーラで `/data/experiments/{exp-id}/environment` に環境をインストールしたものとします。
+事前に v3-megatron-sakura インストーラで `/home/shared/experiments/{exp-id}/environment` に環境をインストールしたものとします。
 `{exp-id}` は登録時のIDを指定しますが、実験結果保全のため本実験のIDは指定しないでください。
-また `/data/experiments/{exp-id}/checkpoints` に以前のチェックポイントが保存されているものとします。
+また `/home/shared/experiments/{exp-id}/checkpoints` に以前のチェックポイントが保存されているものとします。
 
 ```shell
 cd /data/experiments/{exp-id}

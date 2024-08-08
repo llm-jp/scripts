@@ -18,7 +18,7 @@ export PRETRAIN_TRANSFORMER_ENGINE_VERSION=1.4
 export PRETRAIN_MEGATRON_TAG=nii-geniac
 export PRETRAIN_TOKENIZER_TAG=Release-ver3.0b1
 
-export MODULEPATH=/data/modules:${MODULEPATH}
+export MODULEPATH=/home/shared/modules:${MODULEPATH}
 module load cuda-${PRETRAIN_CUDA_VERSION}
 module load cudnn-${PRETRAIN_CUDNN_VERSION}
 module load hpcx-${PRETRAIN_HPCX_VERSION}

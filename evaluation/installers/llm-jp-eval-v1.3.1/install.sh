@@ -40,17 +40,19 @@ ENV_DIR=${TARGET_DIR}/environment
 >&2 echo INSTALLER_DIR=$INSTALLER_DIR
 >&2 echo TARGET_DIR=$TARGET_DIR
 
-mkdir $TARGET_DIR
+mkdir -p $TARGET_DIR
 pushd $TARGET_DIR
 
 # copy basic scripts
-cp -a ${INSTALLER_DIR}/{run_llm-jp-eval.sh,resources} .
+mkdir resources
+cp ${INSTALLER_DIR}/resources/config_base.yaml resources/
 
 mkdir $ENV_DIR
 pushd $ENV_DIR
 
 # copy basic scripts
 cp -a ${INSTALLER_DIR}/{install.sh,scripts} .
+mv scripts/run_llm-jp-eval.sh $TARGET_DIR/
 
 # record current environment variables
 set > installer_envvar.log
@@ -92,7 +94,7 @@ popd  # $ENV_DIR
 popd  # $TARGET_DIR
 
 # check sha256sum on evaluation dataset
-HASH_FILE=${TARGET_DIR}/resources/sha256sums.csv
+HASH_FILE=${INSTALLER_DIR}/resources/sha256sums.csv
 DEV_DATASET_DIR=${ENV_DIR}/data/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
 
 set +x

@@ -54,7 +54,7 @@ TRAIN_STEPS=$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))
 # model config
 TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
 CHECKPOINT_LOAD_DIR=/data/experiments/172b-exp2/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_SIZE}-cp${CONTEXT_PARALLEL_SIZE}
-CHECKPOINT_SAVE_DIR=checkpoints/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_SIZE}-cp${CONTEXT_PARALLEL_SIZE}
+CHECKPOINT_SAVE_DIR=/home/shared/experiments/14/checkpoints/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_SIZE}-cp${CONTEXT_PARALLEL_SIZE}
 
 mkdir -p ${CHECKPOINT_SAVE_DIR}
 
@@ -220,7 +220,6 @@ VALID_DATA_PATH="" # Skip validation
 JOB_NAME="llama-2-172b-exp2-sakura"
 
 # run
-export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --tensor-model-parallel-size ${TENSOR_PARALLEL_SIZE} \
   --pipeline-model-parallel-size ${PIPELINE_PARALLEL_SIZE} \
@@ -241,11 +240,11 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --train-iters ${TRAIN_STEPS} \
   --tokenizer-type Llama2Tokenizer \
   --tokenizer-model ${TOKENIZER_MODEL} \
-  ${CHECKPOINT_ARGS} \
+  --load ${CHECKPOINT_LOAD_DIR} \
   --save ${CHECKPOINT_SAVE_DIR} \
   --data-path ${TRAIN_DATA_PATH} \
   --split 1000,0,0 \
-  --data-cache-path cache \
+  --data-cache-path /home/shared/experiments/14/cache \
   --distributed-backend nccl \
   --init-method-std 0.02 \
   --lr ${LR} \
@@ -283,6 +282,5 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --log-throughput \
   --wandb-name ${JOB_NAME} \
   --wandb-project "Llama-2-175B" \
-  --wandb-entity "nii-geniac" \
-  --use-gcp-dynamic-checkpointing \
+  --wandb-entity "nii-geniac"
 

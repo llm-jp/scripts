@@ -12,10 +12,10 @@
 # This script requires 1 node on the `gpu` partition on the cluster.
 
 #SBATCH --job-name=ckpt-convert
-#SBATCH --partition=<FIX ME>
+#SBATCH --partition=<FIX_ME>
 #SBATCH --nodes=1
-#SBATCH --gpus-per-node=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --gpus=1
+#SBATCH --ntasks=8
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
@@ -40,7 +40,7 @@ FORMATTED_ITERATION=$(printf "%07d" $ITER)
 
 TMP_DIR=${HOME}/ckpt_convert_$(date +%Y%m%d%H%M%S)
 mkdir -p "${TMP_DIR}"
-ln -s $MEGATRON_CHECKPOINT_DIR ${TMP_DIR}/iter_${FORMATTED_ITERATION}
+ln -s $(readlink -f $MEGATRON_CHECKPOINT_DIR) ${TMP_DIR}/iter_${FORMATTED_ITERATION}
 echo $ITER > "${TMP_DIR}/latest_checkpointed_iteration.txt"
 
 echo "Converting $MEGATRON_CHECKPOINT_DIR"

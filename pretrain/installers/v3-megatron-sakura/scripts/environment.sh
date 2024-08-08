@@ -15,6 +15,8 @@ export PRETRAIN_TORCHVISION_VERSION=0.18.1
 export PRETRAIN_APEX_VERSION=24.04.01
 export PRETRAIN_TRANSFORMER_ENGINE_VERSION=1.4
 export PRETRAIN_MEGATRON_TAG=nii-geniac
+# Ensure the appropriate Huggingface tokenizer is included
+# https://github.com/llm-jp/scripts/pull/12#discussion_r1708415209
 export PRETRAIN_TOKENIZER_TAG=v3.0b2
 
 module load cuda/${PRETRAIN_CUDA_VERSION}

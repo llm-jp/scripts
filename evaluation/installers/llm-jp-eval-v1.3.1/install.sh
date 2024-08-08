@@ -35,6 +35,7 @@ fi
 
 INSTALLER_DIR=$(pwd)
 TARGET_DIR=$1; shift
+ENV_DIR=${TARGET_DIR}/environment
 
 >&2 echo INSTALLER_DIR=$INSTALLER_DIR
 >&2 echo TARGET_DIR=$TARGET_DIR
@@ -43,7 +44,13 @@ mkdir $TARGET_DIR
 pushd $TARGET_DIR
 
 # copy basic scripts
-cp -a ${INSTALLER_DIR}/{install.sh,run_llm-jp-eval.sh,scripts} .
+cp -a ${INSTALLER_DIR}/{run_llm-jp-eval.sh,resources} .
+
+mkdir $ENV_DIR
+pushd $ENV_DIR
+
+# copy basic scripts
+cp -a ${INSTALLER_DIR}/{install.sh,scripts} .
 
 # record current environment variables
 set > installer_envvar.log
@@ -55,17 +62,16 @@ pushd src
 # install Python
 git clone https://github.com/python/cpython -b v${PYTHON_VERSION}
 pushd cpython
-./configure --prefix="${TARGET_DIR}/python" --enable-optimizations
+./configure --prefix="${ENV_DIR}/python" --enable-optimizations
 make -j 64
 make install
 popd # src
-popd # $TARGET_DIR
+popd # $ENV_DIR
 
 # prepare venv
 python/bin/python3 -m venv venv
 source venv/bin/activate
 python -m pip install --no-cache-dir -U pip setuptools
-pip install poetry
 
 # install llm-jp-eval
 pushd src
@@ -74,21 +80,20 @@ pushd llm-jp-eval
 if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
   git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
 fi
-poetry install
+pip install --no-cache-dir .
 
 # preprocess dataset
-poetry run python scripts/preprocess_dataset.py  \
+python scripts/preprocess_dataset.py  \
   --dataset-name all  \
-  --output-dir ${TARGET_DIR}/dataset/llm-jp-eval \
+  --output-dir ${ENV_DIR}/data/llm-jp-eval \
   --version-name $LLM_JP_EVAL_TAG
-# set config
-cp ${INSTALLER_DIR}/configs/config.yaml ./configs/
 popd  # src
-popd  # ${TARGET_DIR}
+popd  # $ENV_DIR 
+popd  # $TARGET_DIR
 
 # check sha256sum on evaluation dataset
-HASH_FILE=${INSTALLER_DIR}/configs/hashs.tsv
-DEV_DATASET_DIR=${TARGET_DIR}/dataset/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
+HASH_FILE=${TARGET_DIR}/resources/sha256sums.csv
+DEV_DATASET_DIR=${ENV_DIR}/data/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
 
 set +x
 declare -A hash_map
@@ -107,3 +112,5 @@ for file in ${DEV_DATASET_DIR}/*; do
     >&2 echo "Got: $calculated_hash"
   fi
 done
+
+echo "Installation done." | tee /dev/stderr

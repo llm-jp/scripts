@@ -25,22 +25,19 @@
     ```
 
 3. スクリプトを実行します：
-  - SLURMが入っているクラスタ
     ```shell
+    # For a cluster with SLURM
     sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR
-    ```
-  - そのほかのクラスタ
-    ```shell
+    # For a cluster without SLURM
     bash convert.sh SOURCE_DIR TARGET_DIR > logs/convert.out 2> logs/convert.err
+    ```
 
 
 ### パラメータ
-
 - `SOURCE_DIR`: `iter_NNNNNNN`を含むMegatronチェックポイントディレクトリ
 - `TARGET_DIR`: Hugging Face形式の出力ディレクトリ
 
-### 例
-
+### サンプルコード
 ```shell
 sbatch convert.sh /data/experiments/{exp-id}/checkpoints/iter_0001000 /data/experiments/{exp-id}/hf_checkpoints/iter_0001000
 ```

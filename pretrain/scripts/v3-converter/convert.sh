@@ -3,9 +3,9 @@
 #
 # Usage:
 # On a cluster with SLURM:
-#   Run `sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR` 
+#   Run `sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR`
 # On a cluster without SLURM:
-#   Run `bash convert.sh SOURCE_DIR TARGET_DIR TEMPORAL_DIR > logs/convert.out 2> logs/convert.err` 
+#   Run `bash convert.sh SOURCE_DIR TARGET_DIR TEMPORAL_DIR > logs/convert.out 2> logs/convert.err`
 # - SOURCE_DIR: Megatron checkpoint directory including `iter_NNNNNNN`
 # - TARGET_DIR: Output directory for the Hugging Face format
 #

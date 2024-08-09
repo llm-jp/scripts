@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# llm-jp-eval v1.3.1 installation script on any cluster
+# llm-jp-eval v1.3.1 installation script
 #
 # Usage:
 # On a cluster with SLURM:
@@ -18,7 +18,7 @@
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
-set -eux 
+set -eux
 
 source scripts/environment.sh
 
@@ -29,7 +29,7 @@ if [ $# -ne 1 ]; then
       ;;
     "llm-jp")
       >&2 echo Usage: bash install.sh TARGET_DIR
-  esac 
+  esac
   exit 1
 fi
 
@@ -86,12 +86,12 @@ fi
 pip install --no-cache-dir .
 
 # preprocess dataset
-python scripts/preprocess_dataset.py  \
+python scripts/preprocess_dataset.py \
   --dataset-name all  \
   --output-dir ${ENV_DIR}/data/llm-jp-eval \
   --version-name $LLM_JP_EVAL_TAG
 popd  # src
-popd  # $ENV_DIR 
+popd  # $ENV_DIR
 popd  # $TARGET_DIR
 
 # check sha256sum on evaluation dataset
@@ -116,4 +116,4 @@ for file in ${DEV_DATASET_DIR}/*; do
   fi
 done
 
-echo "Installation done." | tee >(cat >&2) 
+echo "Installation done." | tee >(cat >&2)

@@ -26,7 +26,7 @@ bash install.sh ~/myspace > logs/install.out 2> logs/install.err
 
 3. (Optional) wandb, huggingface の設定
 ```shell
-# Additional process for a cluster with SLURM    
+# Additional process for a cluster with SLURM
 srun --partition {partition} --nodes 1 --pty bash
 ```
 ```shell
@@ -40,7 +40,7 @@ huggingface-cli login
 exit
 ```
 
-### Contents in installed directory (~/myspace) 
+### Contents in installed directory (~/myspace)
 
 インストール終了後、下記のディレクトリ構造が構築されます。
 
@@ -63,16 +63,16 @@ exit
 ### Evaluation
 必要に応じて`run_llm-jp-eval.sh`・`resources/config_base.yaml`内の変数を書き換えてください
  - tokenizer・wandb entity・wandb projectを変更する場合`run_llm-jp-eval.sh`のみの変更で対応可能
- - その他の変更を行う場合、`resources/config_base.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定 
+ - その他の変更を行う場合、`resources/config_base.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定
 ```shell
 cd ~/myspace
-# (Optional) If you need to change variables 
+# (Optional) If you need to change variables
 cp resources/config_base.yaml resources/config_custom.yaml
 cp run_llm-jp-eval.sh run_llm-jp-eval_custom.sh
 # Set `resources/config_custom.yaml` in run_llm-jp-eval_custom.sh
 
 # For a cluster with SLURM
-sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.run_name} 
+sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
 # For a cluster without SLURM
 CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
 ```
@@ -80,7 +80,7 @@ CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_na
 #### Sample code
 ```shell
 # For a cluster with SLURM
-sbatch --partition {partition} run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)                
+sbatch --partition {partition} run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 # For a cluster without SLURM
 CUDA_VISIBLE_DEVICES=0 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 ```

@@ -39,7 +39,7 @@ REPLACE_VARS=("MODEL" "TOKENIZER" "DATASET_DIR" "WANDB_ENTITY" "WANDB_PROJECT" "
 # create config
 cp $CONFIG_TEMPLATE $NEW_CONFIG
 
-# replace variables 
+# replace variables
 for VAR in "${REPLACE_VARS[@]}"; do
   VALUE=$(eval echo \${$VAR})
   sed -i "s|<<${VAR}>>|${VALUE}|g" $NEW_CONFIG

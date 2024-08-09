@@ -15,7 +15,7 @@
 #SBATCH --partition=<FIX_ME>
 #SBATCH --nodes=1
 #SBATCH --gpus=1
-#SBATCH --ntasks=8
+#SBATCH --ntasks-per-node=8
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 

@@ -2,9 +2,9 @@
 #SBATCH --job-name=llm-jp-eval
 #SBATCH --partition=<partition>
 #SBATCH --exclusive
-#SBATCH --nodes 1
+#SBATCH --nodes=1
 #SBATCH --gpus=1
-#SBATCH --ntasks=8
+#SBATCH --ntasks-per-node=8
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 

@@ -1,4 +1,4 @@
-# llm-jp-eval v1.3.1 installation and execution script for any environment
+# llm-jp-eval v1.3.1 installation and execution script
 
 llm-jp-eval の v1.3.1 で評価するためスクリプト
 環境構築のためのスクリプト・評価実行のためのスクリプトを含みます
@@ -13,10 +13,10 @@ llm-jp-eval の v1.3.1 で評価するためスクリプト
   ```shell
   git clone https://github.com/llm-jp/scripts
   cd scripts/evaluation/installers/llm-jp-eval-v1.3.1
-  mkdir logs
   ```
 
-2. インストール（例：~/myspace）
+2. インストール
+指定したディレクトリ（~/myspace）下に環境構築用ディレクトリ (~/myspace/environment) が作成されます
 ```shell
 # For a cluster with SLURM
 sbatch --partition {partition} install.sh ~/myspace
@@ -24,14 +24,14 @@ sbatch --partition {partition} install.sh ~/myspace
 bash install.sh ~/myspace > logs/install.out 2> logs/install.err
 ```
 
-3. (Optional) 設定：wandb, huggingface
+3. (Optional) wandb, huggingface の設定
 ```shell
 # Additional process for a cluster with SLURM    
 srun --partition {partition} --nodes 1 --pty bash
 ```
 ```shell
 cd ~/myspace
-source venv/bin/activate
+source environment/venv/bin/activate
 wandb login
 huggingface-cli login
 ```
@@ -40,34 +40,53 @@ huggingface-cli login
 exit
 ```
 
-### Evaluation
-```shell
-cd ~/myspace
-# For a cluster with SLURM
-sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name} 
-# For a cluster without SLURM
-CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.project} {wandb.run_name}
-```
+### Contents in installed directory (~/myspace) 
 
-### Check
-
-インストール終了後、下記のようなディレクトリ構造が構築されています。
+インストール終了後、下記のディレクトリ構造が構築されます。
 
 ```
 ~/myspace/
-    installer_envvar.log  インストール開始後に記録した環境変数の一覧
-    install.sh            使用したインストールスクリプト
     run_llm-jp-eval.sh    評価を実行するスクリプト
-    dataset/llm-jp-eval   llm-jp-eval評価用データセット
-    python/               Python実行環境
-    scripts/              各種の環境設定用スクリプト
-    src/                  個別ダウンロードされたライブラリ
-    venv/                 Python仮想環境 (python/ にリンク)
+    logs/                 SLURM用ログ保存ディレクトリ
+    resources/
+        config_base.yaml  評価実行時に読み込む設定ファイルのテンプレート
+    environment/
+        installer_envvar.log  インストール開始後に記録した環境変数の一覧
+        install.sh            使用したインストールスクリプト
+        dataset/llm-jp-eval   llm-jp-eval評価用データセット
+        python/               Python実行環境
+        scripts/              各種の環境設定用スクリプト
+        src/                  個別ダウンロードされたライブラリ
+        venv/                 Python仮想環境 (python/ にリンク)
 ```
 
-
-## hashs.tsv の作成コマンド
+### Evaluation
+必要に応じて`run_llm-jp-eval.sh`・`resources/config_base.yaml`内の変数を書き換えてください
+ - tokenizer・wandb entity・wandb projectを変更する場合`run_llm-jp-eval.sh`のみの変更で対応可能
+ - その他の変更を行う場合、`resources/config_base.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定 
 ```shell
-TARGET_DIR={path/to/directory/containing/json/files}
+cd ~/myspace
+# (Optional) If you need to change variables 
+cp resources/config_base.yaml resources/config_custom.yaml
+cp run_llm-jp-eval.sh run_llm-jp-eval_custom.sh
+# Set `resources/config_custom.yaml` in run_llm-jp-eval_custom.sh
+
+# For a cluster with SLURM
+sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.run_name} 
+# For a cluster without SLURM
+CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
+```
+
+#### Sample code
+```shell
+# For a cluster with SLURM
+sbatch --partition {partition} run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)                
+# For a cluster without SLURM
+CUDA_VISIBLE_DEVICES=0 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
+```
+
+## resources/sha256sums.csv の作成コマンド
+```shell
+TARGET_DIR={path/to/dataset/directory/containing/json/files}
 find $TARGET_DIR -type f | xargs -I{} sh -c 'echo -e "$(basename {})\t$(sha256sum {} | awk "{print \$1}")"'
 ```

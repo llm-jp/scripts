@@ -14,7 +14,7 @@
 #SBATCH --job-name=install-llm-jp-eval
 #SBATCH --partition={partition}
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=8
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
@@ -46,6 +46,7 @@ pushd $TARGET_DIR
 # copy basic scripts
 mkdir resources
 cp ${INSTALLER_DIR}/resources/config_base.yaml resources/
+mkdir logs
 
 mkdir $ENV_DIR
 pushd $ENV_DIR
@@ -115,4 +116,4 @@ for file in ${DEV_DATASET_DIR}/*; do
   fi
 done
 
-echo "Installation done." | tee /dev/stderr
+echo "Installation done." | tee >(cat >&2) 

@@ -3,6 +3,8 @@
 Measure throughput between gpu when all_reduce.  
 To check the value returned by all_reduce, it also returns the sum of each RANK.
 
+## Example output
+
 ```
 MASTER_ADDR=a001
 NUM_NODES=53

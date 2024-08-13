@@ -36,9 +36,9 @@ source ${ENV_DIR}/venv/bin/activate
 
 TOKENIZER_MODEL_DIR=${ENV_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2
 
-TARGET_ITER_DIR=$(basename $MEGATRON_CHECKPOINT_DIR)
-ITER=$(echo $TARGET_ITER_DIR | sed 's/^iter_0*//')
-if [[ -z "$ITER" || ! "$ITER" =~ ^[0-9]+$ ]]; then
+TARGET_ITER_DIR=$(basename $MEGATRON_CHECKPOINT_DIR) # iter_NNNNNNN
+ITER=$(echo $TARGET_ITER_DIR | sed 's/^iter_0*//') # NNNNNNN (no 0 padding)
+if [[ -z "$ITER" || ! "$ITER" =~ ^[0-9]+$ ]]; then # check if directory is valid
   echo "Error: ITER is not a valid number. Exiting."
   exit 1
 fi

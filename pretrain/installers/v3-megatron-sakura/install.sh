@@ -14,10 +14,10 @@
 
 #SBATCH --job-name=pretrain-install
 #SBATCH --partition=cpu
+#SBATCH --exclusive=topo
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=72
-#SBATCH --mem=1920G
+#SBATCH --mem=0
 #SBATCH --output=%x-%j.out
 #SBATCH --error=%x-%j.err
 

@@ -43,7 +43,7 @@ if [[ -z "$ITER" || ! "$ITER" =~ ^[0-9]+$ ]]; then
   exit 1
 fi
 
-# Create a unique working directory to avoid affecting the original directory and 
+# Create a unique temporal working directory to avoid affecting the original directory and 
 # to allow multiple runs to execute simultaneously.
 TMP_DIR=${HOME}/ckpt_convert_$(date +%Y%m%d%H%M%S)
 mkdir -p "${TMP_DIR}"

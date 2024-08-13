@@ -17,11 +17,12 @@ Local Rank Total: 1484
 
 ## How to use
 
-Fix nodes and partition of `sbatch.sh`.
+Fix `PARTITION_NAME_FIX_ME` and `NUM_NODES_FIX_ME` of `sbatch.sh`.  
+If the partition name is `gpu` and `8` nodes, modify them as follows
 
 ```
 #SBATCH --partition=gpu
-#SBATCH --nodes 64
+#SBATCH --nodes 1
 ```
 
 Create an `outputs` directory in the same hierarchy as the `scripts`.  

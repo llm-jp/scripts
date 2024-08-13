@@ -1,4 +1,4 @@
-## All_Reduce Benchmark
+# All_Reduce Benchmark
 
 Measure throughput between gpu when all_reduce.  
 To check the value returned by all_reduce, it also returns the sum of each RANK.

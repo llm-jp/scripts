@@ -20,7 +20,7 @@
 #SBATCH --gpus=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=64
-#SBATCH --mem=360GB
+#SBATCH --mem=360G
 #SBATCH --output=outputs/%x-%j.out
 #SBATCH --error=outputs/%x-%j.err
 

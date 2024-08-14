@@ -2,7 +2,7 @@
 
 LLM-jp v3 172B exp2 の学習をSakuraクラスタ上で行うスクリプトです。
 
-Experiment: https://github.com/llm-jp/experiments/issues/14
+Experiment: https://github.com/llm-jp/experiments/issues/9
 
 ## スペック
 

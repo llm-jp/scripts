@@ -16,12 +16,14 @@ llm-jp-eval の v1.3.1 で評価するためスクリプト
   ```
 
 2. インストール
-指定したディレクトリ（~/myspace）下に環境構築用ディレクトリ (~/myspace/environment) が作成されます
+指定したディレクトリ（`~/myspace`）下に環境構築用ディレクトリ (`~/myspace/environment`) が作成されます
+- `<env-name>`には環境名(llm-jp, llm-jp-nvlink, sakura, etc)を入力してください。
+  - scripts/envs以下にあるフォルダ名が選択可能です。
 ```shell
 # For a cluster with SLURM
-sbatch --partition {partition} install.sh ~/myspace
+sbatch --partition {partition} install.sh <env-name> ~/myspace
 # For a cluster without SLURM
-bash install.sh ~/myspace > logs/install.out 2> logs/install.err
+bash install.sh <env-name> ~/myspace > logs/install.out 2> logs/install.err
 ```
 
 3. (Optional) wandb, huggingface の設定

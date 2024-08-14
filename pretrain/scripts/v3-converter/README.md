@@ -4,6 +4,7 @@
 
 ## スペック
 - 必要リソース: gpu 1ノード
+  - VRAMは使用せず、pytorch上でのCUDAチェックにのみ利用
 
 ## 実行方法
 
@@ -42,3 +43,6 @@
 sbatch convert.sh /data/experiments/{exp-id}/checkpoints/iter_0001000 /data/experiments/{exp-id}/hf_checkpoints/iter_0001000
 ```
 
+### 作業ディレクトリについて
+実行中、$HOME上作業用ディレクトリ(`ckpt_convert_YYYYMMDDHHSSMM`)が作成されます。
+実行エラーが起きてもデバッグのために残る私用のため各自で削除してください。

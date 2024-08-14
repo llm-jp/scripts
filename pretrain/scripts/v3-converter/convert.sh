@@ -1,6 +1,9 @@
 #!/bin/bash
 # Model conversion script for converting Megatron format checkpoints into Huggingface format
 #
+# This script needs one node on the `gpu` partition of the cluster.
+# However, a GPU is necessary to verify CUDA functionality, even though no VRAM will be used.
+#
 # Usage:
 # On a cluster with SLURM:
 #   Run `sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR`
@@ -12,8 +15,6 @@
 # Example:
 # sbatch convert.sh /data/experiments/{exp-id}/checkpoints/iter_0001000 /data/experiments/{exp-id}/hf_checkpoints/iter_0001000 
 #
-# This script requires 1 node on the `gpu` partition on the cluster.
-
 #SBATCH --job-name=ckpt-convert
 #SBATCH --partition=<FIX_ME>
 #SBATCH --nodes=1

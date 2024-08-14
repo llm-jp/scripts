@@ -1,5 +1,5 @@
 #!/bin/bash
-# Model conversion script for converting Megatron format checkpoints into Huggingface format
+# Model conversion script for converting Megatron format checkpoints into Hugging Face format
 #
 # This script needs one node on the `gpu` partition of the cluster.
 # However, a GPU is necessary to verify CUDA functionality, even though no VRAM will be used.

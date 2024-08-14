@@ -1,9 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=14_llama-2-172b-exp2
+#SBATCH --job-name=9_llama-2-172b-exp2
 #SBATCH --partition=gpu
 #SBATCH --nodes=64
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks-per-node=8
+#SBATCH --cpus-per-task=8
 #SBATCH --output=outputs/%x-%j.out
 #SBATCH --error=outputs/%x-%j.err
 

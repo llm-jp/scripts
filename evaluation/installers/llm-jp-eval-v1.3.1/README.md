@@ -87,7 +87,7 @@ sbatch --partition {partition} run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(
 CUDA_VISIBLE_DEVICES=0 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 ```
 
-## resources/sha256sums.csv の作成コマンド
+## 開発者向け: resources/sha256sums.csv の作成コマンド
 ```shell
 TARGET_DIR={path/to/dataset/directory/containing/json/files}
 find $TARGET_DIR -type f | xargs -I{} sh -c 'echo -e "$(basename {})\t$(sha256sum {} | awk "{print \$1}")"'

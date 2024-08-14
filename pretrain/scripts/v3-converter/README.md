@@ -22,7 +22,7 @@
 2. スクリプトを実行環境と同じディレクトリにコピーし、ログ出力フォルダを作成します：
     ```shell
     cp {this directory}/convert.sh .
-    mkdir logs
+    mkdir outputs
     ```
 
 3. スクリプトを実行します：
@@ -30,7 +30,7 @@
     # For a cluster with SLURM
     sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR
     # For a cluster without SLURM
-    bash convert.sh SOURCE_DIR TARGET_DIR > logs/convert.out 2> logs/convert.err
+    bash convert.sh SOURCE_DIR TARGET_DIR > outputs/convert.out 2> outputs/convert.err
     ```
 
 

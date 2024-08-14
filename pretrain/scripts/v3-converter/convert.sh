@@ -13,7 +13,7 @@
 # - TARGET_DIR: Output directory for the Hugging Face format
 #
 # Example:
-# sbatch convert.sh /data/experiments/{exp-id}/checkpoints/iter_0001000 /data/experiments/{exp-id}/hf_checkpoints/iter_0001000 
+# sbatch convert.sh /data/experiments/{exp-id}/checkpoints/iter_0001000 /data/experiments/{exp-id}/hf_checkpoints/iter_0001000
 #
 #SBATCH --job-name=ckpt-convert
 #SBATCH --partition=<FIX_ME>
@@ -39,13 +39,15 @@ source ${ENV_DIR}/venv/bin/activate
 TOKENIZER_MODEL_DIR=${ENV_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2
 
 TARGET_ITER_DIR=$(basename $MEGATRON_CHECKPOINT_DIR) # iter_NNNNNNN
-ITER=$(echo $TARGET_ITER_DIR | sed 's/^iter_0*//') # NNNNNNN (no 0 padding)
+ITER=$(( $(echo $TARGET_ITER_DIR | sed 's/^iter_//') )) # NNNNNNN (no 0 padding)
+echo ITER=$ITER
+
 if [[ -z "$ITER" || ! "$ITER" =~ ^[0-9]+$ ]]; then # check if directory is valid
-  echo "Error: ITER is not a valid number. Exiting."
+  >&2 echo "Error: ITER=$ITER is not a valid number. Exiting."
   exit 1
 fi
 
-# Create a unique temporal working directory to avoid affecting the original directory and 
+# Create a unique temporal working directory to avoid affecting the original directory and
 # to allow multiple runs to execute simultaneously.
 TMP_DIR=${HOME}/ckpt_convert_$(date +%Y%m%d%H%M%S)
 mkdir -p "${TMP_DIR}"

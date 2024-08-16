@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --job-name=all-reduce
 #SBATCH --time=0:30:00
-#SBATCH --partition=PARTITION_NAME_FIX_ME
+#SBATCH --partition=example
 #SBATCH --exclusive
-#SBATCH --nodes NUM_NODES_FIX_ME
+#SBATCH --nodes 1
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks-per-node=8
 #SBATCH --output=outputs/%x-%j.out

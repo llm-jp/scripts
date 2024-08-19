@@ -7,7 +7,8 @@ llm-jp-eval の v1.3.1 で評価するためスクリプト
 
 ### Build
 
-インストール処理のためにCPUノードを1個使用します。
+インストール処理のためにCPUを利用します。
+ - SLURM環境ではCPUノードの優先的な利用を推奨
 
 1. リポジトリのクローン
   ```shell
@@ -28,18 +29,10 @@ bash install.sh <env-name> ~/myspace > logs/install.out 2> logs/install.err
 
 3. (Optional) wandb, huggingface の設定
 ```shell
-# Additional process for a cluster with SLURM
-srun --partition {partition} --nodes 1 --pty bash
-```
-```shell
 cd ~/myspace
 source environment/venv/bin/activate
 wandb login
 huggingface-cli login
-```
-```shell
-# Additional process for a cluster with SLURM
-exit
 ```
 
 ### Contents in installed directory (~/myspace)

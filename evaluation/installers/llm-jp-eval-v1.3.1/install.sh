@@ -12,17 +12,17 @@
 # - TARGET_DIR: Instalation directory
 #
 #SBATCH --job-name=install-llm-jp-eval
-#SBATCH --partition={partition}
+#SBATCH --partition={FIX_ME}
 #SBATCH --nodes=1
 #SBATCH --exclusive
 #SBATCH --mem=0
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
-set -eux
+set -eux -o pipefail
 
 ENV_CHOICES=($(ls scripts/envs))
-TARGET_ENV_MSG="Set TARGET_ENV from (${ENV_CHOICES} ) or add a new configuratione in 'scripts/envs'."
+TARGET_ENV_MSG="Set TARGET_ENV from (${ENV_CHOICES[@]} ) or add a new configuration in 'scripts/envs'."
 
 if [ $# -ne 2 ]; then
   set +x
@@ -34,6 +34,7 @@ fi
 INSTALLER_DIR=$(pwd)
 TARGET_ENV=$1
 TARGET_DIR=$2
+INSTALLER_COMMON=$INSTALLER_DIR/../../../common/installers.sh
 
 if [[ ! " ${ENV_CHOICES[@]} " =~ " ${TARGET_ENV} " ]]; then
   set +x
@@ -44,6 +45,8 @@ fi
 >&2 echo INSTALLER_DIR=$INSTALLER_DIR
 >&2 echo TARGET_DIR=$TARGET_DIR
 >&2 echo TARGET_ENV=$TARGET_ENV
+>&2 echo INSTALLER_COMMON=$INSTALLER_COMMON
+source $INSTALLER_COMMON
 
 mkdir -p $TARGET_DIR
 pushd $TARGET_DIR
@@ -67,11 +70,16 @@ BASE_ENV_SHELL=${INSTALLER_DIR}/scripts/env_common.sh
 EXT_ENV_SHELL=${INSTALLER_DIR}/scripts/envs/${TARGET_ENV}/environment.sh
 NEW_ENV_SHELL=scripts/environment.sh
 
-touch $NEW_ENV_SHELL
-echo -e "#!/bin/bash\n# from $BASE_ENV_SHELL" >> $NEW_ENV_SHELL
-cat $BASE_ENV_SHELL >> $NEW_ENV_SHELL
-echo -e "\n# from $EXT_ENV_SHELL" >> $NEW_ENV_SHELL
-cat $EXT_ENV_SHELL >> $NEW_ENV_SHELL
+print_env_shell() {
+    echo "#!/bin/bash"
+    echo
+    echo "# from $BASE_ENV_SHELL"
+    cat $BASE_ENV_SHELL
+    echo
+    echo "# from $EXT_ENV_SHELL"
+    cat $EXT_ENV_SHELL
+}
+print_env_shell > $NEW_ENV_SHELL
 
 source $NEW_ENV_SHELL
 
@@ -82,13 +90,8 @@ set > installer_envvar.log
 mkdir src
 pushd src
 
-# Install Python
-git clone https://github.com/python/cpython -b v${PYTHON_VERSION}
-pushd cpython
-./configure --prefix="${ENV_DIR}/python" --enable-optimizations
-make -j 64
-make install
-popd # src
+# Install Python (function in $INSTALLER_COMMON)
+install_python v${PYTHON_VERSION} ${ENV_DIR}/python
 popd # $ENV_DIR
 
 # Prepare venv

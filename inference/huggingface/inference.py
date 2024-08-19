@@ -65,4 +65,4 @@ while True:
     )
     output_token_ids = outputs[0][inputs["input_ids"].size(1) :]
     generated_text = tokenizer.decode(output_token_ids)
-    print("Generated:", generated_text)
+    print(generated_text)

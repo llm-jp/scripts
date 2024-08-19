@@ -1,6 +1,6 @@
 # Inference with HuggingFace Models
 
-This directory provides a minimum script to perform inference with HuggingFace models.
+This directory provides a minimum script to perform inference with causal language models saved in the HuggingFace format.
 
 ## Installation
 
@@ -17,7 +17,7 @@ pip3 install -r requirements.txt
 Run the following script:
 
 ```bash
-python3 inference.py --model-name-or-path <model name>
+python3 inference.py --model-name-or-path <model name or path>
 ```
 
 See the command-line help for more options:

@@ -53,7 +53,7 @@ model.eval()
 
 logging.info("Start inference loop")
 while True:
-    prompt = input("Enter a prompt: ")
+    prompt = input("Prompt >>> ")
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     outputs = model.generate(
         **inputs,

@@ -2,7 +2,8 @@
 #
 # llm-jp-eval v1.3.1 installation script
 #
-# This script consumes 1 node on the `cpu` partition on the cluster.
+# This script use CPU on a cluster.
+#  - In a SLURM environment, it is recommend to use CPU nodes.
 #
 # Usage:
 # On a cluster with SLURM:

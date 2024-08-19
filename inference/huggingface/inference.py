@@ -40,6 +40,7 @@ if torch.cuda.is_available():
         torch_dtype = torch.float32
 else:
     torch_dtype = torch.float32
+logging.info(f"Selected dtype: {torch_dtype}")
 
 logging.info("Load tokenizer")
 tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)

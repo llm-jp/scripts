@@ -19,7 +19,7 @@ llm-jp-eval の v1.3.1 で評価するためスクリプト
 2. インストール
 指定したディレクトリ（`~/myspace`）下に環境構築用ディレクトリ (`~/myspace/environment`) が作成されます
 - `<env-name>`には環境名(llm-jp, llm-jp-nvlink, sakura, etc)を入力してください。
-  - scripts/envs以下にあるフォルダ名が選択可能です。
+  - scripts/envs以下にあるフォルダ名が`<env-name>`として選択可能です。
 ```shell
 # For a cluster with SLURM
 sbatch --partition {partition} install.sh <env-name> ~/myspace
@@ -80,7 +80,7 @@ sbatch --partition {partition} run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(
 CUDA_VISIBLE_DEVICES=0 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 ```
 
-## resources/sha256sums.csv の作成コマンド
+## 開発者向け: resources/sha256sums.csv の作成コマンド
 ```shell
 TARGET_DIR={path/to/dataset/directory/containing/json/files}
 find $TARGET_DIR -type f | xargs -I{} sh -c 'echo -e "$(basename {})\t$(sha256sum {} | awk "{print \$1}")"'

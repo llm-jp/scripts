@@ -36,7 +36,7 @@ DATASET_DIR=${ENV_DIR}/data/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
 NEW_CONFIG=${CONFIG_DIR}/config.${WANDB_PROJECT}.${WANDB_RUN_NAME}.yaml
 REPLACE_VARS=("MODEL" "TOKENIZER" "DATASET_DIR" "WANDB_ENTITY" "WANDB_PROJECT" "WANDB_RUN_NAME")
 
-# Create a new config file and set variables to save the config file 
+# Create a new config file to save the config file of each run
 cp $CONFIG_TEMPLATE $NEW_CONFIG
 
 # Replace variables

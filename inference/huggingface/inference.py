@@ -13,7 +13,7 @@ parser.add_argument(
     required=True,
     help="The name or path of the model to use",
 )
-parser.add_argument("--max-length", type=int, default=1024, help="The maximum length")
+parser.add_argument("--max-length", type=int, default=1024, help="The maximum length to generate")
 parser.add_argument(
     "--temperature", type=float, default=1.0, help="The temperature for sampling"
 )

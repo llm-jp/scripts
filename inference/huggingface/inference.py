@@ -13,7 +13,7 @@ parser.add_argument(
     required=True,
     help="The name or path of the model to use",
 )
-parser.add_argument("--max-length", type=int, default=1024, help="The maximum length")
+parser.add_argument("--max-length", type=int, default=1024, help="The maximum length to generate")
 parser.add_argument(
     "--temperature", type=float, default=1.0, help="The temperature for sampling"
 )
@@ -40,6 +40,7 @@ if torch.cuda.is_available():
         torch_dtype = torch.float32
 else:
     torch_dtype = torch.float32
+logging.info(f"Selected dtype: {torch_dtype}")
 
 logging.info("Load tokenizer")
 tokenizer = AutoTokenizer.from_pretrained(args.model_name_or_path)
@@ -52,7 +53,7 @@ model.eval()
 
 logging.info("Start inference loop")
 while True:
-    prompt = input("Enter a prompt: ")
+    prompt = input("Prompt >>> ")
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
     outputs = model.generate(
         **inputs,
@@ -64,4 +65,4 @@ while True:
     )
     output_token_ids = outputs[0][inputs["input_ids"].size(1) :]
     generated_text = tokenizer.decode(output_token_ids)
-    print("Generated:", generated_text)
+    print(generated_text)

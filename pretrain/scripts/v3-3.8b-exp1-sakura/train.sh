@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# For details about the model, see:
+# https://github.com/llm-jp/model-cards/pull/20
+
 set -eu -o pipefail
 
 # EXPERIMENT_DIR=  # set by sbatch

@@ -38,4 +38,4 @@ mpirun \
   -x MASTER_PORT=$MASTER_PORT \
   -x NUM_NODES=$NUM_NODES \
   -x NUM_GPUS_PER_NODE=$NUM_GPUS_PER_NODE \
-  bash scripts/pretrain/scripts/v3-3.8m-exp1-sakura/train.sh
+  bash scripts/pretrain/scripts/v3-3.8b-exp1-sakura/train.sh

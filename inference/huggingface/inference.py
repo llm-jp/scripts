@@ -13,7 +13,9 @@ parser.add_argument(
     required=True,
     help="The name or path of the model to use",
 )
-parser.add_argument("--max-length", type=int, default=1024, help="The maximum length to generate")
+parser.add_argument(
+    "--max-length", type=int, default=1024, help="The maximum length to generate"
+)
 parser.add_argument(
     "--temperature", type=float, default=1.0, help="The temperature for sampling"
 )
@@ -54,8 +56,9 @@ model.eval()
 logging.info("Start inference loop")
 while True:
     prompt = input("Prompt >>> ")
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    input_ids = inputs["input_ids"]
+    input_ids = tokenizer.encode(
+        prompt, add_special_tokens=False, return_tensors="pt"
+    ).to(model.device)
     outputs = model.generate(
         input_ids,
         do_sample=True,

@@ -55,14 +55,15 @@ logging.info("Start inference loop")
 while True:
     prompt = input("Prompt >>> ")
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    input_ids = inputs["input_ids"]
     outputs = model.generate(
-        **inputs,
+        input_ids,
         do_sample=True,
         max_length=args.max_length,
         temperature=args.temperature,
         top_p=args.top_p,
         repetition_penalty=args.repetition_penalty,
     )
-    output_token_ids = outputs[0][inputs["input_ids"].size(1) :]
-    generated_text = tokenizer.decode(output_token_ids)
+    output_ids = outputs[0][input_ids.size(1) :]
+    generated_text = tokenizer.decode(output_ids)
     print(generated_text)

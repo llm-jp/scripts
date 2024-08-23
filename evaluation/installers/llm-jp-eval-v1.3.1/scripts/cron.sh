@@ -23,11 +23,12 @@ for checkpoint_path in $CHECKPOINT_GLOB_PATTERN; do
         continue
     fi
     
+    # Log the checkpoint path
+    # NOTE: This is done before evaluation to avoid re-evaluating the same checkpoint
+    echo $checkpoint_path >> $LOG_FILE
+
     # Evaluate the checkpoint
     echo "Evaluating checkpoint $checkpoint_path"
     wandb_run_name=$(basename $checkpoint_path)
     sbatch $SCRIPT_PATH $checkpoint_path $wandb_run_name
-    
-    # Log the checkpoint path
-    echo $checkpoint_path >> $LOG_FILE
 done

@@ -49,8 +49,8 @@ fi
 
 # Create a unique temporal working directory to avoid affecting the original directory and
 # to allow multiple runs to execute simultaneously.
-TMP_DIR=${HOME}/ckpt_convert_$(date +%Y%m%d%H%M%S)
-mkdir -p "${TMP_DIR}"
+TMP_DIR=$(mktemp -d "${HOME}/ckpt_convert.XXXXXXXX")
+>&2 echo TMP_DIR=$TMP_DIR 
 ln -s $(readlink -f $MEGATRON_CHECKPOINT_DIR) ${TMP_DIR}/${TARGET_ITER_DIR}
 echo $ITER > "${TMP_DIR}/latest_checkpointed_iteration.txt"
 

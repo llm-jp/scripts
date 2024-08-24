@@ -34,7 +34,7 @@ def main():
     for src_ckpt_dir in src_ckpt_dirs:
         iter_num = int(src_ckpt_dir.name.split("_")[1])
 
-        # min_iter(1000iter)未満は移動の対象外とする
+        # min_iter未満は移動の対象外とする
         if iter_num < args.min_iter:
             continue
 

@@ -24,3 +24,18 @@ mkdir outputs
 # 実行
 sbatch scripts/pretrain/scripts/v3-172b-exp2-sakura/sbatch.sh
 ```
+
+## 保存する必要のないチェックポイントの移動
+
+172Bでは1000iter刻み以外のチェックポイントは必要ないので以下のスクリプトで`trash`に移動します。  
+例外として最新のチェックポイントと1000iter未満のチェクkポイントは残します。
+
+`--dryrun`オプションがついているため、実際の移動は行われず行われる予定のコマンド操作だけ表示されます。
+実際に移動する場合は`--dryrun`オプションを消してください。
+
+```shell
+python3 ./scripts/pretrain/scripts/v3-172b-exp2-sakura/mv_unnecessaary_ckpt.py \
+    --src_dir /home/shared/experiments/9/checkpoints/tp4-pp16-cp1 \
+    --dst_dir /home/shared/experiments/9/trash/tp4-pp16-cp1 \
+    --dryrun
+```

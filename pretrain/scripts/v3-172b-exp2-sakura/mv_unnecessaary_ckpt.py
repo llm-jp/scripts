@@ -38,7 +38,7 @@ def main():
         if iter_num < args.min_iter:
             continue
 
-        # ckpt_iter(1000iter)の倍数は移動の対象外とする
+        # ckpt_iterの倍数は移動の対象外とする
         if iter_num % args.ckpt_iter == 0:
             continue
 

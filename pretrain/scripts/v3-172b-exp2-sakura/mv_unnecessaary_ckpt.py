@@ -44,13 +44,13 @@ def main():
 
         mv_command = f"mv {src_ckpt_dir} {args.dst_dir}"
 
-        # dryrunの場合は実行コマンドを表示する(実際の移動はしない。)
         if args.dryrun:
+            # dryrunの場合は実行コマンドを表示する(実際の移動はしない。)
             print(mv_command)
             continue
-
-        # 実際にckptディレクトリを移動する
-        os.system(mv_command)
+        else:
+            # 実際にckptディレクトリを移動する
+            os.system(mv_command)
 
 
 if __name__ == "__main__":

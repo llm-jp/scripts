@@ -59,6 +59,7 @@ huggingface-cli login
 必要に応じて`run_llm-jp-eval.sh`・`resources/config_base.yaml`内の変数を書き換えてください
  - tokenizer・wandb entity・wandb projectを変更する場合`run_llm-jp-eval.sh`のみの変更で対応可能
  - その他の変更を行う場合、`resources/config_base.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定
+
 VRAMはモデルサイズの2.5-3.5倍必要。（例: 13B model -> 33GB-45GB）
 ```shell
 cd ~/myspace

@@ -1,7 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=llm-jp-eval
 #SBATCH --partition=<partition>
-#SBATCH --exclusive
 #SBATCH --nodes=1
 #SBATCH --gpus=1
 #SBATCH --ntasks-per-node=8

@@ -133,7 +133,7 @@ popd  # src
 #pip install --no-cache-dir -r ${ENV_DIR}/requirements-vllm.txt
 #git clone https://github.com/vllm-project/vllm.git -b v${VLLM_TAG}
 #pushd vllm
-pip install vllm=5.1.0
+pip install vllm==${VLLM_TAG}
 
 popd  #src
 popd  # $ENV_DIR

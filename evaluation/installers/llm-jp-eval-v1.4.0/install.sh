@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# llm-jp-eval v1.3.1 installation script
+# llm-jp-eval v1.4.0 installation script
 #
 # This script use CPU on a cluster.
 #  - In a SLURM environment, it is recommend to use CPU nodes.

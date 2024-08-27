@@ -58,7 +58,7 @@ done
 # Need to generate dump for each run because $OFFLINE_SCRIPT_PATH read this dump
 python ${EVAL_DIR}/scripts/dump_prompts.py -cn $(basename $NEW_CONFIG)
 # Generate outputs and copy data of $NEW_CONFIG to output via $NEW_OFFLINE_CONFIG
-python $OFFLINE_SCRIPT_PATH -cd $(dirname $NEW_OFFLINE_CONFIG)
+python $OFFLINE_SCRIPT_PATH -cp $(pwd)/$(dirname $NEW_OFFLINE_CONFIG)
 
 # Run llm-jp-eval
 python ${EVAL_DIR}/scripts/evaluate_llm.py -cn $(basename $NEW_CONFIG)

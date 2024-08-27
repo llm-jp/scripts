@@ -37,7 +37,7 @@ wandb:
   launch: false # true for WANDB Launch. notice: if it is true, all other configurations will be overwrited by launch config
   log: true # true for logging WANDB in evaluate_llm.py
   entity: <<WANDB_ENTITY>>
-  project: <<WANDB_ENTITY>>
+  project: <<WANDB_PROJECT>>
   run_name:  <<WANDB_RUN_NAME>> # default run_name is f"{model.pretrained_model_name_or_path}_yyyyMMdd_hhmmss"
 
 metainfo:

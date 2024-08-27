@@ -122,18 +122,18 @@ python scripts/preprocess_dataset.py \
 popd  # src
 
 # Install Pytorch
-pip uninstall -y torch
-pip install \
-  --no-cache-dir \
-  --find-links https://download.pytorch.org/whl/torch_stable.html \
-  torch==${TORCH_VERSION}+cu${CUDA_VERSION_SHORT} \
-  torchvision==${TORCHVISION_VERSION}+cu${CUDA_VERSION_SHORT}
+# pip uninstall -y torch
+# pip install \
+#   --no-cache-dir \
+#   --find-links https://download.pytorch.org/whl/torch_stable.html \
+#   torch==${TORCH_VERSION}+cu${CUDA_VERSION_SHORT} \
+#   torchvision==${TORCHVISION_VERSION}+cu${CUDA_VERSION_SHORT}
 
 # Install vllm
-pip install --no-cache-dir -r ${ENV_DIR}/requirements-vllm.txt
-git clone https://github.com/vllm-project/vllm.git -b v${VLLM_TAG}
-pushd vllm
-pip install -e .
+#pip install --no-cache-dir -r ${ENV_DIR}/requirements-vllm.txt
+#git clone https://github.com/vllm-project/vllm.git -b v${VLLM_TAG}
+#pushd vllm
+pip install vllm=5.1.0
 
 popd  #src
 popd  # $ENV_DIR

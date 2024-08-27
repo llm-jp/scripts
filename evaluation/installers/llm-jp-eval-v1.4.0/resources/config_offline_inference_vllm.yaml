@@ -1,5 +1,5 @@
 offline_inference:
-  prompt_json_path: ["/<<OFFLINE_OUT>>/<<MODEL_NORM>>/*.eval-prompt.json"]
+  prompt_json_path: ["<<OFFLINE_OUT>>/<<MODEL_NORM>>/*.eval-prompt.json"]
   output_base_dir: <<OFFLINE_OUT>>
 
 model:

@@ -76,7 +76,7 @@ CUDA_VISIBLE_DEVICES={num} bash run_g-leaderboard.sh {path/to/model} {wandb.run_
 
 ```shell
 # For a cluster with SLURM
-sbatch --partition {partition} run_g-leaderboard.sh llm-jp/llm-jp-13b-v2.0 g-leaderboard-$(whoami)
+OPENAI_AZURE_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx sbatch --partition {partition} run_g-leaderboard.sh llm-jp/llm-jp-13b-v2.0 g-leaderboard-$(whoami)
 # For a cluster without SLURM
-CUDA_VISIBLE_DEVICES=0 bash run_g-leaderboard.sh llm-jp/llm-jp-13b-v2.0 g-leaderboard-$(whoami)
+OPENAI_AZURE_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx bash run_g-leaderboard.sh llm-jp/llm-jp-13b-v2.0 g-leaderboard-$(whoami)
 ```

@@ -63,7 +63,7 @@ mkdir $ENV_DIR
 pushd $ENV_DIR
 
 # Copy enviroment scripts
-cp ${INSTALLER_DIR}/{install.sh,requirements-vllm.txt} .
+cp ${INSTALLER_DIR}/install.sh .
 mkdir scripts
 
 # Create environment.sh

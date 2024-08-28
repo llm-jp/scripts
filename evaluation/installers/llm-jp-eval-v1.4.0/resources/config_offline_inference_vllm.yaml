@@ -7,8 +7,6 @@ model:
   model: <<MODEL>>
   dtype: "bfloat16"  # ["bfloat16", "float16", "float32"]
   gpu_memory_utilization: 0.9
-  tensor-parallel-size: 1
-  pipeline-parallel-size: 1
 
 tokenizer:
   _target_: "transformers.AutoTokenizer.from_pretrained"

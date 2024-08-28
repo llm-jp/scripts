@@ -1,6 +1,6 @@
 # llm-jp-eval v1.4.0 installation and execution script
 
-llm-jp-eval の v1.4.0 で評価するためスクリプト
+llm-jp-eval の v1.4.0 で評価するためスクリプト<br>
 環境構築のためのスクリプト・評価実行のためのスクリプトを含みます
 
 ## Usage
@@ -46,7 +46,7 @@ huggingface-cli login
     logs/                      SLURM用ログ保存ディレクトリ
     resources/
         config_base.yaml       評価実行時に読み込む設定ファイルのテンプレート
-    vllm_outputs/              vllm用の出力データ
+    vllm_outputs/              vllm用の出力ディレクトリ
     environment/
         installer_envvar.log  インストール開始後に記録した環境変数の一覧
         install.sh            使用したインストールスクリプト

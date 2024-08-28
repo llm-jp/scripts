@@ -40,10 +40,10 @@ The following directory structure will be created after installation.
 
 ```
 ~/g-leaderboard/
-    run_g-leaderboard.sh  Script for running g-leaderboard
-    logs/                 Log files for SLURM jobs
+    run_g-leaderboard.sh      Script for running g-leaderboard
+    logs/                     Log files for SLURM jobs
     resources/
-        config_base.yaml  Configuration file template
+        config_base.yaml      Configuration file template
     environment/
         installer_envvar.log  List of environment variables recorded during installation
         install.sh            Installation script

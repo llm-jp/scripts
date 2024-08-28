@@ -30,11 +30,10 @@ WANDB_PROJECT=test
 # Fixed vars
 G_LEADERBOARD_DIR=${ENV_DIR}/src/g-leaderboard
 CONFIG_DIR=${G_LEADERBOARD_DIR}/configs
-SCRIPT_PATH=${G_LEADERBOARD_DIR}/scripts/run_eval.py
 
 # Config settings
 NEW_CONFIG=${CONFIG_DIR}/config.${WANDB_PROJECT}.${WANDB_RUN_NAME}.yaml
-REPLACE_VARS=("MODEL" "TOKENIZER" "DATASET_DIR" "WANDB_ENTITY" "WANDB_PROJECT" "WANDB_RUN_NAME")
+REPLACE_VARS=("MODEL" "TOKENIZER" "WANDB_ENTITY" "WANDB_PROJECT" "WANDB_RUN_NAME")
 
 # Create a new config file to save the config file of each run
 cp $CONFIG_TEMPLATE $NEW_CONFIG
@@ -51,11 +50,12 @@ BLENDED_RUN_CONFIG_DIR=${G_LEADERBOARD_DIR}/blend_run_configs
 cp $BLENDED_RUN_CONFIG ${BLENDED_RUN_CONFIG_DIR}/config.yaml
 
 # Create a temporal project
-TMP_G_LEADERBOARD_DIR=$(mktemp -d "${HOME}/ckpt_convert.XXXXXXXX")
+TMP_G_LEADERBOARD_DIR=$(mktemp -d "${ENV_DIR}/src/g-leaderboard.XXXXXXXX")
 cp -r $G_LEADERBOARD_DIR/* $TMP_G_LEADERBOARD_DIR
 cp $NEW_CONFIG $TMP_G_LEADERBOARD_DIR/configs/config.yaml
 
 # Run g-leaderboard
+SCRIPT_PATH=scripts/run_eval.py
 pushd $TMP_G_LEADERBOARD_DIR
 python $SCRIPT_PATH
 

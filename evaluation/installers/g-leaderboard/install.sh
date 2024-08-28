@@ -56,6 +56,7 @@ pushd $TARGET_DIR
 cp ${INSTALLER_DIR}/scripts/run_g-leaderboard.sh .
 mkdir resources
 cp ${INSTALLER_DIR}/resources/config_base.yaml resources/
+cp ${INSTALLER_DIR}/resources/blended_run_config.yaml resources/
 mkdir logs
 
 ENV_DIR=${TARGET_DIR}/environment
@@ -98,12 +99,11 @@ popd # $ENV_DIR
 # Prepare venv
 python/bin/python3 -m venv venv
 source venv/bin/activate
-python -m pip install --no-cache-dir -U pip setuptools
 
 # Install g-leaderboard
 pushd src
 git clone https://github.com/wandb/llm-leaderboard g-leaderboard -b ${G_LEADERBOARD_TAG}
 pushd g-leaderboard
-pip install --no-cache-dir requirements.txt
+pip install --no-cache-dir -r requirements.txt
 
 echo "Installation done." | tee >(cat >&2)

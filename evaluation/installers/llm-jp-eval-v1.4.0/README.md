@@ -1,6 +1,6 @@
-# llm-jp-eval v1.3.1 installation and execution script
+# llm-jp-eval v1.4.0 installation and execution script
 
-llm-jp-eval の v1.3.1 で評価するためスクリプト
+llm-jp-eval の v1.4.0 で評価するためスクリプト
 環境構築のためのスクリプト・評価実行のためのスクリプトを含みます
 
 ## Usage
@@ -13,13 +13,14 @@ llm-jp-eval の v1.3.1 で評価するためスクリプト
 1. リポジトリのクローン
   ```shell
   git clone https://github.com/llm-jp/scripts
-  cd scripts/evaluation/installers/llm-jp-eval-v1.3.1
+  cd scripts/evaluation/installers/llm-jp-eval-v1.4.0
   ```
 
 2. インストール
 指定したディレクトリ（`~/myspace`）下に環境構築用ディレクトリ (`~/myspace/environment`) が作成されます
 - `<env-name>`には環境名(llm-jp, llm-jp-nvlink, sakura, etc)を入力してください。
   - scripts/envs以下にあるフォルダ名が`<env-name>`として選択可能です。
+通信速度によりますが、少なくとも20分ほどかかります。
 ```shell
 # For a cluster with SLURM
 sbatch --partition {partition} install.sh <env-name> ~/myspace
@@ -41,10 +42,11 @@ huggingface-cli login
 
 ```
 ~/myspace/
-    run_llm-jp-eval.sh    評価を実行するスクリプト
-    logs/                 SLURM用ログ保存ディレクトリ
+    run_llm-jp-eval.sh         評価を実行するスクリプト
+    logs/                      SLURM用ログ保存ディレクトリ
     resources/
-        config_base.yaml  評価実行時に読み込む設定ファイルのテンプレート
+        config_base.yaml       評価実行時に読み込む設定ファイルのテンプレート
+    vllm_outputs/              vllm用の出力データ
     environment/
         installer_envvar.log  インストール開始後に記録した環境変数の一覧
         install.sh            使用したインストールスクリプト
@@ -56,9 +58,12 @@ huggingface-cli login
 ```
 
 ### Evaluation
-必要に応じて`run_llm-jp-eval.sh`・`resources/config_base.yaml`内の変数を書き換えてください
+必要に応じて`run_llm-jp-eval.sh`・`resources/config_*.yaml`内の変数を書き換えてください
  - tokenizer・wandb entity・wandb projectを変更する場合`run_llm-jp-eval.sh`のみの変更で対応可能
- - その他の変更を行う場合、`resources/config_base.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定
+ - その他の変更を行う場合、`resources/config_*.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定
+
+VRAMはモデルサイズの2.5-3.5倍必要（例: 13B model -> 33GB-45GB）<br>
+SLURM環境で実行する場合、デフォルトでは`--gpus 1`のため、`--mem`と共にクラスタに適切なサイズに設定すること
 ```shell
 cd ~/myspace
 # (Optional) If you need to change variables

@@ -102,7 +102,7 @@ python -m pip install --no-cache-dir -U pip setuptools
 
 # Install g-leaderboard
 pushd src
-git clone https://github.com/wandb/llm-leaderboard g-leaderboard -b v${G_LEADERBOARD_TAG}
+git clone https://github.com/wandb/llm-leaderboard g-leaderboard -b ${G_LEADERBOARD_TAG}
 pushd g-leaderboard
 pip install --no-cache-dir requirements.txt
 

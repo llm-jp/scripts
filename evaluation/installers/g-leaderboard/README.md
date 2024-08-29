@@ -59,7 +59,7 @@ The following directory structure will be created after installation.
 ### Evaluation
 
 The evaluation script takes the model path and wandb run name as arguments.
-For the other settings, edit the configuration file `resources/config_base.yaml` and/or `resources/config_custom.yaml`.
+For the other settings, edit the configuration file `resources/config_base.yaml` and/or `run_g-leaderboard.sh`.
  - To edit the tokenizer, wandb entity, and/or wandb project: Edit `run_g-leaderboard.sh`.
  - Otherwise: Edit `resources/config_base.yaml` and `run_g-leaderboard.sh`.
 

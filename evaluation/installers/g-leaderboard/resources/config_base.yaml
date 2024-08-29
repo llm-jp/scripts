@@ -42,7 +42,7 @@ llm_jp_eval:
 
 # for mtbench
 mtbench:
-  model_id: "nii--llama-2-175b-exp2-instruct" # cannot use '<', '>', ':', '"', '/', '\\', '|', '?', '*', '.'  
+  model_id: "<<WANDB_RUN_NAME>>" # cannot use '<', '>', ':', '"', '/', '\\', '|', '?', '*', '.'  
   max_new_token: 1024
   num_gpus_per_model: 8
   num_gpus_total: 8

@@ -101,7 +101,7 @@ source venv/bin/activate
 
 # Install g-leaderboard
 pushd src
-git clone https://github.com/wandb/llm-leaderboard g-leaderboard -b ${G_LEADERBOARD_TAG}
+git clone https://github.com/wandb/llm-leaderboard g-leaderboard -b g-leaderboard
 pushd g-leaderboard
 pip install --no-cache-dir -r requirements.txt
 

@@ -50,6 +50,7 @@ BLENDED_RUN_CONFIG_DIR=${G_LEADERBOARD_DIR}/blend_run_configs
 cp $BLENDED_RUN_CONFIG ${BLENDED_RUN_CONFIG_DIR}/config.yaml
 
 # Create a temporal project
+# NOTE: This is necessary to avoid using incorrect configurations when running multiple jobs at the same time.
 TMP_G_LEADERBOARD_DIR=$(mktemp -d "${ENV_DIR}/src/g-leaderboard.XXXXXXXX")
 cp -r $G_LEADERBOARD_DIR/* $TMP_G_LEADERBOARD_DIR
 cp $NEW_CONFIG $TMP_G_LEADERBOARD_DIR/configs/config.yaml

@@ -1,4 +1,4 @@
-# g-leaderboard (GENIAC Official Evaluation) installation and execution script
+# LLM Evaluation using g-leaderboard (GENIAC Official Evaluation)
 
 This repository contains scripts for evaluating LLMs using [g-leaderboard](https://github.com/wandb/llm-leaderboard/tree/g-leaderboard).
 
@@ -14,15 +14,15 @@ cd scripts/evaluation/installers/g-leaderboard
 ```
 
 Then, run the installation script.
-The following command will create a working directory under the specified directory (here, `~/g-leaderboard`).
+The following command will create an installation directory under the specified directory (here, `~/g-leaderboard`).
 `<env-name>` should be the name of the environment (llm-jp, llm-jp-nvlink, sakura, etc).
 The list of available environment names can be found in the `scripts/envs` directory.
 
 ```bash
 # For a cluster with SLURM
-sbatch --partition {partition} install.sh <env-name> ~/g-leaderboard
+sbatch --partition {partition} install.sh {env-name} ~/g-leaderboard
 # For a cluster without SLURM
-bash install.sh <env-name> ~/g-leaderboard > logs/install.out 2> logs/install.err
+bash install.sh {env-name} ~/g-leaderboard > logs/install.out 2> logs/install.err
 ```
 
 After the installation is complete, set up the wandb and huggingface accounts.

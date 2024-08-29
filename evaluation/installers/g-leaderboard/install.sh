@@ -3,7 +3,7 @@
 # g-leaderboard installation script
 #
 # This script use CPU on a cluster.
-#  - In a SLURM environment, it is recommend to use CPU nodes.
+#  - In a SLURM environment, it is recommended to use CPU nodes.
 #
 # Usage:
 # On a cluster with SLURM:
@@ -55,8 +55,7 @@ pushd $TARGET_DIR
 # Copy basic scripts for g-leaderboard
 cp ${INSTALLER_DIR}/scripts/run_g-leaderboard.sh .
 mkdir resources
-cp ${INSTALLER_DIR}/resources/config_base.yaml resources/
-cp ${INSTALLER_DIR}/resources/blended_run_config.yaml resources/
+cp ${INSTALLER_DIR}/resources/* resources/
 mkdir logs
 
 ENV_DIR=${TARGET_DIR}/environment

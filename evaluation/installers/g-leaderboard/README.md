@@ -79,4 +79,4 @@ AZURE_OPENAI_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx bash run_g-leaderboard.sh llm-jp/
 
 ### About Azure OpenAI API
 
-To conduct an evaluation, you must configure the Azure OpenAI API by setting the endpoint and key for the deployment named `gpt-4`, which uses `gpt-4-0613`. Please contact the administrator to obtain the necessary endpoint and key.
+To conduct an evaluation, you must configure the Azure OpenAI API by setting the endpoint and key for the deployment named `gpt-4`, which corresponds to `gpt-4-0613`. Please contact the administrator to obtain the necessary endpoint and key.

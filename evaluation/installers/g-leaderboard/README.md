@@ -19,8 +19,11 @@ The following command will create an installation directory under the specified 
 The list of available environment names can be found in the `scripts/envs` directory.
 
 ```bash
+# NOTE: Using a CPU node is recommended as the installation process doesn't require GPUs
+
 # For a cluster with SLURM
 sbatch --partition {partition} install.sh {env-name} ~/g-leaderboard
+
 # For a cluster without SLURM
 bash install.sh {env-name} ~/g-leaderboard > logs/install.out 2> logs/install.err
 ```
@@ -62,8 +65,10 @@ For the other settings, edit the configuration file `resources/config_base.yaml`
 
 ```shell
 cd ~/g-leaderboard
+
 # For a cluster with SLURM
 AZURE_OPENAI_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx sbatch --partition {partition} run_g-leaderboard.sh {path/to/model} {wandb.run_name}
+
 # For a cluster without SLURM
 CUDA_VISIBLE_DEVICES=<num> AZURE_OPENAI_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx bash run_g-leaderboard.sh {path/to/model} {wandb.run_name}
 ```
@@ -73,6 +78,7 @@ CUDA_VISIBLE_DEVICES=<num> AZURE_OPENAI_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx bash r
 ```shell
 # For a cluster with SLURM
 AZURE_OPENAI_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx sbatch --partition {partition} run_g-leaderboard.sh llm-jp/llm-jp-13b-v2.0 g-leaderboard-$(whoami)
+
 # For a cluster without SLURM
 AZURE_OPENAI_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx bash run_g-leaderboard.sh llm-jp/llm-jp-13b-v2.0 g-leaderboard-$(whoami)
 ```

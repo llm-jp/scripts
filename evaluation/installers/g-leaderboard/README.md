@@ -55,17 +55,13 @@ The following directory structure will be created after installation.
 
 ### Evaluation
 
-Replace variables as needed in `run_g-leaderboard.sh` and `resources/config_base.yaml`.
- - To edit tokenizer, wandb entity, and/or wandb project: Edit `run_g-leaderboard.sh`.
+The evaluation script takes the model path and wandb run name as arguments.
+For the other settings, edit the configuration file `resources/config_base.yaml` and/or `resources/config_custom.yaml`.
+ - To edit the tokenizer, wandb entity, and/or wandb project: Edit `run_g-leaderboard.sh`.
  - Otherwise: Edit `resources/config_base.yaml` and `run_g-leaderboard.sh`.
 
 ```shell
 cd ~/g-leaderboard
-# (Optional) If you need to change variables
-cp resources/config_base.yaml resources/config_custom.yaml
-cp run_g-leaderboard.sh run_g-leaderboard_custom.sh
-# Set `resources/config_custom.yaml` in run_g-leaderboard_custom.sh
-
 # For a cluster with SLURM
 AZURE_OPENAI_ENDPOINT=xxx AZURE_OPENAI_KEY=xxx sbatch --partition {partition} run_g-leaderboard.sh {path/to/model} {wandb.run_name}
 # For a cluster without SLURM

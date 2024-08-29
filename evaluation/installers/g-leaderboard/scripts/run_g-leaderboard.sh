@@ -44,11 +44,6 @@ for VAR in "${REPLACE_VARS[@]}"; do
   sed -i "s|<<${VAR}>>|${VALUE}|g" $NEW_CONFIG
 done
 
-# Blended run config settings
-BLENDED_RUN_CONFIG=resources/blended_run_config.yaml
-BLENDED_RUN_CONFIG_DIR=${G_LEADERBOARD_DIR}/blend_run_configs
-cp $BLENDED_RUN_CONFIG ${BLENDED_RUN_CONFIG_DIR}/config.yaml
-
 # Create a temporal project
 # NOTE: This is necessary to avoid using incorrect configurations when running multiple jobs at the same time.
 TMP_G_LEADERBOARD_DIR=$(mktemp -d "${ENV_DIR}/src/g-leaderboard.XXXXXXXX")

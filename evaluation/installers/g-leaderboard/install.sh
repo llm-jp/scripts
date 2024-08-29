@@ -55,7 +55,7 @@ pushd $TARGET_DIR
 # Copy basic scripts for g-leaderboard
 cp ${INSTALLER_DIR}/scripts/run_g-leaderboard.sh .
 mkdir resources
-cp ${INSTALLER_DIR}/resources/* resources/
+cp ${INSTALLER_DIR}/resources/config_base.yaml resources/
 mkdir logs
 
 ENV_DIR=${TARGET_DIR}/environment
@@ -104,5 +104,9 @@ pushd src
 git clone https://github.com/wandb/llm-leaderboard g-leaderboard -b g-leaderboard
 pushd g-leaderboard
 pip install --no-cache-dir -r requirements.txt
+
+# Deploy blended run config
+BLENDED_RUN_CONFIG=${INSTALLER_DIR}/resources/blended_run_config.yaml
+cp $BLENDED_RUN_CONFIG blend_run_configs/config.yaml
 
 echo "Installation done." | tee >(cat >&2)

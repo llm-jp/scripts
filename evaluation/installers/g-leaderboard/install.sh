@@ -22,30 +22,18 @@
 
 set -eux -o pipefail
 
-ENV_CHOICES=($(ls scripts/envs))
-TARGET_ENV_MSG="Set TARGET_ENV from (${ENV_CHOICES[@]} ) or add a new configuration in 'scripts/envs'."
-
-if [ $# -ne 2 ]; then
+if [ $# -ne 1 ]; then
   set +x
-  >&2 echo Usage: sbatch \(or bash\)  install.sh TARGET_ENV TARGET_DIR
-  >&2 echo $TARGET_ENV_MSG
+  >&2 echo Usage: sbatch \(or bash\) install.sh TARGET_DIR
   exit 1
 fi
 
 INSTALLER_DIR=$(pwd)
-TARGET_ENV=$1
-TARGET_DIR=$2
+TARGET_DIR=$1
 INSTALLER_COMMON=$INSTALLER_DIR/../../../common/installers.sh
-
-if [[ ! " ${ENV_CHOICES[@]} " =~ " ${TARGET_ENV} " ]]; then
-  set +x
-  >&2 echo $TARGET_ENV_MSG
-  exit 1
-fi
 
 >&2 echo INSTALLER_DIR=$INSTALLER_DIR
 >&2 echo TARGET_DIR=$TARGET_DIR
->&2 echo TARGET_ENV=$TARGET_ENV
 >&2 echo INSTALLER_COMMON=$INSTALLER_COMMON
 source $INSTALLER_COMMON
 
@@ -67,20 +55,9 @@ cp ${INSTALLER_DIR}/install.sh .
 mkdir scripts
 
 # Create environment.sh
-BASE_ENV_SHELL=${INSTALLER_DIR}/scripts/env_common.sh
-EXT_ENV_SHELL=${INSTALLER_DIR}/scripts/envs/${TARGET_ENV}/environment.sh
+BASE_ENV_SHELL=${INSTALLER_DIR}/scripts/environment.sh
 NEW_ENV_SHELL=scripts/environment.sh
-
-print_env_shell() {
-    echo "#!/bin/bash"
-    echo
-    echo "# from $BASE_ENV_SHELL"
-    cat $BASE_ENV_SHELL
-    echo
-    echo "# from $EXT_ENV_SHELL"
-    cat $EXT_ENV_SHELL
-}
-print_env_shell > $NEW_ENV_SHELL
+cp $BASE_ENV_SHELL $NEW_ENV_SHELL
 
 source $NEW_ENV_SHELL
 

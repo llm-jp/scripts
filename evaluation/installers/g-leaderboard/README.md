@@ -15,17 +15,15 @@ cd scripts/evaluation/installers/g-leaderboard
 
 Then, run the installation script.
 The following command will create an installation directory under the specified directory (here, `~/g-leaderboard`).
-`<env-name>` should be the name of the environment (llm-jp, llm-jp-nvlink, sakura, etc).
-The list of available environment names can be found in the `scripts/envs` directory.
 
 ```bash
 # NOTE: Using a CPU node is recommended as the installation process doesn't require GPUs
 
 # For a cluster with SLURM
-sbatch --partition {partition} install.sh {env-name} ~/g-leaderboard
+sbatch --partition {partition} install.sh ~/g-leaderboard
 
 # For a cluster without SLURM
-bash install.sh {env-name} ~/g-leaderboard > logs/install.out 2> logs/install.err
+bash install.sh ~/g-leaderboard > logs/install.out 2> logs/install.err
 ```
 
 After the installation is complete, set up the wandb and huggingface accounts.

@@ -53,14 +53,8 @@ pushd $ENV_DIR
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/install.sh .
 mkdir scripts
-
-# Create environment.sh
-BASE_ENV_SHELL=${INSTALLER_DIR}/scripts/env_common.sh
-NEW_ENV_SHELL=scripts/environment.sh
-
-cp $BASE_ENV_SHELL $NEW_ENV_SHELL
-
-source $NEW_ENV_SHELL
+cp ${INSTALLER_DIR}/scripts/environment.sh scripts/
+source scripts/environment.sh
 
 # Record current environment variables
 set > installer_envvar.log

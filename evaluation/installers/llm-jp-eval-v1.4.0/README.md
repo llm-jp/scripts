@@ -1,6 +1,6 @@
 # llm-jp-eval v1.4.0 installation and execution script
 
-llm-jp-eval の v1.4.0 で評価するためスクリプト<br>
+llm-jp-eval v1.4.0 で評価するためスクリプト<br>
 環境構築のためのスクリプト・評価実行のためのスクリプトを含みます
 
 ## Usage
@@ -18,14 +18,12 @@ llm-jp-eval の v1.4.0 で評価するためスクリプト<br>
 
 2. インストール
 指定したディレクトリ（`~/myspace`）下に環境構築用ディレクトリ (`~/myspace/environment`) が作成されます
-- `<env-name>`には環境名(llm-jp, llm-jp-nvlink, sakura, etc)を入力してください。
-  - scripts/envs以下にあるフォルダ名が`<env-name>`として選択可能です。
 通信速度によりますが、少なくとも20分ほどかかります。
 ```shell
 # For a cluster with SLURM
-sbatch --partition {partition} install.sh <env-name> ~/myspace
+sbatch --partition {partition} install.sh ~/myspace
 # For a cluster without SLURM
-bash install.sh <env-name> ~/myspace > logs/install.out 2> logs/install.err
+bash install.sh ~/myspace > logs/install.out 2> logs/install.err
 ```
 
 3. (Optional) wandb, huggingface の設定
@@ -79,10 +77,10 @@ CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_na
 
 #### Sample code
 ```shell
-# For a cluster with SLURM
-sbatch --partition {partition} run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
-# For a cluster without SLURM
-CUDA_VISIBLE_DEVICES=0 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
+# Evaluate 70B model on a cluster with SLURM using H100 (VRAM: 80GB)
+sbatch --partition {partition} --gpus 4 --mem 8G run_llm-jp-eval.sh sbintuitions/sarashina2-70b test-$(whoami)
+# Evakyate 13B model on a cluster without SLURM using A100 (VRAM: 40GB)
+CUDA_VISIBLE_DEVICES=0,1 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 ```
 
 ## 開発者向け: resources/sha256sums.csv の作成コマンド

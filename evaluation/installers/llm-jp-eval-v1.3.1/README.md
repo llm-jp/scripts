@@ -59,6 +59,9 @@ huggingface-cli login
 必要に応じて`run_llm-jp-eval.sh`・`resources/config_base.yaml`内の変数を書き換えてください
  - tokenizer・wandb entity・wandb projectを変更する場合`run_llm-jp-eval.sh`のみの変更で対応可能
  - その他の変更を行う場合、`resources/config_base.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定
+
+VRAMはモデルサイズの2.5-3.5倍必要（例: 13B model -> 33GB-45GB）<br>
+SLURM環境で実行する場合、デフォルトでは`--gpus 1`のため、`--mem`と共にクラスタに適切なサイズに設定すること
 ```shell
 cd ~/myspace
 # (Optional) If you need to change variables
@@ -73,11 +76,11 @@ CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_na
 ```
 
 #### Sample code
-```shell
-# For a cluster with SLURM
-sbatch --partition {partition} run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
-# For a cluster without SLURM
-CUDA_VISIBLE_DEVICES=0 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
+ ``shell
+# Evaluate 70B model on a cluster with SLURM using H100 (VRAM: 80GB)
+sbatch --partition {partition} --gpus 4 --mem 8G run_llm-jp-eval.sh sbintuitions/sarashina2-70b test-$(whoami)
+# Evakyate 13B model on a cluster without SLURM using A100 (VRAM: 40GB)
+CUDA_VISIBLE_DEVICES=0,1 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 ```
 
 ## 開発者向け: resources/sha256sums.csv の作成コマンド

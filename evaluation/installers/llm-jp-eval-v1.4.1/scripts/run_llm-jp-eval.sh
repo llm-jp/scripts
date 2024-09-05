@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=llm-jp-eval
-#SBATCH --partition=<partition>
+#SBATCH --partition=<FIX_ME>
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
@@ -54,13 +54,13 @@ for VAR in "${REPLACE_VARS[@]}"; do
   sed -i "s|<<${VAR}>>|${VALUE}|g" $NEW_OFFLINE_CONFIG
 done
 
-# Offline generation
-# Need to generate dump for each run because $OFFLINE_SCRIPT_PATH read this dump
+# Generate dump for each run to load $NEW_CONFIG settings
 python ${EVAL_DIR}/scripts/dump_prompts.py -cn $(basename $NEW_CONFIG)
-# Generate outputs and copy data of $NEW_CONFIG to output via $NEW_OFFLINE_CONFIG
-python $OFFLINE_SCRIPT_PATH -cp $(pwd)/$(dirname $NEW_OFFLINE_CONFIG)
 
-# Run llm-jp-eval
+# Generate outputs in offline mode 
+python $OFFLINE_SCRIPT_PATH -cp $(pwd)/$(dirname $NEW_OFFLINE_CONFIG) -cn $(basename $NEW_OFFLINE_CONFIG)
+
+# Run llm-jp-eval to upload results
 python ${EVAL_DIR}/scripts/evaluate_llm.py -cn $(basename $NEW_CONFIG)
 
 echo "Done"

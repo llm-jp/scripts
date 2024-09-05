@@ -1,13 +1,13 @@
 #!/bin/bash
 #
-# llm-jp-eval v1.4.0 installation script
+# llm-jp-eval v1.4.1 installation script
 #
 # This script use CPU on a cluster.
 #  - In a SLURM environment, it is recommend to use CPU nodes.
 #
 # Usage:
 # On a cluster with SLURM:
-#   Run `sbatch --paratition {partition} install.sh TARGET_DIR`
+#   Run `sbatch --paratition {FIX_ME} install.sh TARGET_DIR`
 # On a cluster without SLURM:
 #   Run `bash install.sh TARGET_DIR > logs/install-eval.out 2> logs/install-eval.err`
 # - TARGET_DIR: Instalation directory
@@ -83,7 +83,7 @@ pip install --no-cache-dir .
 
 INFERENCE_SCRIPT=offline_inference/vllm/offline_inference_vllm.py
 # Remove execution time due to its complexity in handling
-sed -i.bak 's/_{GENERATOR_TYPE}_{execution_datetime}//' "$INFERENCE_SCRIPT"
+sed -i.bak 's/_{GENERATOR_TYPE}_{current_time}//' "$INFERENCE_SCRIPT"
 
 # Preprocess dataset
 python scripts/preprocess_dataset.py \
@@ -92,6 +92,7 @@ python scripts/preprocess_dataset.py \
   --version-name $LLM_JP_EVAL_TAG
 
 # Install vllm
+# This implicitly installs vllm-flash-attn with their recommended version
 pip install vllm==${VLLM_VERSION}
 
 popd  #src
@@ -117,6 +118,8 @@ for file in ${DEV_DATASET_DIR}/*; do
     >&2 echo "NG: $filename"
     >&2 echo "Expected: ${hash_map[$filename]}"
     >&2 echo "Got: $calculated_hash"
+    echo "Aborted." | tee >(cat >&2)
+    exit 1
   fi
 done
 

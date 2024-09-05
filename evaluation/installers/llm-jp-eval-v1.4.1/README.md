@@ -1,6 +1,6 @@
-# llm-jp-eval v1.4.0 installation and execution script
+# llm-jp-eval v1.4.1 installation and execution script
 
-llm-jp-eval v1.4.0 で評価するためスクリプト<br>
+llm-jp-eval v1.4.1 で評価するためスクリプト<br>
 環境構築のためのスクリプト・評価実行のためのスクリプトを含みます
 
 ## Usage
@@ -13,7 +13,7 @@ llm-jp-eval v1.4.0 で評価するためスクリプト<br>
 1. リポジトリのクローン
   ```shell
   git clone https://github.com/llm-jp/scripts
-  cd scripts/evaluation/installers/llm-jp-eval-v1.4.0
+  cd scripts/evaluation/installers/llm-jp-eval-v1.4.1
   ```
 
 2. インストール
@@ -21,7 +21,7 @@ llm-jp-eval v1.4.0 で評価するためスクリプト<br>
 通信速度によりますが、少なくとも20分ほどかかります。
 ```shell
 # For a cluster with SLURM
-sbatch --partition {partition} install.sh ~/myspace
+sbatch --partition {FIX_ME} install.sh ~/myspace
 # For a cluster without SLURM
 bash install.sh ~/myspace > logs/install.out 2> logs/install.err
 ```
@@ -70,15 +70,15 @@ cp run_llm-jp-eval.sh run_llm-jp-eval_custom.sh
 # Set `resources/config_custom.yaml` in run_llm-jp-eval_custom.sh
 
 # For a cluster with SLURM
-sbatch --partition {partition} run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
+sbatch --partition {FIX_ME} run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
 # For a cluster without SLURM
-CUDA_VISIBLE_DEVICES={num} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
+CUDA_VISIBLE_DEVICES={FIX_ME} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
 ```
 
 #### Sample code
 ```shell
 # Evaluate 70B model on a cluster with SLURM using H100 (VRAM: 80GB)
-sbatch --partition {partition} --gpus 4 --mem 8G run_llm-jp-eval.sh sbintuitions/sarashina2-70b test-$(whoami)
+sbatch --partition {FIX_ME} --gpus 4 --mem 8G run_llm-jp-eval.sh sbintuitions/sarashina2-70b test-$(whoami)
 # Evakyate 13B model on a cluster without SLURM using A100 (VRAM: 40GB)
 CUDA_VISIBLE_DEVICES=0,1 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 ```

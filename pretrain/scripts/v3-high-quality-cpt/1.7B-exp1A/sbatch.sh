@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=llama-2-1.7b-cpt1a
+#SBATCH --job-name=0022-1.7b_cpt_1a
 #SBATCH --partition=gpu-small
 #SBATCH --nodes=4
 #SBATCH --gpus-per-node=8

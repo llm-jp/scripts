@@ -38,18 +38,18 @@ load_train_data_paths() {
 
 # Function to display dataset paths and their token counts
 display_file_and_tokens() {
-  set +x
   declare -A LANG_TOTAL_TOKENS
   TOTAL_TOKEN_SIZE=0
 
-  printf >&2 "%-5s %-20s %15s\n" "Lang" "File Name" "Token Size"
+  printf "%-5s %-20s %15s\n" "Lang" "File Name" "Token Size"
 
+  # split $TRAIN_DATA_PATH by " " and, read token_size and file path
   set -- $TRAIN_DATA_PATH
   while [ $# -gt 1 ]; do
     token_size=$1
     lang=$(basename "$(dirname "$2")")
     filename=$(basename "${2%.jsonl_text_document}")
-    printf >&2 "%-5s %-20s %'15d\n" "$lang" "$filename" "$token_size"
+    printf "%-5s %-20s %'15d\n" "$lang" "$filename" "$token_size"
 
     if [[ -z "${LANG_TOTAL_TOKENS[$lang]:-}" ]]; then
       LANG_TOTAL_TOKENS[$lang]=$token_size
@@ -61,13 +61,12 @@ display_file_and_tokens() {
     shift 2
   done
 
-  echo >&2 "Summary"
+  echo "Summary"
   for lang in "${!LANG_TOTAL_TOKENS[@]}"; do
-    printf >&2 "%-5s %'15d\n" "$lang" "${LANG_TOTAL_TOKENS[$lang]}"
+    printf "%-5s %'15d\n" "$lang" "${LANG_TOTAL_TOKENS[$lang]}"
   done
 
-  printf >&2 "%-5s %'15d\n" "ALL" "$TOTAL_TOKEN_SIZE"
-  set -x
+  printf "%-5s %'15d\n" "ALL" "$TOTAL_TOKEN_SIZE"
   export TOTAL_TOKEN_SIZE
 }
 # Format information from INFO_FILE

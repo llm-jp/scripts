@@ -2,7 +2,7 @@
 #
 # This script sets up the MDX environment by mounting `/data` and `/model` directories.
 #
-# Usage: Run `sudo bash setup_mdx.sh [-f] [-v] NETWORK_STORAGE1_IPV4`
+# Usage: Run `sudo bash setup_mdx.sh [-f] [-v] STORAGE_NETWORK1_IPV4`
 #
 
 USAGE_MSG="Usage: sudo bash setup_mdx.sh [-f] [-v] STORAGE_NETWORK1_IPV4"

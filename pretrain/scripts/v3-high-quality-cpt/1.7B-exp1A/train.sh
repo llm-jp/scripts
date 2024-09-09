@@ -1,12 +1,16 @@
 #!/bin/bash
-
+#
+# For details about the model, see:
+# https://github.com/llm-jp/model-cards/pull/22
 set -eu -o pipefail
 
-ENV_DIR=environment
+# EXPERIMENT_DIR=  # set by sbatch
+ENV_DIR=${EXPERIMENT_DIR}/environment
+CACHE_DIR=${EXPERIMENT_DIR}/cache
 
-source ${ENV_DIR}/scripts/environment.sh
-source ${ENV_DIR}/scripts/mpi_variables.sh
-source ${ENV_DIR}/venv/bin/activate
+source "${ENV_DIR}"/scripts/environment.sh
+source "${ENV_DIR}"/scripts/mpi_variables.sh
+source "${ENV_DIR}"/venv/bin/activate
 
 # open file limit
 ulimit -n 65536 1048576
@@ -20,10 +24,9 @@ export CUDA_LAUNCH_BLOCKING=0
 export CUDNN_LOGDEST_DBG=stderr
 export CUDNN_LOGERR_DBG=1
 
-NUM_GPUS=$((NUM_NODES * NUM_GPUS_PER_NODE))
+NUM_GPUS=$((NUM_NODES * NUM_GPUS_PER_NODE)) # unused var
 
 # model config
-# llama-2-13b: https://huggingface.co/meta-llama/Llama-2-13b-hf/blob/main/config.json
 HIDDEN_SIZE=2048
 FFN_HIDDEN_SIZE=7168
 NUM_LAYERS=24
@@ -34,10 +37,10 @@ SEQ_LENGTH=4096
 TENSOR_PARALLEL_SIZE=1
 PIPELINE_PARALLEL_SIZE=1
 CONTEXT_PARALLEL_SIZE=1
-DATA_PARALLEL_SIZE=$((NUM_GPUS / (TENSOR_PARALLEL_SIZE * PIPELINE_PARALLEL_SIZE)))
+DATA_PARALLEL_SIZE=$((NUM_GPUS / (TENSOR_PARALLEL_SIZE * PIPELINE_PARALLEL_SIZE))) # unused var
 
 # training config
-MICRO_BATCH_SIZE=2
+MICRO_BATCH_SIZE=8
 GLOBAL_BATCH_SIZE=512
 
 LR=3e-5
@@ -47,7 +50,7 @@ GRAD_CLIP=1
 
 # data config
 # export $TRAIN_DATA_PATH in this script and $TOTAL_TOKEN_SIZE
-source ./dataset_token_mapper.sh 
+source ./dataset_token_mapper.sh
 
 # validation set
 VALID_DATA_PATH="" # Skip validation
@@ -62,18 +65,31 @@ TRAIN_STEPS=$((LR_WARMUP_STEPS + LR_DECAY_ITERS))
 
 # model config
 TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
-CHECKPOINT_LOAD_DIR=checkpoints/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_SIZE}-cp${CONTEXT_PARALLEL_SIZE}
-CHECKPOINT_SAVE_DIR=checkpoints/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_SIZE}-cp${CONTEXT_PARALLEL_SIZE}
 
-mkdir -p ${CHECKPOINT_SAVE_DIR}
+CHECKPOINT_ROOT=${EXPERIMENT_DIR}/checkpoints
+
+CHECKPOINT_SAVE_DIR=${CHECKPOINT_ROOT}
+
+CHECKPOINT_ARGS=""
+if [[ -f "${CHECKPOINT_SAVE_DIR}/latest_checkpointed_iteration.txt" ]]; then
+  # resume training
+  CHECKPOINT_LOAD_DIR=${CHECKPOINT_ROOT}
+else
+  # first training
+  CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/pretrain_checkpoint
+  CHECKPOINT_ARGS="--finetune"
+fi
+
+mkdir -p "${CHECKPOINT_SAVE_DIR}"
 
 # job name
-JOB_NAME="llama-2-1.7b-cpt1a"
-PROJECT_NAME="high-quality-cpt"
-exit 1
+WANDB_ENTITY="llm-jp"
+WANDB_PROJECT="high-quality-cpt"
+WANDB_JOB="llama-2-1.7b-cpt-1a"
+
 # run
 export NVTE_FUSED_ATTN=0
-python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
+python "${ENV_DIR}"/src/Megatron-LM/pretrain_gpt.py \
   --tensor-model-parallel-size ${TENSOR_PARALLEL_SIZE} \
   --pipeline-model-parallel-size ${PIPELINE_PARALLEL_SIZE} \
   --context-parallel-size ${CONTEXT_PARALLEL_SIZE} \
@@ -89,12 +105,13 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --global-batch-size ${GLOBAL_BATCH_SIZE} \
   --train-iters ${TRAIN_STEPS} \
   --tokenizer-type Llama2Tokenizer \
-  --tokenizer-model ${TOKENIZER_MODEL} \
-  --load ${CHECKPOINT_LOAD_DIR} \
-  --save ${CHECKPOINT_SAVE_DIR} \
-  --data-path "$TRAIN_DATA_PATH" \
-  --split 1000,0,0 \
-  --data-cache-path cache \
+  --tokenizer-model "${TOKENIZER_MODEL}" \
+  --load "${CHECKPOINT_LOAD_DIR}" \
+  "$CHECKPOINT_ARGS" \
+  --save "${CHECKPOINT_SAVE_DIR}" \
+  --data-path "${TRAIN_DATA_PATH}" \
+  --split 1,0,0 \
+  --data-cache-path "${CACHE_DIR}" \
   --distributed-backend nccl \
   --init-method-std 0.02 \
   --lr ${LR} \
@@ -130,6 +147,6 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --use-mpi \
   --use-z-loss \
   --log-throughput \
-  --wandb-name ${JOB_NAME} \
-  --wandb-project ${PROJECT_NAME} \
-  --wandb-entity "llm-jp" \
+  --wandb-entity ${WANDB_ENTITY} \
+  --wandb-project ${WANDB_PROJECT} \
+  --wandb-name ${WANDB_JOB}

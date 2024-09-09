@@ -45,12 +45,20 @@ MIN_LR=3e-5
 WEIGHT_DECAY=0.1
 GRAD_CLIP=1
 
+# data config
+# export $TRAIN_DATA_PATH in this script and $TOTAL_TOKEN_SIZE
+source ./dataset_token_mapper.sh 
+
+# validation set
+VALID_DATA_PATH="" # Skip validation
+
 # total number of iterations
-# 2072488058295 (number of tokens) / 4096 (seq len) / 1024 (batch size) = 494119.65806365 -> 494120
-LR_WARMUP_STEPS=0
-LR_DECAY_ITERS=492120
+# 210,033,012,552 (number of tokens) / 4096 (seq len) / 512 (batch size) = 100151.54 -> 100152
+STEP_DETAIL=$((TOTAL_TOKEN_SIZE / SEQ_LENGTH / GLOBAL_BATCH_SIZE))
+LR_DECAY_ITERS=$(awk "BEGIN {print int($STEP_DETAIL + 0.5)}")
 LR_DECAY_STYLE=constant
-TRAIN_STEPS=$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))
+LR_WARMUP_STEPS=0
+TRAIN_STEPS=$((LR_WARMUP_STEPS + LR_DECAY_ITERS))
 
 # model config
 TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
@@ -59,16 +67,10 @@ CHECKPOINT_SAVE_DIR=checkpoints/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_
 
 mkdir -p ${CHECKPOINT_SAVE_DIR}
 
-# data config
-source ./dataset_token_mapper.sh 
-
-# validation set
-VALID_DATA_PATH="" # Skip validation
-
 # job name
 JOB_NAME="llama-2-1.7b-cpt1a"
 PROJECT_NAME="high-quality-cpt"
-
+exit 1
 # run
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
@@ -98,7 +100,7 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --lr ${LR} \
   --min-lr ${MIN_LR} \
   --lr-decay-style ${LR_DECAY_STYLE} \
-  --lr-decay-iters ${LR_DECAY_ITERS} \
+  --lr-decay-iters "${LR_DECAY_ITERS}" \
   --weight-decay ${WEIGHT_DECAY} \
   --clip-grad ${GRAD_CLIP} \
   --lr-warmup-iters ${LR_WARMUP_STEPS} \

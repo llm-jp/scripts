@@ -2,7 +2,7 @@
 
 set -euxo pipefail
 
-# common settings
+# Common settings
 SCRIPT_PATH="../megatron_data_formatter.sh"
 V3_0_INFO_ROOT="/model/llmjp0/Megatron-LM/scripts/mdx/tokenize/GENIAC/token_info"
 V3_1_INFO_ROOT="/model/llm-jp-corpus/v3.1.0/tokenize/v3.0b1/token_info"
@@ -33,3 +33,7 @@ JA_V3_0_INFO_FILE="${V3_0_INFO_ROOT}/2024_0410_ja.csv"
 JA_OTHER_PREFIX="train/ja/cc train/ja/kaken train/ja/warp-html train/ja/wiki"
 JA_OTHER_REPEAT=0.2028
 source "$SCRIPT_PATH" "$JA_V3_0_INFO_FILE" "$JA_OTHER_REPEAT" "$JA_OTHER_PREFIX"
+
+# Display token size and get $TOTAL_TOKEN_SIZE
+display_file_and_tokens "$TRAIN_DATA_PATH"
+export TOTAL_TOKEN_SIZE

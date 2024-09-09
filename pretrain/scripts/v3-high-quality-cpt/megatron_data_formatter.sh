@@ -5,7 +5,7 @@
 # Usage: Run `bash megatron_data_formatter.sh INFO_FILE REPEAT_SIZE (INCLUDE_CHARS)`
 # - INFO_FILE: CSV file that contains the dataset information (token count, file path, etc.).
 # - REPEAT_SIZE: Multiplier to adjust the token count (e.g., 0.25 or 1.0).
-# - INCLUDE_CHARS: (Optional) Space-separated list of strings to filter in the dataset paths. 
+# - INCLUDE_CHARS: (Optional) Space-separated list of strings to filter in the dataset paths.
 #   The script will include only the lines in the dataset path output that contain any of these strings.
 #
 # The script reads the dataset information from INFO_FILE, multiplies the token counts by REPEAT_SIZE, and formats each dataset path with its adjusted token count.
@@ -28,30 +28,65 @@ INFO_FILE=$1
 REPEAT=$2
 INCLUDE_CHARS=${3:-}
 
-# format information
+# Function to load dataset paths ($DATA_PATH_SET) and export TRAIN_DATA_PATH
+load_train_data_paths() {
+  while IFS= read -r line; do
+    eval "$line"
+    export TRAIN_DATA_PATH
+  done <<<"$1"
+}
+
+# Function to display dataset paths and their token counts
+display_file_and_tokens() {
+  set +x
+  declare -A LANG_TOTAL_TOKENS
+  TOTAL_TOKEN_SIZE=0
+
+  printf >&2 "%-5s %-20s %15s\n" "Lang" "File Name" "Token Size"
+
+  set -- $TRAIN_DATA_PATH
+  while [ $# -gt 1 ]; do
+    token_size=$1
+    lang=$(basename "$(dirname "$2")")
+    filename=$(basename "${2%.jsonl_text_document}")
+    printf >&2 "%-5s %-20s %'15d\n" "$lang" "$filename" "$token_size"
+
+    if [[ -z "${LANG_TOTAL_TOKENS[$lang]:-}" ]]; then
+      LANG_TOTAL_TOKENS[$lang]=$token_size
+    else
+      LANG_TOTAL_TOKENS[$lang]=$((LANG_TOTAL_TOKENS[$lang] + token_size))
+    fi
+    TOTAL_TOKEN_SIZE=$((TOTAL_TOKEN_SIZE + token_size))
+
+    shift 2
+  done
+
+  echo >&2 "Summary"
+  for lang in "${!LANG_TOTAL_TOKENS[@]}"; do
+    printf >&2 "%-5s %'15d\n" "$lang" "${LANG_TOTAL_TOKENS[$lang]}"
+  done
+
+  printf >&2 "%-5s %'15d\n" "ALL" "$TOTAL_TOKEN_SIZE"
+  set -x
+  export TOTAL_TOKEN_SIZE
+}
+# Format information from INFO_FILE
 DATA_PATH_SET=$(awk -v repeat="$REPEAT" -F, '{printf "TRAIN_DATA_PATH=\"${TRAIN_DATA_PATH} %d %s\"\n", int(($3 * repeat) + 0.5), $2}' "$INFO_FILE")
 
-
+# Ensure TRAIN_DATA_PATH is initialized if not already
 if [ -z "${TRAIN_DATA_PATH:-}" ]; then
   TRAIN_DATA_PATH=""
 fi
 
+# Process data with optional filtering
 if [ -n "$INCLUDE_CHARS" ]; then
   IFS=$' '
   for pattern in $INCLUDE_CHARS; do
-    SINGLE_DATA_PATH=$(echo "$DATA_PATH_SET" | grep "$pattern")
-    IFS=$'\n'
-    for line in $SINGLE_DATA_PATH; do
-      eval "$line"
-      export TRAIN_DATA_PATH
-    done
+    SINGLE_DATA_PATH=$(echo "$DATA_PATH_SET" | grep "$pattern" || true) # Prevent grep failure if no match
+    if [ -n "$SINGLE_DATA_PATH" ]; then
+      load_train_data_paths "$SINGLE_DATA_PATH"
+    fi
   done
 else
-  IFS=$'\n'
-  for line in $DATA_PATH_SET; do
-      eval "$line"
-      export TRAIN_DATA_PATH
-    done
+  load_train_data_paths "$DATA_PATH_SET"
 fi
-
-echo "$TRAIN_DATA_PATH"

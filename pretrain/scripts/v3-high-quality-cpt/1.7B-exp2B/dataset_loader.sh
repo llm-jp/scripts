@@ -17,9 +17,9 @@ JA_CC1_REPEAT=0.8996
 JA_WIKI_FILTER="train/ja/wiki"
 JA_WIKI_REPEAT=2
 
-set +eux
+set +x
 process_info "$JA_V3_0_INFO_FILE" "$JA_CC1_REPEAT" "$JA_CC1_FILTER"
 process_info "$JA_V3_0_INFO_FILE" "$JA_WIKI_REPEAT" "$JA_WIKI_FILTER"
 # get $TOTAL_TOKEN_SIZE
 check_load_dataset "$TRAIN_DATA_PATH"
-set -eux
+set -x

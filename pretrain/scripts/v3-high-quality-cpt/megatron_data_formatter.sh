@@ -98,7 +98,7 @@ check_load_dataset() {
       DUPLICATE_MSG="Duplicate entry for $combination."
       if [ "$FORCE" = false ]; then
         echo "Error: $DUPLICATE_MSG Exiting."
-        exit 1
+        return 1
       else
         echo "Warning: $DUPLICATE_MSG"
       fi

@@ -5,8 +5,12 @@
 set -eu -o pipefail
 
 # EXPERIMENT_DIR=  # set by sbatch
+# SCRIPT_ROOT # set by sbatch
+# JOB_DIR # set by sbatch
 ENV_DIR=${EXPERIMENT_DIR}/environment
-CACHE_DIR=${EXPERIMENT_DIR}/cache
+WORK_DIR=${EXPERIMENT_DIR}/${JOB_DIR}
+CACHE_DIR=${WORK_DIR}/cache
+SCRIPT_DIR=${SCRIPT_ROOT}/${JOB_DIR}
 
 source ${ENV_DIR}/scripts/environment.sh
 source ${ENV_DIR}/scripts/mpi_variables.sh
@@ -47,7 +51,7 @@ GRAD_CLIP=1
 
 # data config
 # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
-source ./dataset_loader.sh
+source "${SCRIPT_DIR}/dataset_loader.sh" "$SCRIPT_ROOT"
 
 # validation set
 VALID_DATA_PATH="" # Skip validation
@@ -63,17 +67,16 @@ TRAIN_STEPS=$((LR_WARMUP_STEPS + LR_DECAY_ITERS))
 # model config
 TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
 
-CHECKPOINT_ROOT=${EXPERIMENT_DIR}/checkpoints
-
+CHECKPOINT_ROOT=${WORK_DIR}/checkpoints
 CHECKPOINT_SAVE_DIR=${CHECKPOINT_ROOT}
 
 CHECKPOINT_ARGS=""
 if [[ -f "${CHECKPOINT_SAVE_DIR}/latest_checkpointed_iteration.txt" ]]; then
   # resume training
-  CHECKPOINT_LOAD_DIR=${CHECKPOINT_ROOT}
+  CHECKPOINT_LOAD_DIR=${CHECKPOINT_SAVE_DIR}
 else
   # first training
-  CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/pretrained_checkpoint/1.7b-exp2
+  CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/pretrained_checkpoints/1.7b-exp2
   CHECKPOINT_ARGS="--finetune"
 fi
 
@@ -82,8 +85,8 @@ mkdir -p ${CHECKPOINT_SAVE_DIR}
 # job name
 WANDB_ENTITY="llm-jp"
 WANDB_PROJECT="high-quality-cpt"
-WANDB_JOB="llama-2-1.7b-cpt-exp1a"
-
+WANDB_JOB=$JOB_DIR
+exit 1
 # run
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \

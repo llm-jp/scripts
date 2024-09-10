@@ -23,13 +23,9 @@ Experiment: https://github.com/llm-jp/experiments/issues/22
 ```shell
 cd /data/experiments/{exp-id}
 
-# 実行環境と同じ階層にスクリプトをコピー
-cp megatron_data_formatter.sh . 
-cp -r {target directory} .
-
 # ログ保存用ディレクトリ
 mkdir outputs
 
 # 実行
-sbatch sbatch.sh
+sbatch scripts/pretrain/scripts/v3-high-quality-cpt/{job_dir}/sbatch.sh
 ```

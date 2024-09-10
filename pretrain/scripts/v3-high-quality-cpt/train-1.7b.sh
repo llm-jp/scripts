@@ -86,7 +86,7 @@ mkdir -p ${CHECKPOINT_SAVE_DIR}
 WANDB_ENTITY="llm-jp"
 WANDB_PROJECT="high-quality-cpt"
 WANDB_JOB=$JOB_DIR
-exit 1
+
 # run
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \

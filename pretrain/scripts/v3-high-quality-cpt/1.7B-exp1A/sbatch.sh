@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=0022-1.7b_cpt_1a
+#SBATCH --job-name=0022_1.7b-hugh-qaulity-cpt-exp1a
 #SBATCH --partition=gpu-small
 #SBATCH --nodes=4
 #SBATCH --gpus-per-node=8
@@ -10,33 +10,31 @@
 set -eu -o pipefail
 
 # change directory if each experiment will be handled as one experintal issue
-EXPERIMENT_DIR=/home/shared/experiments/0022_v3-1.7b-high-quality-cpt-1A
+EXPERIMENT_DIR=/home/shared/experiments/0022_v3-high-quality-cpt
 ENV_DIR=environment
 
 source ${EXPERIMENT_DIR}/${ENV_DIR}/scripts/environment.sh
 source ${EXPERIMENT_DIR}/${ENV_DIR}/venv/bin/activate
 
-MASTER_ADDR=$(scontrol show hostname "$SLURM_JOB_NODELIST" | head -n1)
-export MASTER_ADDR
+export MASTER_ADDR=$(scontrol show hostname $SLURM_JOB_NODELIST | head -n1)
 export MASTER_PORT=$((10000 + (SLURM_JOBID % 50000)))
 
 echo "MASTER_ADDR=${MASTER_ADDR}"
 
 NUM_NODES=$SLURM_JOB_NUM_NODES
-NUM_GPUS_PER_NODE=$(echo "$SLURM_TASKS_PER_NODE" | cut -d '(' -f 1)
+NUM_GPUS_PER_NODE=$(echo $SLURM_TASKS_PER_NODE | cut -d '(' -f 1)
 NUM_GPUS=$((NUM_NODES * NUM_GPUS_PER_NODE))
 
-echo NUM_NODES="$NUM_NODES"
-echo NUM_GPUS_PER_NODE="$NUM_GPUS_PER_NODE"
+echo NUM_NODES=$NUM_NODES
+echo NUM_GPUS_PER_NODE=$NUM_GPUS_PER_NODE
 echo NUM_GPUS=$NUM_GPUS
 
 mpirun \
   -np $NUM_GPUS \
-  --npernode "$NUM_GPUS_PER_NODE" \
+  --npernode $NUM_GPUS_PER_NODE \
   -bind-to none \
   -map-by slot \
-  -x MASTER_ADDR="$MASTER_ADDR" \
+  -x EXPERIMENT_DIR=$EXPERIMENT_DIR \
+  -x MASTER_ADDR=$MASTER_ADDR \
   -x MASTER_PORT=$MASTER_PORT \
-  -x NUM_NODES="$NUM_NODES" \
-  -x NUM_GPUS_PER_NODE="$NUM_GPUS_PER_NODE" \
   bash train.sh

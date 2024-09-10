@@ -8,9 +8,9 @@ set -eu -o pipefail
 ENV_DIR=${EXPERIMENT_DIR}/environment
 CACHE_DIR=${EXPERIMENT_DIR}/cache
 
-source "${ENV_DIR}"/scripts/environment.sh
-source "${ENV_DIR}"/scripts/mpi_variables.sh
-source "${ENV_DIR}"/venv/bin/activate
+source ${ENV_DIR}/scripts/environment.sh
+source ${ENV_DIR}/scripts/mpi_variables.sh
+source ${ENV_DIR}/venv/bin/activate
 
 # open file limit
 ulimit -n 65536 1048576
@@ -24,8 +24,6 @@ export CUDA_LAUNCH_BLOCKING=0
 export CUDNN_LOGDEST_DBG=stderr
 export CUDNN_LOGERR_DBG=1
 
-NUM_GPUS=$((NUM_NODES * NUM_GPUS_PER_NODE)) # unused var
-
 # model config
 HIDDEN_SIZE=2048
 FFN_HIDDEN_SIZE=7168
@@ -37,7 +35,6 @@ SEQ_LENGTH=4096
 TENSOR_PARALLEL_SIZE=1
 PIPELINE_PARALLEL_SIZE=1
 CONTEXT_PARALLEL_SIZE=1
-DATA_PARALLEL_SIZE=$((NUM_GPUS / (TENSOR_PARALLEL_SIZE * PIPELINE_PARALLEL_SIZE))) # unused var
 
 # training config
 MICRO_BATCH_SIZE=8
@@ -49,8 +46,8 @@ WEIGHT_DECAY=0.1
 GRAD_CLIP=1
 
 # data config
-# export $TRAIN_DATA_PATH in this script and $TOTAL_TOKEN_SIZE
-source ./dataset_token_mapper.sh
+# load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
+source ./dataset_loader.sh
 
 # validation set
 VALID_DATA_PATH="" # Skip validation
@@ -76,20 +73,20 @@ if [[ -f "${CHECKPOINT_SAVE_DIR}/latest_checkpointed_iteration.txt" ]]; then
   CHECKPOINT_LOAD_DIR=${CHECKPOINT_ROOT}
 else
   # first training
-  CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/pretrain_checkpoint
+  CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/pretrained_checkpoint/1.7b-exp2
   CHECKPOINT_ARGS="--finetune"
 fi
 
-mkdir -p "${CHECKPOINT_SAVE_DIR}"
+mkdir -p ${CHECKPOINT_SAVE_DIR}
 
 # job name
 WANDB_ENTITY="llm-jp"
 WANDB_PROJECT="high-quality-cpt"
-WANDB_JOB="llama-2-1.7b-cpt-1a"
+WANDB_JOB="llama-2-1.7b-cpt-exp1a"
 
 # run
 export NVTE_FUSED_ATTN=0
-python "${ENV_DIR}"/src/Megatron-LM/pretrain_gpt.py \
+python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --tensor-model-parallel-size ${TENSOR_PARALLEL_SIZE} \
   --pipeline-model-parallel-size ${PIPELINE_PARALLEL_SIZE} \
   --context-parallel-size ${CONTEXT_PARALLEL_SIZE} \
@@ -105,19 +102,19 @@ python "${ENV_DIR}"/src/Megatron-LM/pretrain_gpt.py \
   --global-batch-size ${GLOBAL_BATCH_SIZE} \
   --train-iters ${TRAIN_STEPS} \
   --tokenizer-type Llama2Tokenizer \
-  --tokenizer-model "${TOKENIZER_MODEL}" \
-  --load "${CHECKPOINT_LOAD_DIR}" \
-  "$CHECKPOINT_ARGS" \
-  --save "${CHECKPOINT_SAVE_DIR}" \
-  --data-path "${TRAIN_DATA_PATH}" \
+  --tokenizer-model ${TOKENIZER_MODEL} \
+  --load ${CHECKPOINT_LOAD_DIR} \
+  $CHECKPOINT_ARGS \
+  --save ${CHECKPOINT_SAVE_DIR} \
+  --data-path ${TRAIN_DATA_PATH} \
   --split 1,0,0 \
-  --data-cache-path "${CACHE_DIR}" \
+  --data-cache-path ${CACHE_DIR} \
   --distributed-backend nccl \
   --init-method-std 0.02 \
   --lr ${LR} \
   --min-lr ${MIN_LR} \
   --lr-decay-style ${LR_DECAY_STYLE} \
-  --lr-decay-iters "${LR_DECAY_ITERS}" \
+  --lr-decay-iters ${LR_DECAY_ITERS} \
   --weight-decay ${WEIGHT_DECAY} \
   --clip-grad ${GRAD_CLIP} \
   --lr-warmup-iters ${LR_WARMUP_STEPS} \

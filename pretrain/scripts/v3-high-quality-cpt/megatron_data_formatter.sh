@@ -10,7 +10,7 @@ process_info() {
   REPEAT=$2
   INCLUDE_CHARS=${3:-}
 
-  if [ -z "$INCLUDE_CHARS" ]; then
+  if [ -z "$TRAIN_DATA_PATH" ]; then
     TRAIN_DATA_PATH=""
   fi
 

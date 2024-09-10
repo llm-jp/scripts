@@ -14,7 +14,7 @@ EXPERIMENT_DIR=/home/shared/experiments/0022_v3-high-quality-cpt
 JOB_DIR=1.7B-exp1B
 
 ENV_DIR=${EXPERIMENT_DIR}/environment
-SCRIPT_ROOT=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v3-high-quality-cpt/
+SCRIPT_ROOT=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v3-high-quality-cpt
 
 source ${EXPERIMENT_DIR}/${ENV_DIR}/scripts/environment.sh
 source ${EXPERIMENT_DIR}/${ENV_DIR}/venv/bin/activate

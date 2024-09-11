@@ -14,6 +14,8 @@ The following directories and contents must be exist before running scripts in t
 
 ## Scripts
 
+All scripts must be invoked from the root of the experiment directory.
+
 * `run_train.sh`: Runs cont'd training with several configurations
 * `run_convert.sh`: Runs model conversion to Hugging Face format
 * `run_eval.sh`: Runs llm-jp-eval 1.3.1 evaluation

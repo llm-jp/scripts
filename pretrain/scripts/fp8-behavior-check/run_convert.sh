@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p checkpoints_hf
+
 for d in $(ls checkpoints/3.8b); do
     echo $d
     sbatch \

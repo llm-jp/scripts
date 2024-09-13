@@ -52,7 +52,7 @@ GRAD_CLIP=1
 # total number of iterations
 # 2072488058295 (number of tokens) / 4096 (seq len) / 512 (batch size) = 988239.316127 -> 988240
 LR_WARMUP_STEPS=2000
-LR_DECAY_ITERS=988240
+LR_DECAY_ITERS=986240
 TRAIN_STEPS=$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))
 
 # model config

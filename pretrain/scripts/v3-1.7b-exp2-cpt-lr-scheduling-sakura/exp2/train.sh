@@ -51,10 +51,9 @@ GRAD_CLIP=1
 
 # total number of iterations
 # 2072488058295 (number of tokens) / 4096 (seq len) / 512 (batch size) = 988239.316127 -> 988240
-# 988240 + 988240 = 1976480
 LR_WARMUP_STEPS=2000
 LR_DECAY_ITERS=988240
-TRAIN_STEPS=$(((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}) * 2))
+TRAIN_STEPS=$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))
 
 # model config
 TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model

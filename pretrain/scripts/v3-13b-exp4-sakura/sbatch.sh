@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=llama-2-13b-exp4
+#SBATCH --job-name=1_train
 #SBATCH --partition=gpu-small
-#SBATCH --nodes=32
+#SBATCH --nodes=16
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks-per-node=8
 #SBATCH --output=outputs/%x-%j.out

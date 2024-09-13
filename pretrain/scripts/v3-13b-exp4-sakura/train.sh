@@ -51,16 +51,19 @@ LR_WARMUP_STEPS=2000
 LR_DECAY_ITERS=492120
 TRAIN_STEPS=$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))
 
+EXPERIMENT_DIR=/home/shared/experiments/1
+CACHE_DIR=${EXPERIMENT_DIR}/cache
+
 # model config
 TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
-CHECKPOINT_LOAD_DIR=checkpoints/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_SIZE}-cp${CONTEXT_PARALLEL_SIZE}
-CHECKPOINT_SAVE_DIR=checkpoints/tp${TENSOR_PARALLEL_SIZE}-pp${PIPELINE_PARALLEL_SIZE}-cp${CONTEXT_PARALLEL_SIZE}
+CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/checkpoints
+CHECKPOINT_SAVE_DIR=${EXPERIMENT_DIR}/checkpoints
 
 mkdir -p ${CHECKPOINT_SAVE_DIR}
 
 # data config
-DATASET_DIR=/data/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0
-DATASET_V3_1_DIR=/data/llm-jp-corpus/v3.1.0/tokenize/v3.0b1
+DATASET_DIR=/home/shared/corpus/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0
+DATASET_V3_1_DIR=/home/shared/corpus/llm-jp-corpus/v3.1.0/tokenize/v3.0b1
 
 TRAIN_DATA_PATH=""
 
@@ -242,7 +245,7 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --save ${CHECKPOINT_SAVE_DIR} \
   --data-path ${TRAIN_DATA_PATH} \
   --split 1000,0,0 \
-  --data-cache-path cache \
+  --data-cache-path ${CACHE_DIR} \
   --distributed-backend nccl \
   --init-method-std 0.02 \
   --lr ${LR} \

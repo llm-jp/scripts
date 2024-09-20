@@ -50,8 +50,12 @@ WEIGHT_DECAY=0.1
 GRAD_CLIP=1
 
 # data config
+DATA_CONFIG="$WORK_DIR/data_config.sh"
+python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG"
+source "$DATA_CONFIG"
+
 # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
-source "${SCRIPT_DIR}/dataset_loader.sh" "$SCRIPT_ROOT"
+
 
 # validation set
 VALID_DATA_PATH="" # Skip validation
@@ -88,6 +92,7 @@ WANDB_PROJECT="high-quality-cpt"
 WANDB_JOB=$JOB_DIR
 
 # run
+exit 1
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --tensor-model-parallel-size ${TENSOR_PARALLEL_SIZE} \

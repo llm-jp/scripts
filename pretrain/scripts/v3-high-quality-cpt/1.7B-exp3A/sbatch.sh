@@ -16,8 +16,8 @@ JOB_DIR=1.7B-exp3A
 ENV_DIR=${EXPERIMENT_DIR}/environment
 SCRIPT_ROOT=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v3-high-quality-cpt/
 
-source ${EXPERIMENT_DIR}/${ENV_DIR}/scripts/environment.sh
-source ${EXPERIMENT_DIR}/${ENV_DIR}/venv/bin/activate
+source ${ENV_DIR}/scripts/environment.sh
+source ${ENV_DIR}/venv/bin/activate
 
 export MASTER_ADDR=$(scontrol show hostname $SLURM_JOB_NODELIST | head -n1)
 export MASTER_PORT=$((10000 + (SLURM_JOBID % 50000)))

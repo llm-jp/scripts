@@ -14,12 +14,14 @@ datasets:
   ja_v3_1_pdf00:
     basedir: "v3_1_info_root"
     file: "2024_0718_ja_train2.sakura_home.csv"
-    filter: "train2/ja/warp-pdf-e00"
+    filter: 
+      - "train2/ja/warp-pdf-e00"
     repeat: 0.2028
   ja_v3_1_pdf02:
     basedir: "v3_1_info_root"
     file: "2024_0718_ja_train2.sakura_home.csv"
-    filter: "train2/ja/warp-pdf-e02"
+    filter: 
+      - "train2/ja/warp-pdf-e02"
     repeat: 0.1014
   ja_other:
     basedir: "v3_0_info_root"

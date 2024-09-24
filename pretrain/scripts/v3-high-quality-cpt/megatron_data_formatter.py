@@ -3,6 +3,48 @@ This module processes dataset information from CSV files, adjusts token counts,
 and filters entries based on a YAML configuration file. It loads dataset paths, 
 calculates total token sizes, and checks for duplicates, with optional detailed output.
 
+CSV File Specification:
+    The CSV file should have the following structure:
+    - Each row represents a dataset entry.
+    - The columns in the CSV file are:
+        1. Unused (can be ignored by the script).
+        2. Dataset path (a string representing the path to the dataset).
+        3. Token size (an integer representing the number of tokens in the dataset).
+
+    Example of a valid CSV format:
+        , /path/to/dataset1.jsonl, 1000
+        , /path/to/dataset2.jsonl, 1500
+        , /path/to/dataset3.jsonl, 2000
+
+YAML Configuration Specification:
+    The YAML configuration file defines the datasets and optionally a common 
+    base directory for shared file paths. Each dataset includes a path to the CSV file, 
+    a repeat factor, and an optional filter for specific dataset patterns.
+
+    Fields:
+        - common: (optional) Defines shared directories or common settings.
+        - datasets: Defines the datasets to be processed. Each dataset must include:
+            * basedir: (optional) A Directory that can be referenced in each dataset
+            to avoid repeating the full path.
+            * file: Path to the CSV file containing dataset information. If a base 
+              directory is provided in the common section, the `file` path will be 
+              relative to this `basedir`.
+            * repeat: A multiplier applied to the token sizes from the CSV file.
+            * filter: (optional) A list of strings used to filter dataset paths.
+
+    Example of a valid YAML configuration:
+
+        common:
+            corpus_root: /path/to/corpus_root
+        
+        datasets:
+            ja:
+                basedir: corpus_root
+                file: ja.csv
+                repeat: 1.0
+                filter:
+                  - "wiki"
+
 Usage:
     python3 megatron_data_formatter.py {yaml_config_file} [-f] [-d]
 
@@ -13,10 +55,15 @@ Arguments:
 """
 
 import csv
+import logging
 from argparse import ArgumentParser
 from pathlib import Path
 
 import yaml
+
+# Set up logging configuration
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 # Argument parser setup
 argparser = ArgumentParser()
@@ -45,7 +92,7 @@ def process_info(
     Args:
         info_file (Path): Path to the CSV file containing dataset information.
         repeat (float): Multiplier for token sizes.
-        include_chars (list[str], optional): List of filter patterns. Defaults to an empty list.
+        filters (list[str], optional): List of filter patterns.
 
     Returns:
         list[str]: List of formatted dataset strings (token size and data path).
@@ -79,9 +126,9 @@ def check_load_dataset(
 
     if display_details:
         lang_total_tokens: dict[str, int] = {}
-        print(f"{'Lang':<5} {'File Name':<20} {'Token Size':>15}")
+        logger.info("%-5s %-20s %15s", "Lang", "File Name", "Token Size")
 
-    data_entries = train_data_path.strip().split()
+    data_entries = train_data_path.split()
     for i in range(0, len(data_entries), 2):
         token_size = int(data_entries[i])
         data_path = Path(data_entries[i + 1])
@@ -94,21 +141,21 @@ def check_load_dataset(
             if not force:
                 raise ValueError(common_msg)
             else:
-                print(f"Warning: {common_msg}")
+                logger.warning("Warning: %s", common_msg)
         else:
             file_checker.add(combination)
 
         if display_details:
-            print(f"{lang:<5} {file_name:<20} {token_size:>15,}")
+            logger.info("%-5s %-20s %15s", lang, file_name, f"{token_size:,}")
             lang_total_tokens[lang] = lang_total_tokens.get(lang, 0) + token_size
 
         total_token_size += token_size
 
     if display_details:
-        print("\nSummary:")
+        logger.info("\nSummary:")
         for lang, total in lang_total_tokens.items():
-            print(f"{lang:<5} {total:>15,}")
-        print(f"ALL   {total_token_size:>15,}")
+            logger.info("%-5s %15s", lang, f"{total:,}")
+        logger.info("%-5s %15s", "ALL", f"{total_token_size:,}")
 
     print(f"export TOTAL_TOKEN_SIZE={total_token_size}")
 
@@ -130,21 +177,14 @@ def main(config_path: str, force: bool = False, display_details: bool = False) -
     for params in config["datasets"].values():
         basedir = Path("")
         if "basedir" in params:
-            if params["basedir"] in config["common"]:
-                basedir = Path(config["common"][params["basedir"]])
-                assert basedir.exists(), f"Base directory {basedir} does not exist."
-            elif Path(params["basedir"]).exists():
-                basedir = Path(params["basedir"])
-            else:
-                raise ValueError(f"Invalid basedir: {params['basedir']}")
-
-        info_file = basedir / Path(params["file"])
+            basedir = Path(config["common"].get(params["basedir"], params["basedir"]))
+            assert basedir.exists(), f"Base directory {basedir} does not exist."
+        info_file = basedir / params["file"]
         repeat = float(params["repeat"])
         filters = params.get("filter", None)
-        filters = [filters] if isinstance(filters, str) else filters
         assert filters is None or isinstance(
             filters, list
-        ), f"{filters=} must be a string or list of strings."
+        ), f"{filters=} must be a list of strings."
         token_and_path.extend(process_info(info_file, repeat, filters))
 
     train_data_path = " ".join(token_and_path)

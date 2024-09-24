@@ -31,7 +31,6 @@ argparser.add_argument(
     "-d",
     "--display",
     action="store_true",
-    default=False,
     help="Display detailed dataset statistics including token sizes and paths",
 )
 

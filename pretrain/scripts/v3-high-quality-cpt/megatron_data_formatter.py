@@ -45,13 +45,18 @@ YAML Configuration Specification:
                 filter:
                   - "wiki"
 
+Output:
+    - Environment variables (such as TOTAL_TOKEN_SIZE and TRAIN_DATA_PATH) will be 
+      printed to stdout.
+    - Statistical information such as token size summaries and warnings will be 
+      logged to stderr.                  
+
 Usage:
-    python3 megatron_data_formatter.py {yaml_config_file} [-f] [-d]
+    python3 megatron_data_formatter.py {yaml_config_file} [-f]
 
 Arguments:
     yaml_config_file    Path to the YAML configuration file.
     -f, -force          Ignore duplicate dataset entries.
-    -d, -display        Display detailed dataset statistics including token sizes and paths.
 """
 
 import csv
@@ -73,12 +78,6 @@ argparser.add_argument(
     "--force",
     action="store_true",
     help="Ignore duplicate dataset entries",
-)
-argparser.add_argument(
-    "-d",
-    "--display",
-    action="store_true",
-    help="Display detailed dataset statistics including token sizes and paths",
 )
 
 
@@ -109,9 +108,7 @@ def process_info(
     return data_paths
 
 
-def check_load_dataset(
-    train_data_path: str, force: bool = False, display_details: bool = False
-) -> None:
+def check_load_dataset(train_data_path: str, force: bool = False) -> None:
     """
     Checks and displays the dataset details including token sizes and file names.
     Optionally detects and handles duplicate entries.
@@ -119,14 +116,12 @@ def check_load_dataset(
     Args:
         train_data_path (str): The TRAIN_DATA_PATH string containing dataset paths and token sizes.
         force (bool, optional): If True, ignore duplicates and continue. Defaults to False.
-        display_details (bool, optional): If True, display detailed token size breakdown. Defaults to False.
     """
     total_token_size = 0
     file_checker = set()
 
-    if display_details:
-        lang_total_tokens: dict[str, int] = {}
-        logger.info("%-5s %-20s %15s", "Lang", "File Name", "Token Size")
+    lang_total_tokens: dict[str, int] = {}
+    logger.info("%-5s %-20s %15s", "Lang", "File Name", "Token Size")
 
     data_entries = train_data_path.split()
     for i in range(0, len(data_entries), 2):
@@ -145,29 +140,26 @@ def check_load_dataset(
         else:
             file_checker.add(combination)
 
-        if display_details:
-            logger.info("%-5s %-20s %15s", lang, file_name, f"{token_size:,}")
-            lang_total_tokens[lang] = lang_total_tokens.get(lang, 0) + token_size
+        logger.info("%-5s %-20s %15s", lang, file_name, f"{token_size:,}")
+        lang_total_tokens[lang] = lang_total_tokens.get(lang, 0) + token_size
 
         total_token_size += token_size
 
-    if display_details:
-        logger.info("\nSummary:")
-        for lang, total in lang_total_tokens.items():
-            logger.info("%-5s %15s", lang, f"{total:,}")
-        logger.info("%-5s %15s", "ALL", f"{total_token_size:,}")
+    logger.info("\nSummary:")
+    for lang, total in lang_total_tokens.items():
+        logger.info("%-5s %15s", lang, f"{total:,}")
+    logger.info("%-5s %15s", "ALL", f"{total_token_size:,}")
 
     print(f"export TOTAL_TOKEN_SIZE={total_token_size}")
 
 
-def main(config_path: str, force: bool = False, display_details: bool = False) -> None:
+def main(config_path: str, force: bool = False) -> None:
     """
     Main function to process datasets as defined in the configuration file.
 
     Args:
         config_path (str): Path to the YAML configuration file.
         force (bool, optional): If True, ignore duplicates. Defaults to False.
-        display_details (bool, optional): If True, display detailed token size breakdown. Defaults to False.
     """
     with open(config_path, "r", encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -191,9 +183,9 @@ def main(config_path: str, force: bool = False, display_details: bool = False) -
     print(f'export TRAIN_DATA_PATH="{train_data_path}"')
 
     # Check and print dataset summary
-    check_load_dataset(train_data_path, force=force, display_details=display_details)
+    check_load_dataset(train_data_path, force=force)
 
 
 if __name__ == "__main__":
     args = argparser.parse_args()
-    main(args.yaml_config, force=args.force, display_details=args.display)
+    main(args.yaml_config, force=args.force)

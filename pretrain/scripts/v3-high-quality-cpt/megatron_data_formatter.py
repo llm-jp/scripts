@@ -54,7 +54,7 @@ def process_info(
     with open(info_file, newline="", encoding="utf-8") as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
-            token_count = int(int(row[2]) * repeat + 0.5)
+            token_count = round(int(row[2]) * repeat)
             data_path = row[1]
             # Filter by filters if provided, otherwise add the path
             if filters is None or any(pattern in data_path for pattern in filters):

@@ -136,7 +136,7 @@ def check_load_dataset(train_data_path: str, force: bool = False) -> None:
             if not force:
                 raise ValueError(common_msg)
             else:
-                logger.warning("Warning: %s", common_msg)
+                logger.warning(common_msg)
         else:
             file_checker.add(combination)
 

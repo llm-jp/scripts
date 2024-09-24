@@ -92,7 +92,7 @@ def check_load_dataset(
         if combination in file_checker:
             common_msg = f"Duplicate entry for {combination}."
             if not force:
-                raise ValueError(f"{common_msg} Exiting.")
+                raise ValueError(common_msg)
             else:
                 print(f"Warning: {common_msg}")
         else:

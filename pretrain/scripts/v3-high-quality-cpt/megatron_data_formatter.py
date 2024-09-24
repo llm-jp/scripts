@@ -25,7 +25,6 @@ argparser.add_argument(
     "-f",
     "--force",
     action="store_true",
-    default=False,
     help="Ignore gnore duplicate dataset entries",
 )
 argparser.add_argument(

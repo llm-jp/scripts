@@ -44,8 +44,9 @@ CONTEXT_PARALLEL_SIZE=1
 MICRO_BATCH_SIZE=4
 GLOBAL_BATCH_SIZE=512
 
+LR_WARMUP_INIT=3e-5
 LR=3e-5
-MIN_LR=3e-5
+MIN_LR=3e-6
 WEIGHT_DECAY=0.1
 GRAD_CLIP=1
 
@@ -64,7 +65,7 @@ VALID_DATA_PATH="" # Skip validation
 # 210,033,012,552 (number of tokens) / 4096 (seq len) / 512 (batch size) = 100151.54 -> 100152
 STEP_DETAIL=$((TOTAL_TOKEN_SIZE / SEQ_LENGTH / GLOBAL_BATCH_SIZE))
 LR_DECAY_ITERS=$(awk "BEGIN {print int($STEP_DETAIL + 0.5)}")
-LR_DECAY_STYLE=constant
+LR_DECAY_STYLE=cosine
 LR_WARMUP_STEPS=0
 TRAIN_STEPS=$((LR_WARMUP_STEPS + LR_DECAY_ITERS))
 
@@ -119,6 +120,7 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --data-cache-path ${CACHE_DIR} \
   --distributed-backend nccl \
   --init-method-std 0.02 \
+  --lr-warmup-init ${LR_WARMUP_INIT} \
   --lr ${LR} \
   --min-lr ${MIN_LR} \
   --lr-decay-style ${LR_DECAY_STYLE} \

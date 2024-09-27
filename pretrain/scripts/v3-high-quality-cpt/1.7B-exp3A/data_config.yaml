@@ -1,0 +1,8 @@
+common:
+  v3_0_info_root: "/home/shared/corpus/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0/token_info"
+
+datasets:
+  en:
+    basedir: "v3_0_info_root"
+    file: "2024_0410_en.sakura_home.csv"
+    repeat: 0.2211

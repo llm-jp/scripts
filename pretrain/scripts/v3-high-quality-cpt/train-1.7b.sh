@@ -11,6 +11,7 @@ ENV_DIR=${EXPERIMENT_DIR}/environment
 WORK_DIR=${EXPERIMENT_DIR}/${JOB_DIR}
 CACHE_DIR=${WORK_DIR}/cache
 SCRIPT_DIR=${SCRIPT_ROOT}/${JOB_DIR}
+mkdir -p "$WORK_DIR"
 
 source ${ENV_DIR}/scripts/environment.sh
 source ${ENV_DIR}/scripts/mpi_variables.sh
@@ -52,7 +53,7 @@ GRAD_CLIP=1
 
 # data config
 DATA_CONFIG="$WORK_DIR/data_config.sh"
-python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG"
+python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG" 2> /dev/null
 source "$DATA_CONFIG"
 
 # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
@@ -93,7 +94,6 @@ WANDB_PROJECT="high-quality-cpt"
 WANDB_JOB=$JOB_DIR
 
 # run
-exit 1
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --tensor-model-parallel-size ${TENSOR_PARALLEL_SIZE} \

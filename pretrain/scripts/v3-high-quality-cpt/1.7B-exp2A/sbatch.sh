@@ -42,4 +42,4 @@ mpirun \
   -x JOB_DIR=$JOB_DIR \
   -x MASTER_ADDR=$MASTER_ADDR \
   -x MASTER_PORT=$MASTER_PORT \
-  bash ${EXPERIMENT_DIR}/train-1.7b.sh
+  bash ${SCRIPT_ROOT}/train-1.7b.sh

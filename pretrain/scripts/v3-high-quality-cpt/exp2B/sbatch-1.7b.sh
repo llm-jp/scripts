@@ -11,7 +11,7 @@ set -eu -o pipefail
 
 # change directory if each experiment will be handled as one experintal issue
 EXPERIMENT_DIR=/home/shared/experiments/0022_v3-high-quality-cpt
-JOB_DIR=1.7B-exp2B
+JOB_DIR=exp2B
 
 ENV_DIR=${EXPERIMENT_DIR}/environment
 SCRIPT_ROOT=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v3-high-quality-cpt/

@@ -6,11 +6,14 @@ set -eu -o pipefail
 
 # EXPERIMENT_DIR=  # set by sbatch
 # SCRIPT_ROOT # set by sbatch
-# JOB_DIR # set by sbatch
+# CONF_DIR # set by sbatch
+MODEL_SIZE="1.7B"
+EXP_NAME="${MODEL_SIZE}-${CONF_DIR}"
 ENV_DIR=${EXPERIMENT_DIR}/environment
-WORK_DIR=${EXPERIMENT_DIR}/${JOB_DIR}
+WORK_DIR=${EXPERIMENT_DIR}/${EXP_NAME}
 CACHE_DIR=${WORK_DIR}/cache
-SCRIPT_DIR=${SCRIPT_ROOT}/${JOB_DIR}
+SCRIPT_DIR=${SCRIPT_ROOT}/${CONF_DIR}
+mkdir -p "$WORK_DIR"
 
 source ${ENV_DIR}/scripts/environment.sh
 source ${ENV_DIR}/scripts/mpi_variables.sh
@@ -52,7 +55,7 @@ GRAD_CLIP=1
 
 # data config
 DATA_CONFIG="$WORK_DIR/data_config.sh"
-python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG"
+python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG" 2> /dev/null
 source "$DATA_CONFIG"
 
 # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
@@ -90,10 +93,9 @@ mkdir -p ${CHECKPOINT_SAVE_DIR}
 # job name
 WANDB_ENTITY="llm-jp"
 WANDB_PROJECT="high-quality-cpt"
-WANDB_JOB=$JOB_DIR
+WANDB_NAME=$EXP_NAME
 
 # run
-exit 1
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --tensor-model-parallel-size ${TENSOR_PARALLEL_SIZE} \
@@ -156,4 +158,4 @@ python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
   --log-throughput \
   --wandb-entity ${WANDB_ENTITY} \
   --wandb-project ${WANDB_PROJECT} \
-  --wandb-name ${WANDB_JOB}
+  --wandb-name ${WANDB_NAME}

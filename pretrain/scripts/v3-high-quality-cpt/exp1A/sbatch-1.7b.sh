@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=0022_1.7b-hugh-qaulity-cpt-exp2b
+#SBATCH --job-name=0022_1.7b-hugh-qaulity-cpt-exp1a
 #SBATCH --partition=gpu-small
 #SBATCH --nodes=4
 #SBATCH --gpus-per-node=8
@@ -11,7 +11,7 @@ set -eu -o pipefail
 
 # change directory if each experiment will be handled as one experintal issue
 EXPERIMENT_DIR=/home/shared/experiments/0022_v3-high-quality-cpt
-JOB_DIR=1.7B-exp2B
+CONF_DIR=exp1A
 
 ENV_DIR=${EXPERIMENT_DIR}/environment
 SCRIPT_ROOT=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v3-high-quality-cpt/
@@ -39,7 +39,7 @@ mpirun \
   -map-by slot \
   -x EXPERIMENT_DIR=$EXPERIMENT_DIR \
   -x SCRIPT_ROOT=$SCRIPT_ROOT \
-  -x JOB_DIR=$JOB_DIR \
+  -x CONF_DIR=$CONF_DIR \
   -x MASTER_ADDR=$MASTER_ADDR \
   -x MASTER_PORT=$MASTER_PORT \
-  bash ${EXPERIMENT_DIR}/train-1.7b.sh
+  bash ${SCRIPT_ROOT}/train-1.7b.sh

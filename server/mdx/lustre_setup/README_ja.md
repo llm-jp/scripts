@@ -1,4 +1,4 @@
-[English]((README.md))
+[English](README.md)
 # Lustre setup script for mdx
 
 このスクリプトは、mdxの[ストレージマウント](https://docs.mdx.jp/ja/index.html#高速内部ストレージ、大容量ストレージをマウントする)を自動的に行い、`/data`および`/model`ディレクトリをLustreファイルシステムでマウントします。

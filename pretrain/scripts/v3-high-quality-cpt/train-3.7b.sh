@@ -85,7 +85,7 @@ if [[ -f "${CHECKPOINT_SAVE_DIR}/latest_checkpointed_iteration.txt" ]]; then
   CHECKPOINT_LOAD_DIR=${CHECKPOINT_SAVE_DIR}
 else
   # first training
-  CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/pretrained_checkpoints/3.7b-exp1
+  CHECKPOINT_LOAD_DIR=${EXPERIMENT_DIR}/pretrained_checkpoints/3.8b-exp1
   CHECKPOINT_ARGS="--finetune"
 fi
 

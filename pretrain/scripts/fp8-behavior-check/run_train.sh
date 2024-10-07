@@ -5,6 +5,7 @@ run_job() {
     PARAM_SIZE=$1; shift
     sbatch \
         --partition=gpu-small \
+        --nodes=8 \
         scripts/pretrain/scripts/fp8-behavior-check/sbatch_${PARAM_SIZE}.sh \
         $@
 }
@@ -59,4 +60,5 @@ run_job() {
 
 #run_job 3.8b true hybrid 0 1 1 most_recent false 200000 201000
 
-#run_job 13b true hybrid 0 1 1 most_recent true 239000 249000
+run_job 13b true hybrid 0 1 1 most_recent true 0 50000
+#run_job 13b true hybrid 0 1 1 most_recent true 239000 289000

@@ -1,19 +1,16 @@
 #!/bin/bash
 
-CHECKPOINTS_DIR=checkpoints_hf/3.8b
-
-mkdir -p processed
-
-for d in $(ls ${CHECKPOINTS_DIR}); do
-    if [[ -f processed/$d ]]; then
-        echo "$d: already processed"
+for cfg_file in $(find checkpoints_hf -name config.json | sort); do
+    cfg=$(dirname $cfg_file | sed 's/checkpoints_hf\///')
+    if [ -e processed/$cfg ]; then
+        echo "Already processed: $cfg"
         continue
     fi
-    sbatch \
-        --partition=gpu-small \
-        --priority=1 \
-        eval_environment/run_llm-jp-eval.sh ${CHECKPOINTS_DIR}/$d $d \
-    && touch processed/$d \
-    && echo "$d: queued"
-done
 
+    sbatch \
+        --partition=gpu-small-lp \
+        scripts/pretrain/scripts/fp8-behavior-check/run_llm-jp-eval.sh checkpoints_hf/$cfg $cfg
+
+    mkdir -p $(dirname processed/$cfg) && touch processed/$cfg
+    echo "Started: $cfg"
+done

@@ -108,7 +108,12 @@ CHECKPOINT_ROOT=${EXPERIMENT_DIR}/checkpoints
 CHECKPOINT_LOAD_DIR=${CHECKPOINT_ROOT}/${PARAM_SIZE}/${LOAD_REL}
 CHECKPOINT_SAVE_DIR=${CHECKPOINT_ROOT}/${PARAM_SIZE}/${SAVE_REL}
 
-mkdir -p ${CHECKPOINT_SAVE_DIR}
+if [ -e $CHECKPOINT_SAVE_DIR ]; then
+    # Continue previous run
+    CHECKPOINT_LOAD_DIR=${CHECKPOINT_SAVE_DIR}
+else
+    mkdir -p ${CHECKPOINT_SAVE_DIR}
+fi
 
 # data config
 DATASET_DIR=/home/shared/corpus/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0

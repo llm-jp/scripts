@@ -60,5 +60,5 @@ run_job() {
 
 #run_job 3.8b true hybrid 0 1 1 most_recent false 200000 201000
 
-run_job 13b true hybrid 0 1 1 most_recent true 0 50000
+#run_job 13b true hybrid 0 1 1 most_recent true 0 50000
 #run_job 13b true hybrid 0 1 1 most_recent true 239000 289000

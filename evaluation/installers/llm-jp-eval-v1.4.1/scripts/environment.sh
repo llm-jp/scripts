@@ -1,5 +1,4 @@
-# List of environment variables and module loads for llm-jp-eval
-
+#!/bin/bash
 export PYTHON_VERSION=3.10.14
 export TORCH_VERSION=2.3.1
 export TORCHVISION_VERSION=0.18.1

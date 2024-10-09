@@ -79,6 +79,7 @@ pushd llm-jp-eval
 if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
   git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
 fi
+pip install --no-cache-dir -r requirements.txt 
 pip install --no-cache-dir .
 
 INFERENCE_SCRIPT=offline_inference/vllm/offline_inference_vllm.py
@@ -93,7 +94,7 @@ python scripts/preprocess_dataset.py \
 
 # Install vllm
 # This implicitly installs vllm-flash-attn with their recommended version
-pip install vllm==${VLLM_VERSION}
+pip install --no-cache-dir vllm==${VLLM_VERSION}
 
 popd  #src
 popd  # $ENV_DIR

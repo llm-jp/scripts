@@ -26,6 +26,7 @@
     ```
 
 3. スクリプトを実行します：
+  - SLURMで実行する際には、`--mem`オプションをモデルサイズの2倍以上にしてください。
     ```shell
     # For a cluster with SLURM
     sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR

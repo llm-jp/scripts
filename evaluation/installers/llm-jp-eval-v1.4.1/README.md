@@ -1,32 +1,32 @@
-# llm-jp-eval v1.4.1 installation and execution script
+[日本語版](README.ja.md)
+# llm-jp-eval v1.4.1 Installation and Execution Script
 
-llm-jp-eval v1.4.1 で評価するためスクリプト<br>
-環境構築のためのスクリプト・評価実行のためのスクリプトを含みます
+Script for evaluation using llm-jp-eval v1.4.1 <br>
+This includes scripts for environment setup and evaluation execution.
+
+Note: In this version, Docker is not supported, so the Code Generation task (mbpp) will be skipped.
 
 ## Usage
 
 ### Build
 
-インストール処理のためにCPUを利用します。
- - SLURM環境ではCPUノードの優先的な利用を推奨
+The installation process requires CPU resources only.
 
-1. リポジトリのクローン
-  ```shell
-  git clone https://github.com/llm-jp/scripts
-  cd scripts/evaluation/installers/llm-jp-eval-v1.4.1
-  ```
-
-2. インストール
-指定したディレクトリ（`~/myspace`）下に環境構築用ディレクトリ (`~/myspace/environment`) が作成されます
-通信速度によりますが、少なくとも20分ほどかかります。
+1. Clone the repository:
+```shell
+git clone https://github.com/llm-jp/scripts
+cd scripts/evaluation/installers/llm-jp-eval-v1.4.1
+```
+2. Installation:
+A directory for environment setup (`~/myspace/environment`) will be created under the specified directory (`~/myspace`).
+Depending on your network speed, it may take at least 20 minutes.
 ```shell
 # For a cluster with SLURM
 sbatch --partition {FIX_ME} install.sh ~/myspace
 # For a cluster without SLURM
 bash install.sh ~/myspace > logs/install.out 2> logs/install.err
 ```
-
-3. (Optional) wandb, huggingface の設定
+3.	(Optional) Configure wandb and Hugging Face:
 ```shell
 cd ~/myspace
 source environment/venv/bin/activate
@@ -34,34 +34,35 @@ wandb login
 huggingface-cli login
 ```
 
-### Contents in installed directory (~/myspace)
+### Contents of the Installed Directory (~/myspace)
 
-インストール終了後、下記のディレクトリ構造が構築されます。
-
+After installation, the following directory structure will be created:
 ```
 ~/myspace/
-    run_llm-jp-eval.sh         評価を実行するスクリプト
-    logs/                      SLURM用ログ保存ディレクトリ
+    run_llm-jp-eval.sh         Script for running the evaluation
+    logs/                      Directory for SLURM logs
     resources/
-        config_base.yaml       評価実行時に読み込む設定ファイルのテンプレート
-    vllm_outputs/              vllm用の出力ディレクトリ
+        config_base.yaml       Template configuration file for evaluation
+    vllm_outputs/              Output directory for vllm
     environment/
-        installer_envvar.log  インストール開始後に記録した環境変数の一覧
-        install.sh            使用したインストールスクリプト
-        dataset/llm-jp-eval   llm-jp-eval評価用データセット
-        python/               Python実行環境
-        scripts/              各種の環境設定用スクリプト
-        src/                  個別ダウンロードされたライブラリ
-        venv/                 Python仮想環境 (python/ にリンク)
+        installer_envvar.log   Log of environment variables recorded after installation started
+        install.sh             Installation script used
+        dataset/llm-jp-eval    Dataset for llm-jp-eval evaluation
+        python/                Python runtime environment
+        scripts/               Various setup scripts
+        src/                   Libraries downloaded individually
+        venv/                  Python virtual environment (linked to python/)
 ```
 
 ### Evaluation
-必要に応じて`run_llm-jp-eval.sh`・`resources/config_*.yaml`内の変数を書き換えてください
- - tokenizer・wandb entity・wandb projectを変更する場合`run_llm-jp-eval.sh`のみの変更で対応可能
- - その他の変更を行う場合、`resources/config_*.yaml`を変更した上で、`run_llm-jp-eval.sh`内でファイルを指定
 
-VRAMはモデルサイズの2.5-3.5倍必要（例: 13B model -> 33GB-45GB）<br>
-SLURM環境で実行する場合、デフォルトでは`--gpus 1`のため、`--mem`と共にクラスタに適切なサイズに設定すること
+Modify the variables in `run_llm-jp-eval.sh` or the `resources/config_*.yaml` files as needed:
+- If you want to change the tokenizer, wandb entity, or wandb project, modifying only `run_llm-jp-eval.sh` will suffice.
+- For other changes, modify `resources/config_*.yaml` and specify the file in `run_llm-jp-eval.sh`.
+
+VRAM needs to be 2.5-3.5 times the model size (e.g., 13B model -> 33GB-45GB).
+If evaluating on more than 2 GPUs, you need to modify `tensor_parallel_size` in `resources/config_offline_inference_vllm.yaml`.
+When running in a SLURM environment, the default is `--gpus 1`, so adjust to the appropriate size for your cluster along with `--mem`.
 ```shell
 cd ~/myspace
 # (Optional) If you need to change variables
@@ -75,15 +76,15 @@ sbatch --partition {FIX_ME} run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
 CUDA_VISIBLE_DEVICES={FIX_ME} bash run_llm-jp-eval.sh {path/to/model} {wandb.run_name}
 ```
 
-#### Sample code
+#### Sample Code
 ```shell
 # Evaluate 70B model on a cluster with SLURM using H100 (VRAM: 80GB)
 sbatch --partition {FIX_ME} --gpus 4 --mem 8G run_llm-jp-eval.sh sbintuitions/sarashina2-70b test-$(whoami)
-# Evakyate 13B model on a cluster without SLURM using A100 (VRAM: 40GB)
+# Evaluate 13B model on a cluster without SLURM using A100 (VRAM: 40GB)
 CUDA_VISIBLE_DEVICES=0,1 bash run_llm-jp-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami)
 ```
 
-## 開発者向け: resources/sha256sums.csv の作成コマンド
+## For Developers: Command to Create resources/sha256sums.csv
 ```shell
 TARGET_DIR={path/to/dataset/directory/containing/json/files}
 find $TARGET_DIR -type f | xargs -I{} sh -c 'echo -e "$(basename {})\t$(sha256sum {} | awk "{print \$1}")"'

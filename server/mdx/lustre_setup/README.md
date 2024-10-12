@@ -1,4 +1,4 @@
-[日本語]((README_ja.md))
+[日本語](README_ja.md)
 # Lustre setup script for mdx
 
 This script automatically configures the [storage mount](https://docs.mdx.jp/ja/index.html#高速内部ストレージ、大容量ストレージをマウントする) for mdx, mounting the `/data` and `/model` directories using the Lustre file system.

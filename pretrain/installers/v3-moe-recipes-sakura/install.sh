@@ -38,7 +38,6 @@ mkdir ${TARGET_DIR}
 pushd ${TARGET_DIR}
 
 # copy basic scripts
-# cp -a ${INSTALLER_DIR}/{install.sh,requirements.txt,scripts,example} .
 cp -a ${INSTALLER_DIR}/{install.sh,requirements.txt,scripts,example} .
 
 source scripts/environment.sh
@@ -105,7 +104,7 @@ popd
 git clone https://github.com/llm-jp/llm-jp-tokenizer -b ${PRETRAIN_TOKENIZER_TAG}
 
 # Clone and build CUTLASS
-git clone https://github.com/NVIDIA/cutlass.git
+git clone https://github.com/NVIDIA/cutlass.git -b ${PRETRAIN_CUTLASS_TAG}
 pushd cutlass
 export CUDACXX=${CUDA_HOME}/bin/nvcc
 mkdir build && pushd build

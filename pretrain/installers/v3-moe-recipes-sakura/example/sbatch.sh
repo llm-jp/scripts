@@ -108,11 +108,17 @@ echo "$DEEPSPEED_CONGIG_CONTENT" >"src/moe-recipes/${DEEPSPEED_CONFIG}"
 # Initialization
 python example/checkpoint_init.py
 
+# Path to tokenizer and initialization checkpoint
+CURRENT_DIR=$(pwd)
+
 mpirun \
   -np $NUM_GPUS \
   --npernode $NUM_GPUS_PER_NODE \
   -bind-to none \
   -map-by slot \
+  -x TORCH_NCCL_ASYNC_ERROR_HANDLING=1 \
+  -x LD_LIBRARY_PATH \
+  -x PATH \
   -x MASTER_ADDR=$MASTER_ADDR \
   -x MASTER_PORT=$MASTER_PORT \
   -x NUM_NODES=$NUM_NODES \
@@ -122,4 +128,5 @@ mpirun \
   -x GLOBAL_BATCH_SIZE=$GLOBAL_BATCH_SIZE \
   -x DEEPSPEED_CONFIG=$DEEPSPEED_CONFIG \
   -x DEEPSPEED_ZERO_STAGE=$DEEPSPEED_ZERO_STAGE \
+  -x CURRENT_DIR=$CURRENT_DIR \
   bash example/train.sh

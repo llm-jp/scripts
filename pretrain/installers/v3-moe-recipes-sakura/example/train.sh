@@ -2,10 +2,19 @@
 # Node-level moe-recipes launcher
 #
 # Environment variables that the script expects to be passed from mpirun:
+# * TORCH_NCCL_ASYNC_ERROR_HANDLING: Enable/disable async error handling for NCCL (1 for enable, 0 for disable)
+# * LD_LIBRARY_PATH: Library path for dynamic linking
+# * PATH: System path for executable files
 # * MASTER_ADDR: Address of the master node
 # * MASTER_PORT: Port number of the master node
 # * NUM_NODES: Number of nodes assigned for this task
 # * NUM_GPUS_PER_NODE: Number of GPUs in the node assined for this task
+# * GRADIENTS_ACCUMULATION_STEPS: Number of gradient accumulation steps
+# * MICRO_BATCH_SIZE: Micro batch size for training
+# * GLOBAL_BATCH_SIZE: Global batch size for training
+# * DEEPSPEED_CONFIG: Path to DeepSpeed configuration file
+# * DEEPSPEED_ZERO_STAGE: DeepSpeed ZeRO stage
+# * CURRENT_DIR: Current working directory
 
 set -eu -o pipefail
 
@@ -28,11 +37,6 @@ SEQ_LENGTH=4096
 SLIDING_WINDOW_SIZE=4096
 DATA_PARALLEL_SIZE=$NUM_GPUS
 
-if [ $GRADIENTS_ACCUMULATION_STEPS -lt 1 ]; then
-  echo "Global batch size is too small for the number of GPUs"
-  exit 1
-fi
-
 TRAIN_STEPS=5000
 
 # optimizer config
@@ -48,7 +52,6 @@ ADAMW_BETA2=0.95
 ADAMW_EPS=1E-8
 
 # model config
-CURRENT_DIR=$(pwd)
 TOKENIZER_MODEL=$CURRENT_DIR/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
 
 if [ ! -f "$TOKENIZER_MODEL" ]; then

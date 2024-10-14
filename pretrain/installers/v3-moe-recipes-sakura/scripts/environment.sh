@@ -15,6 +15,7 @@ export PRETRAIN_TORCHVISION_VERSION=0.18.1
 export PRETRAIN_FLASH_ATTENTION_VERSION=2.6.3
 export PRETRAIN_TRANSFORMERS_TAG=feature/layer-wise-load-balance-loss
 export PRETRAIN_MOE_RECIPES_TAG=sakura
+export PRETRAIN_CUTLASS_TAG=v3.5.1
 # Ensure the appropriate Huggingface tokenizer is included
 # https://github.com/llm-jp/scripts/pull/12#discussion_r1708415209
 export PRETRAIN_TOKENIZER_TAG=v3.0b2

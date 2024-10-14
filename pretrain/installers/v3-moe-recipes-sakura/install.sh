@@ -72,10 +72,12 @@ python -m pip install \
   torchvision==${PRETRAIN_TORCHVISION_VERSION}+cu${PRETRAIN_CUDA_VERSION_SHORT}
 
 # install Transformers
+pushd src
 git clone https://github.com/llm-jp/transformers -b ${PRETRAIN_TRANSFORMERS_TAG}
 pushd transformers
 python -m pip install -e .
-popd
+popd  # transformers
+popd  # src
 
 # install other requirements
 python -m pip install --no-cache-dir -U -r requirements.txt

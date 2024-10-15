@@ -56,7 +56,7 @@ WEIGHT_DECAY=0.1
 GRAD_CLIP=1
 
 # deepspeed config
-DEEPSPEED_CONFIG="deepspeed_config.json"
+DEEPSPEED_CONFIG="src/moe-recipes/deepspeed_config.json"
 
 BF16_ENABLED=true
 DEEPSPEED_ZERO_STAGE=3
@@ -103,13 +103,20 @@ EOF
 )
 
 # write deepspeed config file
-echo "$DEEPSPEED_CONGIG_CONTENT" >"src/moe-recipes/${DEEPSPEED_CONFIG}"
+echo "$DEEPSPEED_CONGIG_CONTENT" >$DEEPSPEED_CONFIG
 
 # Initialization
 python example/checkpoint_init.py
 
-# Path to tokenizer and initialization checkpoint
-CURRENT_DIR=$(pwd)
+PYTHONPATH=${PYTHONPATH:-}
+
+if [ -z "$PYTHONPATH" ]; then
+    export PYTHONPATH="./src/moe-recipes:./src/moe-recipes/src"
+else
+    export PYTHONPATH="./src/moe-recipes:./src/moe-recipes/src:${PYTHONPATH}"
+fi
+
+echo "PYTHONPATH is now: $PYTHONPATH"
 
 mpirun \
   -np $NUM_GPUS \
@@ -128,5 +135,5 @@ mpirun \
   -x GLOBAL_BATCH_SIZE=$GLOBAL_BATCH_SIZE \
   -x DEEPSPEED_CONFIG=$DEEPSPEED_CONFIG \
   -x DEEPSPEED_ZERO_STAGE=$DEEPSPEED_ZERO_STAGE \
-  -x CURRENT_DIR=$CURRENT_DIR \
+  -x PYTHONPATH=$PYTHONPATH \
   bash example/train.sh

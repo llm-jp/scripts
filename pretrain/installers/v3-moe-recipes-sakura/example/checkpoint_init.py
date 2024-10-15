@@ -44,6 +44,6 @@ def save_model_and_config(model_name, save_directory):
 
 if __name__ == "__main__":
     model_name = "example/config.json"
-    save_directory = "Mixtral-llm-jp-v3-8x1.8B-checkpoint_init/"
+    save_directory = "Mixtral-llm-jp-v3-8x1.8B-initial-checkpoint"
 
     save_model_and_config(model_name, save_directory)

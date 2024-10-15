@@ -14,7 +14,7 @@
 # * GLOBAL_BATCH_SIZE: Global batch size for training
 # * DEEPSPEED_CONFIG: Path to DeepSpeed configuration file
 # * DEEPSPEED_ZERO_STAGE: DeepSpeed ZeRO stage
-# * CURRENT_DIR: Current working directory
+# * PYTHONPATH: Python module search path
 
 set -eu -o pipefail
 
@@ -52,16 +52,9 @@ ADAMW_BETA2=0.95
 ADAMW_EPS=1E-8
 
 # model config
-TOKENIZER_MODEL=$CURRENT_DIR/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
+TOKENIZER_MODEL=src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
 
-if [ ! -f "$TOKENIZER_MODEL" ]; then
-    echo "Error: Tokenizer model not found at $TOKENIZER_MODEL"
-    echo "Current directory: $CURRENT_DIR"
-    echo "Please check the path and ensure the file exists."
-    exit 1
-fi
-
-CHECKPOINT_DIR=$CURRENT_DIR/Mixtral-llm-jp-v3-8x1.8B-checkpoint_init/
+CHECKPOINT_DIR=Mixtral-llm-jp-v3-8x1.8B-initial-checkpoint
 CHECKPOINT_SAVE_DIR=checkpoints
 
 mkdir -p ${CHECKPOINT_SAVE_DIR}
@@ -74,8 +67,7 @@ DATA_PATH="${DATA_PATH} 2563804308 ${DATASET_DIR}/train/ja/wiki_0000.jsonl_text_
 # job name
 JOB_NAME="test-$(whoami)"
 
-cd src/moe-recipes/
-python examples/finetuning.py \
+python src/moe-recipes/examples/finetuning.py \
   --seq-length ${SEQ_LENGTH} \
   --sliding-window-size ${SLIDING_WINDOW_SIZE} \
   --micro-batch-size ${MICRO_BATCH_SIZE} \
@@ -96,7 +88,7 @@ python examples/finetuning.py \
   --adam-beta1 $ADAMW_BETA1 \
   --adam-beta2 $ADAMW_BETA2 \
   --adam-eps $ADAMW_EPS \
-  --save-interval 500 \
+  --save-interval 10 \
   --eval-interval 1000000000 \
   --eval-iters 1 \
   --bf16 \

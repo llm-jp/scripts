@@ -1,0 +1,34 @@
+# huggingface
+datasets==3.0.1
+accelerate==1.0.1
+optimum==1.23.1
+peft==0.13.2
+
+appdirs==1.4.4
+loralib==0.1.2
+scipy==1.14.1
+py7zr==0.22.0
+bitsandbytes==0.44.1
+fire==0.7.0
+
+black==24.10.0
+flake8==7.1.1
+
+# tokenizer
+sentencepiece==0.2.0
+
+# logging
+wandb==0.18.3
+
+# multi node
+deepspeed==0.15.2
+mpi4py==4.0.1
+
+# megatron-lm
+nltk==3.9.1
+pybind11==2.13.6
+
+# fa2
+ninja==1.11.1.1
+packaging==24.1
+wheel==0.44.0

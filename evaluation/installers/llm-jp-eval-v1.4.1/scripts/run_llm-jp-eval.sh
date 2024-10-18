@@ -15,7 +15,6 @@ ulimit -n 65536 1048576
 
 ENV_DIR=environment
 source ${ENV_DIR}/scripts/environment.sh
-source ${ENV_DIR}/venv/bin/activate
 
 # Arguments
 MODEL=$1
@@ -55,12 +54,18 @@ for VAR in "${REPLACE_VARS[@]}"; do
 done
 
 # Generate dump for each run to load $NEW_CONFIG settings
+source ${ENV_DIR}/venv-eval/bin/activate
 python ${EVAL_DIR}/scripts/dump_prompts.py -cn $(basename $NEW_CONFIG)
+deactivate
 
 # Generate outputs in offline mode 
+source ${ENV_DIR}/venv-vllm/bin/activate
 python $OFFLINE_SCRIPT_PATH -cp $(pwd)/$(dirname $NEW_OFFLINE_CONFIG) -cn $(basename $NEW_OFFLINE_CONFIG)
+deactivate
 
 # Run llm-jp-eval to upload results
+source ${ENV_DIR}/venv-eval/bin/activate
 python ${EVAL_DIR}/scripts/evaluate_llm.py -cn $(basename $NEW_CONFIG)
+deactivate
 
 echo "Done"

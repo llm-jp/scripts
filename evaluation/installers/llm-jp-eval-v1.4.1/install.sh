@@ -51,7 +51,7 @@ mkdir $ENV_DIR
 pushd $ENV_DIR
 
 # Copy enviroment scripts
-cp ${INSTALLER_DIR}/install.sh .
+cp ${INSTALLER_DIR}/{install.sh,requirements-vllm.txt} .
 mkdir scripts
 cp ${INSTALLER_DIR}/scripts/environment.sh scripts/
 source scripts/environment.sh
@@ -68,11 +68,19 @@ install_python v${PYTHON_VERSION} ${ENV_DIR}/python
 popd # $ENV_DIR
 
 # Prepare venv
-python/bin/python3 -m venv venv
-source venv/bin/activate
-python -m pip install --no-cache-dir -U pip setuptools wheel
+python/bin/python3 -m venv venv-eval venv-vllm
+
+# Install vllm
+source venv-vllm/bin/activate
+pip install --no-cache-dir -U pip setuptools wheel
+# This implicitly installs vllm-flash-attn with their recommended version
+pip install --no-cache-dir -r requirements-vllm.txt
+deactivate
 
 # Install llm-jp-eval
+source venv-eval/bin/activate
+python -m pip install --no-cache-dir -U pip setuptools wheel
+
 pushd src
 git clone https://github.com/llm-jp/llm-jp-eval -b v${LLM_JP_EVAL_TAG}
 pushd llm-jp-eval
@@ -91,10 +99,6 @@ python scripts/preprocess_dataset.py \
   --dataset-name all-with-nc  \
   --output-dir ${ENV_DIR}/data/llm-jp-eval \
   --version-name $LLM_JP_EVAL_TAG
-
-# Install vllm
-# This implicitly installs vllm-flash-attn with their recommended version
-pip install --no-cache-dir vllm==${VLLM_VERSION}
 
 popd  #src
 popd  # $ENV_DIR

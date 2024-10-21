@@ -17,3 +17,4 @@ export PRETRAIN_MEGATRON_TAG=nii-geniac
 export PRETRAIN_TOKENIZER_TAG=v3.0b2
 
 source /etc/profile.d/openmpi.sh
+export CUDACXX="/usr/local/cuda-${PRETRAIN_CUDA_VERSION}/bin/nvcc"

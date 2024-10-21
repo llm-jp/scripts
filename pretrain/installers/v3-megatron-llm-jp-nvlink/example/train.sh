@@ -89,7 +89,7 @@ python src/Megatron-LM/pretrain_gpt.py \
   --train-iters ${TRAIN_STEPS} \
   --tokenizer-type Llama2Tokenizer \
   --tokenizer-model ${TOKENIZER_MODEL} \
-    ${CHECKPOINT_ARGS} \
+  ${CHECKPOINT_ARGS} \
   --save ${CHECKPOINT_SAVE_DIR} \
   --data-path ${DATA_PATH} \
   --split 1,0,0 \

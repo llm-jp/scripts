@@ -16,4 +16,4 @@ export PRETRAIN_MEGATRON_TAG=nii-geniac
 # https://github.com/llm-jp/scripts/pull/12#discussion_r1708415209
 export PRETRAIN_TOKENIZER_TAG=v3.0b2
 
-source /etc/profile.d/openmpi.sh 
+source /etc/profile.d/openmpi.sh

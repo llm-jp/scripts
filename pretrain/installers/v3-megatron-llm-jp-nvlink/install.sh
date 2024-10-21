@@ -24,15 +24,16 @@
 set -eux -o pipefail
 
 if [ $# -ne 1 ]; then
-  >&2 echo Usage: sbatch install.sh TARGET_DIR
+  echo >&2 Usage: sbatch install.sh TARGET_DIR
   exit 1
 fi
 
 INSTALLER_DIR=$(pwd)
-TARGET_DIR=$1; shift
+TARGET_DIR=$1
+shift
 
->&2 echo INSTALLER_DIR=$INSTALLER_DIR
->&2 echo TARGET_DIR=$TARGET_DIR
+echo >&2 INSTALLER_DIR=$INSTALLER_DIR
+echo >&2 TARGET_DIR=$TARGET_DIR
 
 mkdir ${TARGET_DIR}
 pushd ${TARGET_DIR}
@@ -43,7 +44,7 @@ cp -a ${INSTALLER_DIR}/{install.sh,requirements.txt,scripts,example} .
 source scripts/environment.sh
 
 # record current environment variables
-set > installer_envvar.log
+set >installer_envvar.log
 
 # src is used to store all resources for from-scratch builds
 mkdir src
@@ -57,7 +58,7 @@ make -j 64
 make install
 popd
 
-popd  # src
+popd # src
 
 # prepare venv
 python/bin/python3 -m venv venv
@@ -116,5 +117,5 @@ popd
 # Tokenizer
 git clone https://github.com/llm-jp/llm-jp-tokenizer -b ${PRETRAIN_TOKENIZER_TAG}
 
-popd  # src
-popd  # ${TARGET_DIR}
+popd # src
+popd # ${TARGET_DIR}

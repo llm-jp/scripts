@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Example sbatch launcher script of pretraining tasks.
-# 
+#
 # This script only constructs cluster-related environment variables, and immediately
 # calls mpirun with train.sh, which implements an actual invocation of the Megatron-LM
 # trainer script.
@@ -49,4 +49,3 @@ mpirun \
   -x NUM_NODES=$NUM_NODES \
   -x NUM_GPUS_PER_NODE=$NUM_GPUS_PER_NODE \
   bash example/train.sh
-

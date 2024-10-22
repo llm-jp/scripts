@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=0022_3.7b-hugh-qaulity-cpt-exp1c
+#SBATCH --job-name=0022_3.7b-high-qaulity-cpt-exp1c
 #SBATCH --partition=gpu-small
 #SBATCH --nodes=4
 #SBATCH --gpus-per-node=8

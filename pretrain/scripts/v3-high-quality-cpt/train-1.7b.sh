@@ -56,6 +56,8 @@ DATA_SUMMARY="$WORK_DIR/data_config.txt"
 if [ "$OMPI_COMM_WORLD_RANK" -eq 0 ]; then
   # Prepare data config to load
   python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG" 2> "$DATA_SUMMARY"
+  # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
+  source "$DATA_CONFIG"
 else
   # Wait file createtion　and check variable $TOTAL_TOKEN_SIZE until $TIMEOUT
   TIMEOUT=10
@@ -63,13 +65,14 @@ else
   END_TIME=$((SECONDS + TIMEOUT))  
 
   while [ $SECONDS -lt $END_TIME ]; do
+    sleep $INTERVAL
     if [ -f "$DATA_CONFIG" ]; then
+      # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
       source "$DATA_CONFIG"
-      if [ -n "$TOTAL_TOKEN_SIZE" ]; then
+      if [ -z "$TOTAL_TOKEN_SIZE" ]; then
         break
       fi
     fi
-    sleep $INTERVAL
   done
   # timeout
   if [ -z "$TOTAL_TOKEN_SIZE" ]; then
@@ -77,8 +80,6 @@ else
     exit 1
   fi
 fi
-# load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
-source "$DATA_CONFIG"
 
 # validation set
 VALID_DATA_PATH="" # Skip validation

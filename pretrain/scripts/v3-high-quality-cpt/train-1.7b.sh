@@ -57,21 +57,26 @@ if [ "$OMPI_COMM_WORLD_RANK" -eq 0 ]; then
   # Prepare data config to load
   python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG" 2> "$DATA_SUMMARY"
 else
-    # Wait and check file createtion until $TIMEOUT
-    TIMEOUT=10
-    INTERVAL=1
-    WAITED=0
+  # Wait file createtion　and check variable $TOTAL_TOKEN_SIZE until $TIMEOUT
+  TIMEOUT=10
+  INTERVAL=1
+  END_TIME=$((SECONDS + TIMEOUT))  
 
-    while [ ! -f "$DATA_CONFIG" ]; do
-        if [ "$WAITED" -ge "$TIMEOUT" ]; then
-            echo "Error: Timeout. File not found within $TIMEOUT seconds."
-            exit 1
-        fi
-        sleep $INTERVAL
-        WAITED=$((WAITED + INTERVAL))
-    done
+  while [ $SECONDS -lt $END_TIME ]; do
+    if [ -f "$DATA_CONFIG" ]; then
+      source "$DATA_CONFIG"
+      if [ -n "$TOTAL_TOKEN_SIZE" ]; then
+        break
+      fi
+    fi
+    sleep $INTERVAL
+  done
+  # timeout
+  if [ -z "$TOTAL_TOKEN_SIZE" ]; then
+    echo "Error: Timeout. TOTAL_TOKEN_SIZE not found within $TIMEOUT seconds."
+    exit 1
+  fi
 fi
-
 # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
 source "$DATA_CONFIG"
 

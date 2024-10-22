@@ -29,4 +29,4 @@ datasets:
     file: "2024_0718_ja_train2.sakura_home.csv"
     filter:
       - "train2/ja/warp-pdf-e02"
-    repeat: 0.0.4111
+    repeat: 0.4111

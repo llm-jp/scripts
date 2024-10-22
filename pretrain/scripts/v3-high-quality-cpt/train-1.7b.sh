@@ -1,7 +1,5 @@
 #!/bin/bash
 #
-# For details about the model, see:
-# https://github.com/llm-jp/model-cards/pull/22
 set -eu -o pipefail
 
 # EXPERIMENT_DIR=  # set by sbatch
@@ -13,7 +11,7 @@ ENV_DIR=${EXPERIMENT_DIR}/environment
 WORK_DIR=${EXPERIMENT_DIR}/${EXP_NAME}
 CACHE_DIR=${WORK_DIR}/cache
 SCRIPT_DIR=${SCRIPT_ROOT}/${CONF_DIR}
-mkdir -p "$WORK_DIR"
+mkdir -m 777 -p "$WORK_DIR"
 
 source ${ENV_DIR}/scripts/environment.sh
 source ${ENV_DIR}/scripts/mpi_variables.sh
@@ -53,13 +51,29 @@ MIN_LR=3e-6
 WEIGHT_DECAY=0.1
 GRAD_CLIP=1
 
-# data config
 DATA_CONFIG="$WORK_DIR/data_config.sh"
-python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG" 2> /dev/null
-source "$DATA_CONFIG"
+DATA_SUMMARY="$WORK_DIR/data_config.txt"
+if [ "$OMPI_COMM_WORLD_RANK" -eq 0 ]; then
+  # Prepare data config to load
+  python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG" 2> "$DATA_SUMMARY"
+else
+    # Wait and check file createtion until $TIMEOUT
+    TIMEOUT=10
+    INTERVAL=1
+    WAITED=0
+
+    while [ ! -f "$DATA_CONFIG" ]; do
+        if [ "$WAITED" -ge "$TIMEOUT" ]; then
+            echo "Error: Timeout. File not found within $TIMEOUT seconds."
+            exit 1
+        fi
+        sleep $INTERVAL
+        WAITED=$((WAITED + INTERVAL))
+    done
+fi
 
 # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
-
+source "$DATA_CONFIG"
 
 # validation set
 VALID_DATA_PATH="" # Skip validation
@@ -95,6 +109,7 @@ WANDB_ENTITY="llm-jp"
 WANDB_PROJECT="high-quality-cpt"
 WANDB_NAME=$EXP_NAME
 
+exit 1
 # run
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \

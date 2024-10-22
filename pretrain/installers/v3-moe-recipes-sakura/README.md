@@ -1,6 +1,6 @@
-# moe-recipes installation script for Sakura/LLM-jp v3 models
+# moe-recipes installation script for Sakura/LLM-jp-3 models
 
-LLM-jp v3シリーズでのMoE実験を行うためのmoe-recipes環境をSakuraクラスタにインストールするためのスクリプトです。
+LLM-jp-3でのMoE実験を行うためのmoe-recipes環境をSakuraクラスタにインストールするためのスクリプトです。
 System Pythonやpyenvに依存しない閉じた環境を指定したディレクトリ上に構築します。
 
 ## Usage

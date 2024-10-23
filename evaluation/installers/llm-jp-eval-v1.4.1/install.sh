@@ -51,7 +51,7 @@ mkdir $ENV_DIR
 pushd $ENV_DIR
 
 # Copy enviroment scripts
-cp ${INSTALLER_DIR}/{install.sh,requirements-vllm.txt} .
+cp ${INSTALLER_DIR}/{install.sh,requirements*.txt} .
 mkdir scripts
 cp ${INSTALLER_DIR}/scripts/environment.sh scripts/
 source scripts/environment.sh
@@ -87,7 +87,8 @@ pushd llm-jp-eval
 if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
   git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
 fi
-pip install --no-cache-dir -r requirements.txt 
+pip install --no-cache-dir -r requirements.txt
+pip install --no-cache-dir -r ${ENV_DIR}/requirements-eval.txt
 pip install --no-cache-dir .
 
 INFERENCE_SCRIPT=offline_inference/vllm/offline_inference_vllm.py

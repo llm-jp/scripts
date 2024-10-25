@@ -1,6 +1,6 @@
 # Megatron installation script for mdx/LLM-jp v3 models
 
-LLM-jp v3モデルを作成するためのMegatron環境をmdxクラスタにインストールするためのスクリプトです。
+LLM-jp v3モデルを作成するためのMegatron環境をllm-jpクラスタにインストールするためのスクリプトです。
 System Pythonやpyenvに依存しない閉じた環境を指定したディレクトリ上に構築します。
 
 ## Usage
@@ -9,15 +9,13 @@ System Pythonやpyenvに依存しない閉じた環境を指定したディレ�
 
 インストール処理のためにCPUリソースを使用します。
 時間がかかるので気長に待って下さい。
-SLRUMの入っていないクラスタでは`sbatch`を`bash`で読み替えてください。
 
 ```shell
 git clone https://github.com/llm-jp/scripts
 cd scripts/pretrain/installers/v3-megatron-mdx
-cp ../v3-megatron-sakura/{install.sh,requirements.txt} .
 
 # ~/myspace に環境をインストールします。
-sbatch install.sh ~/myspace
+bash install.sh ~/myspace
 ```
 
 ### Check
@@ -33,16 +31,13 @@ sbatch install.sh ~/myspace
     requirements.txt      venvに事前インストールされたライブラリ一覧
     scripts/              各種の環境設定用スクリプト
     src/                  個別ダウンロードされたライブラリ
-    venv/                 Python仮想環境 (python/ にリンク)
+    venv/                 Python仮想環境
 ```
 
 インストールした環境で正常に事前学習ジョブを起動できるかどうかを確認します。
 
 ```shell
 cd ~/myspace
-
-# デフォルトではGPUを8枚全て使うジョブが起動します。
-sbatch example/mpi_wrapper.sh
-
-# W&Bにtrain lossが記録されるのを確認したらジョブを止めてください。
+bash example/mpi_wrapper.sh
 ```
+W&Bにtrain lossが記録されるのを確認したらジョブを止めてください。

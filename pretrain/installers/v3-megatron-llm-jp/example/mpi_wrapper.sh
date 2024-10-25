@@ -11,15 +11,7 @@
 #
 # Usage:
 # 1. cd {root directory that you installed training scripts}
-# 2. sbatch example/sbatch.sh
-
-#SBATCH --job-name=pretrain-test
-#SBATCH --partition=gpu-debug
-#SBATCH --nodes=1
-#SBATCH --gres=gpu:8
-#SBATCH --ntasks-per-node=8
-#SBATCH --output=%x-%j.out
-#SBATCH --error=%x-%j.err
+# 2. bash example/mpi_wrapper.sh
 
 set -eu -o pipefail
 
@@ -31,7 +23,7 @@ export MASTER_PORT=12800
 
 echo "MASTER_ADDR=${MASTER_ADDR}"
 
-NUM_NODES=$SLURM_JOB_NUM_NODES
+NUM_NODES=1
 NUM_GPUS_PER_NODE=$(nvidia-smi -L | wc -l)
 NUM_GPUS=$((${NUM_NODES} * ${NUM_GPUS_PER_NODE}))
 

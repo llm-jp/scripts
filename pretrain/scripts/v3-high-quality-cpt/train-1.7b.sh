@@ -63,13 +63,14 @@ else
   TIMEOUT=10
   INTERVAL=1
   END_TIME=$((SECONDS + TIMEOUT))  
+  TOTAL_TOKEN_SIZE=""
 
   while [ $SECONDS -lt $END_TIME ]; do
     sleep $INTERVAL
     if [ -f "$DATA_CONFIG" ]; then
       # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
       source "$DATA_CONFIG"
-      if [ -z "$TOTAL_TOKEN_SIZE" ]; then
+      if [ -n "$TOTAL_TOKEN_SIZE" ]; then
         break
       fi
     fi
@@ -115,7 +116,6 @@ WANDB_ENTITY="llm-jp"
 WANDB_PROJECT="high-quality-cpt"
 WANDB_NAME=$EXP_NAME
 
-exit 1
 # run
 export NVTE_FUSED_ATTN=0
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \

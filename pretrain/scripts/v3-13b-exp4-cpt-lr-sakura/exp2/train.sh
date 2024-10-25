@@ -218,7 +218,7 @@ TRAIN_DATA_PATH="${TRAIN_DATA_PATH} 316296219 ${DATASET_DIR}/train/ko/wiki_0000.
 
 # job name
 WANDB_ENTITY="llm-jp"
-WANDB_PROJECT="v3-13b-cpt-lr"
+WANDB_PROJECT="0066_v3-13b-cpt-lr"
 WANDB_JOB="train-exp2"
 
 # run

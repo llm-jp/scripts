@@ -51,6 +51,7 @@ MIN_LR=3e-6
 WEIGHT_DECAY=0.1
 GRAD_CLIP=1
 
+# data config
 DATA_CONFIG="$WORK_DIR/data_config.sh"
 DATA_SUMMARY="$WORK_DIR/data_config.txt"
 if [ "$OMPI_COMM_WORLD_RANK" -eq 0 ]; then

@@ -21,7 +21,8 @@ for src_exp_dir in ${src_root}/exp*; do
             --job-name=0066_convert \
             --partition=gpu-small \
             --priority=1 \
-            scripts/pretrain/scripts/v3-converter/convert.sh \
+            --mem=200G \
+            scripts/pretrain/scripts/v3-13b-exp4-cpt-lr-sakura/convert.sh \
             ${src_ckpt_dir} \
             ${dest_ckpt_dir}
         sbatch_result=$?

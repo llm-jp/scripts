@@ -56,33 +56,23 @@ DATA_CONFIG="$WORK_DIR/data_config.sh"
 DATA_SUMMARY="$WORK_DIR/data_config.txt"
 if [ "$OMPI_COMM_WORLD_RANK" -eq 0 ]; then
   # Prepare data config to load
-  python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" > "$DATA_CONFIG" 2> "$DATA_SUMMARY"
-  # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
-  source "$DATA_CONFIG"
+  python3 "${SCRIPT_ROOT}/megatron_data_formatter.py" "${SCRIPT_DIR}/data_config.yaml" >"$DATA_CONFIG" 2>"$DATA_SUMMARY"
 else
-  # Wait file createtion　and check variable $TOTAL_TOKEN_SIZE until $TIMEOUT
+  # Wait to create $DATA_CONFIG until $TIMEOUT
   TIMEOUT=10
-  INTERVAL=1
-  END_TIME=$((SECONDS + TIMEOUT))  
-  TOTAL_TOKEN_SIZE=""
-
-  while [ $SECONDS -lt $END_TIME ]; do
-    sleep $INTERVAL
+  for _ in $(seq 1 ${TIMEOUT}); do
+    sleep 1
     if [ -f "$DATA_CONFIG" ]; then
-      # load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
-      source "$DATA_CONFIG"
-      if [ -n "$TOTAL_TOKEN_SIZE" ]; then
-        break
-      fi
+      break
     fi
   done
-  # timeout
-  if [ -z "$TOTAL_TOKEN_SIZE" ]; then
-    echo "Error: Timeout. TOTAL_TOKEN_SIZE not found within $TIMEOUT seconds."
+  if [ ! -f "$DATA_CONFIG" ]; then
+    echo >&2 "Error: Timeout. $DATA_CONFIG not found within $TIMEOUT seconds."
     exit 1
   fi
 fi
-
+# load $TRAIN_DATA_PATH and $TOTAL_TOKEN_SIZE
+source "$DATA_CONFIG"
 # validation set
 VALID_DATA_PATH="" # Skip validation
 

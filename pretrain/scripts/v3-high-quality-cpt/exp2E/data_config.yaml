@@ -1,0 +1,16 @@
+common:
+  v3_1_info_root: "/home/shared/corpus/llm-jp-corpus/v3.1.0/tokenize/v3.0b1/token_info"
+
+datasets:
+  ja_v3_1_pdf00:
+    basedir: "v3_1_info_root"
+    file: "2024_0718_ja_train2.sakura_home.csv"
+    filter:
+      - "train2/ja/warp-pdf-e00"
+    repeat: 1.770
+  ja_v3_1_pdf02:
+    basedir: "v3_1_info_root"
+    file: "2024_0718_ja_train2.sakura_home.csv"
+    filter:
+      - "train2/ja/warp-pdf-e02"
+    repeat: 0.8849

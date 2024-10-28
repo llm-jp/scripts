@@ -89,7 +89,7 @@ if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
 fi
 pip install --no-cache-dir -r requirements.txt
 pip install --no-cache-dir -r ${ENV_DIR}/requirements-eval.txt
-pip install --no-cache-dir .
+pip install --no-cache-dir -e .
 
 INFERENCE_SCRIPT=offline_inference/vllm/offline_inference_vllm.py
 # Remove execution time due to its complexity in handling

@@ -36,7 +36,6 @@ NUM_LAYERS=28
 NUM_HEADS=24
 SEQ_LENGTH=4096
 
-
 # distributed settings
 TENSOR_PARALLEL_SIZE=1
 PIPELINE_PARALLEL_SIZE=1
@@ -61,7 +60,7 @@ if [ "$OMPI_COMM_WORLD_RANK" -eq 0 ]; then
 else
   # Wait to create $DATA_CONFIG until $TIMEOUT
   TIMEOUT=10
-  for _ in $(seq 1 ${TIMEOUT}); do
+  for iter in $(seq 1 ${TIMEOUT}); do
     sleep 1
     if [ -f "$DATA_CONFIG" ]; then
       break

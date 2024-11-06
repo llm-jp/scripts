@@ -38,7 +38,7 @@ cd $TOKENIZER_DIRNAME
 # Tokenize settings
 MODEL_PATH="${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model"
 TOKENIZER_TYPE="Llama2Tokenizer"
-WORKERS=256
+WORKERS=64
 
 # Tokenize
 echo "Tokenizer: $MODEL_PATH"

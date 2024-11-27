@@ -58,7 +58,7 @@ TRAIN_STEPS=$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))
 # model config
 TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
 
-CHECKPOINT_ROOT=${EXPERIMENT_DIR}/checkpoints
+CHECKPOINT_ROOT=${EXPERIMENT_DIR}/checkpoints/exp2
 CHECKPOINT_LOAD_DIR=${CHECKPOINT_ROOT}
 CHECKPOINT_SAVE_DIR=${CHECKPOINT_ROOT}
 

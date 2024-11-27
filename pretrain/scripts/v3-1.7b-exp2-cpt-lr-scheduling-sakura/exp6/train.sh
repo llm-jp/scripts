@@ -222,7 +222,7 @@ TRAIN_DATA_PATH="${TRAIN_DATA_PATH} 316296219 ${DATASET_DIR}/train/ko/wiki_0000.
 # job name
 WANDB_ENTITY="llm-jp"
 WANDB_PROJECT="nii-geniac-1.7B"
-WANDB_JOB="train-exp2"
+WANDB_JOB="train-exp6"
 
 # run
 export NVTE_FUSED_ATTN=0

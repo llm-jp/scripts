@@ -1,49 +1,76 @@
 # チェックポイント変換スクリプト
 
-このスクリプトは、Megatron形式のチェックポイントをHugging Face形式に変換します。
+このスクリプト群は、Megatron形式のチェックポイントとHugging Face形式のチェックポイントを相互に変換します。
 
 ## スペック
-- 必要リソース: gpu 1ノード
-  - VRAMは使用せず、pytorch上でのCUDAチェックにのみ利用
+
+- 必要リソース: GPU 1ノード
+  - VRAMは使用せず、CUDAチェックにのみ使用します。
 
 ## 実行方法
 
 ### 注意事項
-このスクリプトを実行する前に、環境に適したインストーラを実験ディレクトリにインストールしてください (例: /data/experiments/{exp-id}/enviroment)。
+
+- 環境に適したインストーラにより事前に実験ディレクトリに事前学習用Pythonの環境構築を行なってください (例: /data/experiments/{exp-id}/environment)。
 以前のチェックポイントが保存されていることを確認してください (例: /data/experiments/{exp-id}/checkpoints/)。
 
-### 実行手順
+### 準備
 
 1. 実験ディレクトリに移動します：
     ```shell
     cd /data/experiments/{exp-id}
     ```
 
-2. スクリプトを実行環境と同じディレクトリにコピーし、ログ出力フォルダを作成します：
+2. スクリプトの準備と出力フォルダの作成：
     ```shell
     cp {this directory}/convert.sh .
-    mkdir outputs
+    mkdir -p outputs
     ```
 
-3. スクリプトを実行します：
-  - SLURMで実行する際には、`--mem`オプションをモデルサイズの2倍以上にしてください。
-    ```shell
-    # For a cluster with SLURM
-    sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR
-    # For a cluster without SLURM
-    bash convert.sh SOURCE_DIR TARGET_DIR > outputs/convert.out 2> outputs/convert.err
-    ```
+### チェックポイント変換スクリプトの実行
+SLURMで実行する場合、--mem オプションをモデルサイズの2倍以上に設定してください。
 
+#### Megatron → Hugging Face
 
-### パラメータ
-- `SOURCE_DIR`: `iter_NNNNNNN`を含むMegatronチェックポイントディレクトリ
-- `TARGET_DIR`: Hugging Face形式の出力ディレクトリ
+##### SLURMでの実行例
+```shell
+sbatch --partition {partition} convert.sh SOURCE_DIR TARGET_DIR
+```
+##### SLURMなしの環境での実行例
+```shell
+bash convert.sh SOURCE_DIR TARGET_DIR > outputs/convert.out 2> outputs/convert.err
+```
+##### パラメータ
+- SOURCE_DIR: iter_NNNNNNN を含むMegatron形式のチェックポイントディレクトリ
+- TARGET_DIR: Hugging Face形式の出力ディレクトリ
 
-### サンプルコード
+#### Hugging Face → Megatron
+
+##### SLURMでの実行例
+```shell
+sbatch --partition {partition} hf2megatron.sh SOURCE_DIR TARGET_DIR
+```
+##### SLURMなしの環境での実行例
+```shell
+bash hf2megatron.sh SOURCE_DIR TARGET_DIR > outputs/convert.out 2> outputs/convert.err
+```
+
+##### パラメータ
+- SOURCE_DIR: Hugging Face形式のチェックポイントディレクトリ
+- TARGET_DIR: Megatron形式の出力ディレクトリ
+  - ディレクトリ名には、tp{N:int} と pp{M:int} の形式でテンソル並列とパイプライン並列サイズを含めてください。
+
+#### サンプルコード
+
+##### Megatron → Hugging Face:
 ```shell
 sbatch convert.sh /data/experiments/{exp-id}/checkpoints/iter_0001000 /data/experiments/{exp-id}/hf_checkpoints/iter_0001000
 ```
+##### Hugging Face → Megatron:
+```shell
+sbatch hf2megatron.sh /data/experiments/{exp-id}/hf_checkpoints /data/experiments/{exp-id}/checkpoints/tp2-pp2-cp1
+```
 
-### 作業ディレクトリについて
-実行中、$HOME上作業用ディレクトリ(`ckpt_convert_YYYYMMDDHHSSMM`)が作成されます。
-実行エラーが起きてもデバッグのために残る仕様のため各自で削除してください。
+### 注意事項： 作業ディレクトリについて
+- 実行中、$HOME 上に ckpt_convert_YYYYMMDDHHSSMM という形式の一時作業用ディレクトリが作成されます。
+- 実行エラーが発生しても、デバッグのためにこのディレクトリが残ります。必要に応じて手動で削除してください。

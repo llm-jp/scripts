@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=0022_13b-hugh-qaulity-cpt-exp1b
+#SBATCH --job-name=0022_13b-hugh-qaulity-cpt-exp1B_cc1_desc_ppl
 #SBATCH --partition=gpu-small
 #SBATCH --nodes=8
 #SBATCH --gpus-per-node=8
@@ -11,7 +11,7 @@ set -eu -o pipefail
 
 # change directory if each experiment will be handled as one experintal issue
 EXPERIMENT_DIR=/home/shared/experiments/0022_v3-high-quality-cpt
-CONF_DIR=exp1B
+CONF_DIR=exp1B_cc1_desc_ppl
 
 ENV_DIR=${EXPERIMENT_DIR}/environment
 SCRIPT_ROOT=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v3-high-quality-cpt

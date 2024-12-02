@@ -11,7 +11,7 @@ datasets:
     file: "2024_0410_en.sakura_home.csv"
     repeat: 0.1014
   ja_cc1:
-    file: "/home/shared/experiments/0022_v3-high-quality-cpt/corpus/llm-jp-corpus/v3.0.0/training_resharded_sorted_tokenize_ver3.0/ppl_desc/token_info.csv"
+    file: "/home/shared/experiments/0022_v3-high-quality-cpt/corpus/llm-jp-corpus/v3.0.0/training_resharded_sorted_tokenize_ver3.0/ppl_asc/token_info.csv"
     filter: 
       - train/ja/cc-1
     repeat: 0.4318

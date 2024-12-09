@@ -10,19 +10,19 @@ datasets:
   ja_v3_1_pdf00:
     basedir: "v3_1_info_root"
     file: "2024_0718_ja_train2.sakura_home.csv"
-    filter: 
+    filter:
       - "train2/ja/warp-pdf-e00"
     repeat: 0.1043
   ja_v3_1_pdf02:
     basedir: "v3_1_info_root"
     file: "2024_0718_ja_train2.sakura_home.csv"
-    filter: 
+    filter:
       - "train2/ja/warp-pdf-e02"
     repeat: 0.0522
   ja_other:
     basedir: "v3_0_info_root"
     file: "2024_0410_ja.sakura_home.csv"
-    filter: 
+    filter:
       - train/ja/cc
       - train/ja/kaken
       - train/ja/warp-html

@@ -7,6 +7,11 @@ for src_ckpt_dir in ${src_root}/iter_???????; do
     ckpt_rel=$(basename ${src_ckpt_dir})
     dest_ckpt_dir=${dest_root}/${ckpt_rel}
 
+    if [ ${ckpt_rel} == 'iter_0000000' ]; then
+        echo "Ignore: ${ckpt_rel}"
+        continue
+    fi
+
     if [ -e ${dest_ckpt_dir} ]; then
         echo "Exists: ${ckpt_rel}"
         continue

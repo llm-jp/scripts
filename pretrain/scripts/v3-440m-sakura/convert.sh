@@ -14,7 +14,7 @@ set -e
 MEGATRON_CHECKPOINT_DIR=${1%/}
 HF_CHECKPOINT_DIR=$2
 
-ENV_DIR=/home/shared/experiments/0087_llmjp-440m/environment
+ENV_DIR=/home/shared/experiments/0087_llmjp3-440m/environment
 
 source ${ENV_DIR}/scripts/environment.sh
 source ${ENV_DIR}/venv/bin/activate

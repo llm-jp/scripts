@@ -21,22 +21,48 @@ model_path = root / "bunkai_model"
 senter = bunkai.Bunkai(path_model=model_path)
 
 
-def split_text_by_length(text: str, max_length: int = 20) -> list[str]:
-    """Split text by length.
+def split_text_by_newline(text: str, window: int = 5) -> list[str]:
+    """Split text into chunks so that:
+        - Concatinating all chunks gives the original text.
+        - Each newline character has `window` characters before and after it at least, except for the first and last chunks.
 
     Args:
         text (str): Input text.
-        max_length (int, optional): Maximum length of sentence. Defaults to 30.
 
     Returns:
-        list[str]: List of sentences.
+        list[str]: List of chunks.
+    
+    Example:
+        >>> list(split_text_by_newline("Hello World\n"))
+        ["Hello ", "World\n"]
+        >>> list(split_text_by_newline("Hello\nWorld"))
+        ["Hello\nWorld"]
+        >>> list(split_text_by_newline("Hello\nWorld\n"))
+        ["Hello\nWorld\n"]
+        >>> list(split_text_by_newline("Hello\nWorld\nHello\nWorld\n"))
+        ["Hello\nWorld\nHello\nWorld\n"]
+        >>> list(split_text_by_newline("CONTEXT|Hello\nWorld\nHello\nWorld|CONTEXT"))
+        ["CONTEXT|", "Hello\nWorld\nHello\nWorld", "|CONTEXT"]
     """
-    if not text:
-        return [""]
-
+    if "\n" not in text:
+        return [text]
+    
     chunks: list[str] = []
-    for i in range(0, len(text), max_length):
-        chunks.append(text[i : i + max_length])
+    chunk: str = ""
+    newline_pos: int = -1
+    for i, char in enumerate(text):
+        if char == "\n":
+            newline_pos = i
+            if len(chunk) > window and "\n" not in chunk:
+                chunks.append(chunk[:-window])
+                chunk = chunk[-window:]
+        if newline_pos != -1 and i - newline_pos == window + 1:
+            chunks.append(chunk)
+            chunk = ""
+            newline_pos = -1
+        chunk += char
+    if chunk:
+        chunks.append(chunk)
     return chunks
 
 
@@ -83,18 +109,23 @@ def process_line(line: str) -> str:
     """
     dat = json.loads(line)
 
-    text = dat["text"]
-    new_text = ""
-    # Split into small chunks to avoid long processing time
-    for chunk in split_text_by_length(text):
+    text: str = dat["text"]
+    new_text: str = ""
+    for chunk in split_text_by_newline(text, window=5):
         # Skip sentence splitting by bunkai if there is no line break
         # as it aims to remove intra-sentence line breaks
         if "\n" not in chunk:
             new_text += chunk
             continue
+        
+        # Skip long chunks as they are usually so noisy that
+        # bunkai will not work well
+        if len(chunk) > 20:
+            new_text += chunk
+            continue
 
-        for chunk in split_text_by_bunkai(chunk):
-            new_text += remove_intra_sentence_line_breaks(chunk)
+        for sent in split_text_by_bunkai(chunk):
+            new_text += remove_intra_sentence_line_breaks(sent)
 
     assert text.replace("\n", "") == new_text.replace("\n", "")
 

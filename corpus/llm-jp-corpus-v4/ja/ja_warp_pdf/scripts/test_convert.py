@@ -1,7 +1,7 @@
 import pytest
 
 from convert import (
-    split_text_by_length,
+    split_text_by_newline,
     split_text_by_bunkai,
     remove_intra_sentence_line_breaks,
 )
@@ -10,13 +10,15 @@ from convert import (
 @pytest.mark.parametrize(
     "text, expected",
     [
-        ("", [""]),
-        ("これはペンです。", ["これは", "ペンで", "す。"]),
-        ("これはペンです", ["これは", "ペンで", "す"]),
+        ("Hello World\n", ["Hello ", "World\n"]),
+        ("Hello\nWorld", ["Hello\nWorld"]),
+        ("Hello\nWorld\n", ["Hello\nWorld\n"]),
+        ("Hello\nWorld\nHello\nWorld\n", ["Hello\nWorld\nHello\nWorld\n"]),
+        ("CONTEXT|Hello\nWorld\nHello\nWorld|CONTEXT", ["CONTEXT|", "Hello\nWorld\nHello\nWorld", "|CONTEXT"]),
     ],
 )
-def test_split_text_by_length(text: str, expected: list[str]) -> None:
-    assert split_text_by_length(text, 3) == expected
+def test_split_text_by_newline(text: str, expected: list[str]) -> None:
+    assert split_text_by_newline(text) == expected
 
 
 @pytest.mark.parametrize(

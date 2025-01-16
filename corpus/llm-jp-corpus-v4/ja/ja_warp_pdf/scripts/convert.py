@@ -31,7 +31,7 @@ def split_text_by_newline(text: str, window: int = 5) -> list[str]:
 
     Returns:
         list[str]: List of chunks.
-    
+
     Example:
         >>> list(split_text_by_newline("Hello World\n"))
         ["Hello ", "World\n"]
@@ -46,7 +46,7 @@ def split_text_by_newline(text: str, window: int = 5) -> list[str]:
     """
     if "\n" not in text:
         return [text]
-    
+
     chunks: list[str] = []
     chunk: str = ""
     newline_pos: int = -1
@@ -117,7 +117,7 @@ def process_line(line: str) -> str:
         if "\n" not in chunk:
             new_text += chunk
             continue
-        
+
         # Skip long chunks as they are usually so noisy that
         # bunkai will not work well
         if len(chunk) > 20:
@@ -155,11 +155,11 @@ def process_lines(lines: list[str]) -> str:
 
 def buffered_read(file: TextIO, buffer_size: int = 32) -> Iterator[list[str]]:
     """Buffered read.
-    
+
     Args:
         file: File object.
         buffer_size: Buffer size.
-    
+
     Yields:
         str: Line.
     """

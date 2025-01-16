@@ -14,7 +14,10 @@ from convert import (
         ("Hello\nWorld", ["Hello\nWorld"]),
         ("Hello\nWorld\n", ["Hello\nWorld\n"]),
         ("Hello\nWorld\nHello\nWorld\n", ["Hello\nWorld\nHello\nWorld\n"]),
-        ("CONTEXT|Hello\nWorld\nHello\nWorld|CONTEXT", ["CONTEXT|", "Hello\nWorld\nHello\nWorld", "|CONTEXT"]),
+        (
+            "CONTEXT|Hello\nWorld\nHello\nWorld|CONTEXT",
+            ["CONTEXT|", "Hello\nWorld\nHello\nWorld", "|CONTEXT"],
+        ),
     ],
 )
 def test_split_text_by_newline(text: str, expected: list[str]) -> None:

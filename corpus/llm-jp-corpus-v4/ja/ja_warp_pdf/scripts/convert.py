@@ -51,7 +51,7 @@ def split_text_by_bunkai(text: str) -> list[str]:
     """
     if not text:
         return [""]
-    return list(senter(text))
+    return [s.replace("▁", "\n") for s in senter(text.replace("\n", "▁"))]
 
 
 def remove_intra_sentence_line_breaks(text: str) -> str:

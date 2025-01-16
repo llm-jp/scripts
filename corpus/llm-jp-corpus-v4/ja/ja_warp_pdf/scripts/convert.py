@@ -5,8 +5,8 @@ import concurrent
 import concurrent.futures
 import json
 import logging
-import os
 import pathlib
+from typing import Iterator, TextIO
 
 import bunkai
 import tqdm
@@ -21,31 +21,7 @@ model_path = root / "bunkai_model"
 senter = bunkai.Bunkai(path_model=model_path)
 
 
-def split_text_by_period(text: str) -> list[str]:
-    """Split text by period.
-
-    Args:
-        text (str): Input text.
-
-    Returns:
-        list[str]: List of sentences.
-    """
-    if not text:
-        return [""]
-
-    chunks: list[str] = []
-    chunk: str = ""
-    for char in text:
-        chunk += char
-        if char == "。":
-            chunks.append(chunk)
-            chunk = ""
-    if chunk:
-        chunks.append(chunk)
-    return chunks
-
-
-def split_text_by_length(text: str, max_length: int = 30) -> list[str]:
+def split_text_by_length(text: str, max_length: int = 20) -> list[str]:
     """Split text by length.
 
     Args:
@@ -109,16 +85,16 @@ def process_line(line: str) -> str:
 
     text = dat["text"]
     new_text = ""
-    for chunk in split_text_by_period(text):
-        # Split large chunk to avoid long processing time
-        for chunk in split_text_by_length(chunk, max_length=100):
-            # Skip sentence splitting by bunkai if there is no line break as it is slow
-            if "\n" not in chunk:
-                new_text += chunk
-                continue
+    # Split into small chunks to avoid long processing time
+    for chunk in split_text_by_length(text):
+        # Skip sentence splitting by bunkai if there is no line break
+        # as it aims to remove intra-sentence line breaks
+        if "\n" not in chunk:
+            new_text += chunk
+            continue
 
-            for chunk in split_text_by_bunkai(chunk):
-                new_text += remove_intra_sentence_line_breaks(chunk)
+        for chunk in split_text_by_bunkai(chunk):
+            new_text += remove_intra_sentence_line_breaks(chunk)
 
     assert text.replace("\n", "") == new_text.replace("\n", "")
 
@@ -127,33 +103,67 @@ def process_line(line: str) -> str:
     return json.dumps(dat, ensure_ascii=False) + "\n"
 
 
+def process_lines(lines: list[str]) -> str:
+    """Process lines.
+
+    Args:
+        lines (list[str]): Input lines.
+
+    Returns:
+        str: Processed lines.
+    """
+    ret: str = ""
+    for line in lines:
+        try:
+            ret += process_line(line)
+        except Exception as e:
+            logger.error(f"Error: {e}")
+            ret += line
+    return ret
+
+
+def buffered_read(file: TextIO, buffer_size: int = 32) -> Iterator[list[str]]:
+    """Buffered read.
+    
+    Args:
+        file: File object.
+        buffer_size: Buffer size.
+    
+    Yields:
+        str: Line.
+    """
+    lines: list[str] = []
+    for line in file:
+        lines.append(line)
+        if len(lines) == buffer_size:
+            yield lines
+            lines = []
+    if lines:
+        yield lines
+
+
 def main() -> None:
     """Main function."""
     parser = argparse.ArgumentParser("Remove intra-sentence line breaks from text.")
     parser.add_argument("--input-file", type=str, required=True, help="Input file.")
     parser.add_argument("--output-file", type=str, required=True, help="Output file.")
     parser.add_argument("--num-workers", type=int, default=1, help="Number of workers.")
+    parser.add_argument("--buffer-size", type=int, default=32, help="Buffer size.")
     args = parser.parse_args()
 
     with (
         open(args.input_file, "rt", encoding="utf-8") as fin,
         open(args.output_file, "wt", encoding="utf-8") as fout,
     ):
-        with concurrent.futures.ThreadPoolExecutor(
-            max_workers=args.num_workers
-        ) as executor:
-            future_to_line = {}
-            for i, line in enumerate(fin, start=1):
-                future = executor.submit(process_line, line)
-                future_to_line[future] = line
-            for future in tqdm.tqdm(future_to_line, total=i):
-                try:
-                    fout.write(future.result())
-                except Exception as e:
-                    logger.error(f"Error processing line {i}")
-                    logger.error(e)
-                    line = future_to_line[future]
-                    fout.write(line)
+        with concurrent.futures.ProcessPoolExecutor(args.num_workers) as executor:
+            futures = []
+            for lines in buffered_read(fin, buffer_size=args.buffer_size):
+                futures.append(executor.submit(process_lines, lines))
+            for future in tqdm.tqdm(
+                concurrent.futures.as_completed(futures),
+                total=len(futures),
+            ):
+                fout.write(future.result())
 
 
 if __name__ == "__main__":

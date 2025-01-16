@@ -1,27 +1,10 @@
 import pytest
 
 from convert import (
-    split_text_by_period,
     split_text_by_length,
     split_text_by_bunkai,
     remove_intra_sentence_line_breaks,
 )
-
-
-@pytest.mark.parametrize(
-    "text, expected",
-    [
-        ("これはペンです。それは本です。", ["これはペンです。", "それは本です。"]),
-        ("これはペンです。それは本です", ["これはペンです。", "それは本です"]),
-        ("これはペンです。", ["これはペンです。"]),
-        ("これはペンです", ["これはペンです"]),
-        ("", [""]),
-        ("これはペンです。。。", ["これはペンです。", "。", "。"]),
-        ("。。。", ["。", "。", "。"]),
-    ],
-)
-def test_split_text_by_period(text: str, expected: list[str]) -> None:
-    assert split_text_by_period(text) == expected
 
 
 @pytest.mark.parametrize(

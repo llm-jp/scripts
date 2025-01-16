@@ -11,7 +11,7 @@ Preprocess text extracted from PDFs provided by WARP.
 Use [rye](https://rye.astral.sh/) to install the dependencies.
 
 ```bash
-rye sync
+RUSTFLAGS="-A invalid_reference_casting" rye sync
 ```
 
 and then download the Bunkai sentence splitter model.

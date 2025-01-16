@@ -1,14 +1,20 @@
 """Remove intra-sentence line breaks from text."""
 
 import argparse
+import concurrent
+import concurrent.futures
 import json
 import logging
+import os
 import pathlib
 
 import bunkai
 import tqdm
+import torch
 
 logger = logging.getLogger(__name__)
+
+torch.set_num_threads(1)
 
 root = pathlib.Path(__file__).parent.parent
 model_path = root / "bunkai_model"
@@ -39,12 +45,12 @@ def split_text_by_period(text: str) -> list[str]:
     return chunks
 
 
-def split_text_by_length(text: str, max_length: int = 100) -> list[str]:
+def split_text_by_length(text: str, max_length: int = 30) -> list[str]:
     """Split text by length.
 
     Args:
         text (str): Input text.
-        max_length (int, optional): Maximum length of sentence. Defaults to 100.
+        max_length (int, optional): Maximum length of sentence. Defaults to 30.
 
     Returns:
         list[str]: List of sentences.
@@ -126,19 +132,28 @@ def main() -> None:
     parser = argparse.ArgumentParser("Remove intra-sentence line breaks from text.")
     parser.add_argument("--input-file", type=str, required=True, help="Input file.")
     parser.add_argument("--output-file", type=str, required=True, help="Output file.")
+    parser.add_argument("--num-workers", type=int, default=1, help="Number of workers.")
     args = parser.parse_args()
 
     with (
         open(args.input_file, "rt", encoding="utf-8") as fin,
         open(args.output_file, "wt", encoding="utf-8") as fout,
     ):
-        for i, line in enumerate(tqdm.tqdm(fin), start=1):
-            try:
-                line = process_line(line)
-            except Exception as e:
-                logger.error(f"Error processing line {i}")
-                logger.error(e)
-            fout.write(line)
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=args.num_workers
+        ) as executor:
+            future_to_line = {}
+            for i, line in enumerate(fin, start=1):
+                future = executor.submit(process_line, line)
+                future_to_line[future] = line
+            for future in tqdm.tqdm(future_to_line, total=i):
+                try:
+                    fout.write(future.result())
+                except Exception as e:
+                    logger.error(f"Error processing line {i}")
+                    logger.error(e)
+                    line = future_to_line[future]
+                    fout.write(line)
 
 
 if __name__ == "__main__":

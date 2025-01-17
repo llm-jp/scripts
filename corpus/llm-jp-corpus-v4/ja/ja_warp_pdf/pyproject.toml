@@ -6,7 +6,7 @@ authors = [
     { name = "Hirokazu Kiyomaru", email = "h.kiyomaru@gmail.com" }
 ]
 dependencies = [
-    "bunkai[lb]>=1.5.7",
+    "bunkai[lb] @ git+https://github.com/hkiyomaru/bunkai@feature/sequential-prediction",
     "transformers==4.33.3",
     "pytest>=8.3.4",
 ]

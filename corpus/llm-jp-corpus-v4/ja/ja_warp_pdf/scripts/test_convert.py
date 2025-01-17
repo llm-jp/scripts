@@ -39,6 +39,10 @@ def test_split_text_by_newline(text: str, expected: list[str]) -> None:
             "改行が文区切り\nです\nこういう日本語\nの文章はよくあ\nります\n",
             ["改行が文区切り\nです\n", "こういう日本語\nの文章はよくあ\nります\n"],
         ),
+        (
+            "\n",
+            ["\n"],
+        ),
     ],
 )
 def test_split_text_by_bunkai(text: str, expected: list[str]) -> None:
@@ -55,6 +59,22 @@ def test_split_text_by_bunkai(text: str, expected: list[str]) -> None:
         (
             "\n\nこういう\n日本語の文章は\nよくあります\n\n",
             "\n\nこういう日本語の文章はよくあります\n\n",
+        ),
+        (
+            "\nこういう\n日本語の文章は\nよくあります\n",
+            "\nこういう日本語の文章はよくあります\n",
+        ),
+        (
+            "\n\n\nこういう\n日本語の文章は\nよくあります\n",
+            "\n\n\nこういう日本語の文章はよくあります\n",
+        ),
+        (
+            "\n",
+            "\n",
+        ),
+        (
+            "\n\n",
+            "\n\n",
         ),
     ],
 )

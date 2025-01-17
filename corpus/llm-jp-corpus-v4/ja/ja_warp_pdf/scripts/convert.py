@@ -89,6 +89,8 @@ def remove_intra_sentence_line_breaks(text: str) -> str:
     Returns:
         str: Processed text.
     """
+    if all(char == "\n" for char in text):
+        return text
     num_leading_newlines = len(text) - len(text.lstrip("\n"))
     num_trailing_newlines = len(text) - len(text.rstrip("\n"))
     return (

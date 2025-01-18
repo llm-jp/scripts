@@ -5,6 +5,7 @@ import concurrent
 import concurrent.futures
 import json
 import logging
+import os
 import pathlib
 from typing import Iterator, TextIO
 
@@ -180,15 +181,19 @@ def main() -> None:
     parser = argparse.ArgumentParser("Remove intra-sentence line breaks from text.")
     parser.add_argument("--input-file", type=str, required=True, help="Input file.")
     parser.add_argument("--output-file", type=str, required=True, help="Output file.")
-    parser.add_argument("--num-workers", type=int, default=1, help="Number of workers.")
+    parser.add_argument("--num-workers", type=int, default=-1, help="Number of workers.")
     parser.add_argument("--buffer-size", type=int, default=32, help="Buffer size.")
     args = parser.parse_args()
 
+    num_workers = args.num_workers if args.num_workers != -1 else os.cpu_count()
+
+    os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
+    
     with (
         open(args.input_file, "rt", encoding="utf-8") as fin,
         open(args.output_file, "wt", encoding="utf-8") as fout,
     ):
-        with concurrent.futures.ProcessPoolExecutor(args.num_workers) as executor:
+        with concurrent.futures.ProcessPoolExecutor(num_workers) as executor:
             futures = []
             for lines in buffered_read(fin, buffer_size=args.buffer_size):
                 futures.append(executor.submit(process_lines, lines))

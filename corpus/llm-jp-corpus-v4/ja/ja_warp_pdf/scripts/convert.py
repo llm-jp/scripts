@@ -192,10 +192,7 @@ def main() -> None:
             futures = []
             for lines in buffered_read(fin, buffer_size=args.buffer_size):
                 futures.append(executor.submit(process_lines, lines))
-            for future in tqdm.tqdm(
-                concurrent.futures.as_completed(futures),
-                total=len(futures),
-            ):
+            for future in tqdm.tqdm(futures):
                 fout.write(future.result())
 
 

@@ -3,7 +3,7 @@
 This script splits the [HuggingFaceFW/fineweb-edu-score-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu-score-2) dataset into `int(score * n).jsonl.gz`.  
 Here, `n` (default is 10) can be set to any desired value.
 
-## Install
+## Installation
 
 ```bash
 pip install datatrove[all]

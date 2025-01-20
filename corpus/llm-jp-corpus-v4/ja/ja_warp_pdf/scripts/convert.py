@@ -217,7 +217,7 @@ def main() -> None:
 
     with (
         open(args.input_file, "rt", encoding="utf-8") as fin,
-        open(args.output_file, "wt", encoding="utf-8") as fout,
+        open(args.output_file, "at", encoding="utf-8") as fout,
     ):
         with concurrent.futures.ProcessPoolExecutor(num_workers) as executor:
             futures = []

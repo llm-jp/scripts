@@ -189,15 +189,19 @@ def main() -> None:
     parser = argparse.ArgumentParser("Remove intra-sentence line breaks from text.")
     parser.add_argument("--input-file", type=str, required=True, help="Input file.")
     parser.add_argument("--output-file", type=str, required=True, help="Output file.")
-    parser.add_argument("--num-workers", type=int, default=-1, help="Number of workers.")
+    parser.add_argument(
+        "--num-workers", type=int, default=-1, help="Number of workers."
+    )
     parser.add_argument("--buffer-size", type=int, default=32, help="Buffer size.")
-    parser.add_argument("--overwrite", action="store_true", help="Overwrite output file.")
+    parser.add_argument(
+        "--overwrite", action="store_true", help="Overwrite output file."
+    )
     args = parser.parse_args()
 
     num_workers = args.num_workers if args.num_workers != -1 else os.cpu_count()
 
     os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
-    
+
     # Create an empty file if overwrite is True
     if args.overwrite:
         with open(args.output_file, "wt", encoding="utf-8"):

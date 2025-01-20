@@ -192,7 +192,7 @@ def main() -> None:
     parser.add_argument(
         "--num-workers", type=int, default=-1, help="Number of workers."
     )
-    parser.add_argument("--buffer-size", type=int, default=32, help="Buffer size.")
+    parser.add_argument("--buffer-size", type=int, default=16, help="Buffer size.")
     parser.add_argument(
         "--overwrite", action="store_true", help="Overwrite output file."
     )

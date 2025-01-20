@@ -156,11 +156,16 @@ def process_lines(lines: list[str]) -> str:
     return ret
 
 
-def buffered_read(file: TextIO, buffer_size: int = 32) -> Iterator[list[str]]:
+def buffered_read(
+    file: TextIO,
+    processed_ids: set[str],
+    buffer_size: int = 32,
+) -> Iterator[list[str]]:
     """Buffered read.
 
     Args:
         file: File object.
+        processed_ids: Processed IDs.
         buffer_size: Buffer size.
 
     Yields:
@@ -168,6 +173,9 @@ def buffered_read(file: TextIO, buffer_size: int = 32) -> Iterator[list[str]]:
     """
     lines: list[str] = []
     for line in file:
+        dat = json.loads(line)
+        if dat["docId"] in processed_ids:
+            continue
         lines.append(line)
         if len(lines) == buffer_size:
             yield lines
@@ -183,19 +191,37 @@ def main() -> None:
     parser.add_argument("--output-file", type=str, required=True, help="Output file.")
     parser.add_argument("--num-workers", type=int, default=-1, help="Number of workers.")
     parser.add_argument("--buffer-size", type=int, default=32, help="Buffer size.")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite output file.")
     args = parser.parse_args()
 
     num_workers = args.num_workers if args.num_workers != -1 else os.cpu_count()
 
     os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
     
+    # Create an empty file if overwrite is True
+    if args.overwrite:
+        with open(args.output_file, "wt", encoding="utf-8"):
+            pass
+
+    # Get processed lines if overwrite is False
+    processed_ids: set[str] = set()
+    if not args.overwrite and os.path.exists(args.output_file):
+        with open(args.output_file, "rt", encoding="utf-8") as fin:
+            for line in fin:
+                dat = json.loads(line)
+                processed_ids.add(dat["docId"])
+
     with (
         open(args.input_file, "rt", encoding="utf-8") as fin,
         open(args.output_file, "wt", encoding="utf-8") as fout,
     ):
         with concurrent.futures.ProcessPoolExecutor(num_workers) as executor:
             futures = []
-            for lines in buffered_read(fin, buffer_size=args.buffer_size):
+            for lines in buffered_read(
+                fin,
+                processed_ids=processed_ids,
+                buffer_size=args.buffer_size,
+            ):
                 futures.append(executor.submit(process_lines, lines))
             for future in tqdm.tqdm(futures):
                 fout.write(future.result())

@@ -1,6 +1,6 @@
 # Preprocess fineweb-edu-score-2
 
-This script splits the [HuggingFaceFW/fineweb-edu-score-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu-score-2) dataset into `.jsonl.gz` files based on `int(score * n)`.  
+This script splits the [HuggingFaceFW/fineweb-edu-score-2](https://huggingface.co/datasets/HuggingFaceFW/fineweb-edu-score-2) dataset into `int(score * n).jsonl.gz`.  
 Here, `n` (default is 10) can be set to any desired value.
 
 ## Install

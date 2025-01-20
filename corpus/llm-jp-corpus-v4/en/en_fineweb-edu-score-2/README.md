@@ -11,7 +11,7 @@ pip install datatrove[all]
 
 ## Usage
 
-### Input
+### Input directory
 
 ```
 ./fineweb-edu-score-2/data
@@ -27,10 +27,10 @@ pip install datatrove[all]
 └── CC-MAIN-2024-51
 ```
 
-### Output
+### Output directory
 
 ```
-./en_fineweb-edu-score-2/data
+./en_fineweb-edu-score-2
 ├── CC-MAIN-2013-20
 │   ├── 15.jsonl.gz
 │   ├── 16.jsonl.gz

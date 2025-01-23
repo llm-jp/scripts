@@ -180,8 +180,7 @@ def buffered_read(
         if len(lines) == buffer_size:
             yield lines
             lines = []
-    if lines:
-        yield lines
+    yield lines
 
 
 def main() -> None:
@@ -192,7 +191,7 @@ def main() -> None:
     parser.add_argument(
         "--num-workers", type=int, default=-1, help="Number of workers."
     )
-    parser.add_argument("--buffer-size", type=int, default=16, help="Buffer size.")
+    parser.add_argument("--buffer-size", type=int, default=32, help="Buffer size.")
     parser.add_argument(
         "--overwrite", action="store_true", help="Overwrite output file."
     )
@@ -227,8 +226,12 @@ def main() -> None:
                 buffer_size=args.buffer_size,
             ):
                 futures.append(executor.submit(process_lines, lines))
-            for future in tqdm.tqdm(futures):
+            for future in tqdm.tqdm(
+                concurrent.futures.as_completed(futures),
+                total=len(futures),
+            ):
                 fout.write(future.result())
+                fout.flush()
 
 
 if __name__ == "__main__":

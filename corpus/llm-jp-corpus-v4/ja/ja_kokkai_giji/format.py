@@ -1,3 +1,8 @@
+"""Preprocess the Kokkai Giji corpus.
+
+Usage:
+    python format.py --input-dir /path/to/input --output-file /path/to/output
+"""
 import argparse
 import dataclasses
 import json

@@ -75,7 +75,8 @@ def main() -> None:
     output_file = pathlib.Path(args.output_file)
 
     with output_file.open("wt", encoding="utf-8") as fout:
-        for file_path in file_paths:
+        for i, file_path in enumerate(file_paths):
+            logging.info(f"Processing {file_path} ({i + 1}/{len(file_paths)})")
             with file_path.open("rt", encoding="utf-8") as fin:
                 dat = KokkaiGiji(**json.load(fin))
             
@@ -97,10 +98,12 @@ def main() -> None:
                     },
                 }
                 fout.write(json.dumps(instance, ensure_ascii=False) + "\n")
+                fout.flush()
 
 
 if __name__ == "__main__":
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        level=logging.INFO,
     )
     main()

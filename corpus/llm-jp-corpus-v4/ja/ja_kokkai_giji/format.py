@@ -72,33 +72,32 @@ def main() -> None:
     input_dir = pathlib.Path(args.input_dir)
     file_paths = sorted(input_dir.glob("**/*.json"))
 
-    instances = []
-    for file_path in file_paths:
-        with file_path.open("rt", encoding="utf-8") as f:
-            dat = KokkaiGiji(**json.load(f))
-        
-        for meeting in dat.meetingRecord:
-            instance = {
-                "text": meeting_to_text(meeting),
-                "meta": {
-                    "issueID": meeting.issueID,
-                    "imageKind": meeting.imageKind,
-                    "searchObject": meeting.searchObject,
-                    "session": meeting.session,
-                    "nameOfHouse": meeting.nameOfHouse,
-                    "nameOfMeeting": meeting.nameOfMeeting,
-                    "issue": meeting.issue,
-                    "date": meeting.date,
-                    "closing": meeting.closing,
-                    "meetingURL": meeting.meetingURL,
-                    "pdfURL": meeting.pdfURL,
-                },
-            }
-            instances.append(instance)
+    output_file = pathlib.Path(args.output_file)
 
-    with open(args.output_file, "wt", encoding="utf-8") as f:
-        for instance in instances:
-            f.write(json.dumps(instance, ensure_ascii=False) + "\n")
+    instances = []
+    with output_file.open("wt", encoding="utf-8") as fout:
+        for file_path in file_paths:
+            with file_path.open("rt", encoding="utf-8") as fin:
+                dat = KokkaiGiji(**json.load(fin))
+            
+            for meeting in dat.meetingRecord:
+                instance = {
+                    "text": meeting_to_text(meeting),
+                    "meta": {
+                        "issueID": meeting.issueID,
+                        "imageKind": meeting.imageKind,
+                        "searchObject": meeting.searchObject,
+                        "session": meeting.session,
+                        "nameOfHouse": meeting.nameOfHouse,
+                        "nameOfMeeting": meeting.nameOfMeeting,
+                        "issue": meeting.issue,
+                        "date": meeting.date,
+                        "closing": meeting.closing,
+                        "meetingURL": meeting.meetingURL,
+                        "pdfURL": meeting.pdfURL,
+                    },
+                }
+                fout.write(json.dumps(instance, ensure_ascii=False) + "\n")
 
 
 if __name__ == "__main__":

@@ -70,13 +70,13 @@ def main() -> None:
     args = parser.parse_args()
 
     input_dir = pathlib.Path(args.input_dir)
-    file_paths = sorted(input_dir.glob("**/*.json"))
+    file_paths = input_dir.glob("**/*.json")
 
     output_file = pathlib.Path(args.output_file)
 
     with output_file.open("wt", encoding="utf-8") as fout:
-        for i, file_path in enumerate(file_paths):
-            logging.info(f"Processing {file_path} ({i + 1}/{len(file_paths)})")
+        for file_path in file_paths:
+            logging.info(f"Processing {file_path}")
             with file_path.open("rt", encoding="utf-8") as fin:
                 dat = KokkaiGiji(**json.load(fin))
             

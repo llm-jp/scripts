@@ -53,6 +53,13 @@ class KokkaiGiji:
         self.meetingRecord = [MeetingRecord(**meeting) for meeting in self.meetingRecord]
 
 
+def meeting_to_text(meeting: MeetingRecord) -> str:
+    text = ""
+    for speech in meeting.speechRecord:
+        text += speech.speech.replace("\r\n", "\n").strip() + "\n\n"
+    return text.strip()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser("Remove intra-sentence line breaks from text.")
     parser.add_argument("--input-dir", type=str, required=True, help="Input directory.")
@@ -72,7 +79,7 @@ def main() -> None:
         
         for meeting in dat.meetingRecord:
             instance = {
-                "text": "",
+                "text": meeting_to_text(meeting),
                 "meta": {
                     "issueID": meeting.issueID,
                     "imageKind": meeting.imageKind,
@@ -87,9 +94,6 @@ def main() -> None:
                     "pdfURL": meeting.pdfURL,
                 },
             }
-            for speech in meeting.speechRecord:
-                instance["text"] += speech.speech.replace("\r\n", "\n").strip() + "\n\n"
-            instance["text"] = instance["text"].strip()
             instances.append(instance)
 
     with open(args.output_file, "wt", encoding="utf-8") as f:

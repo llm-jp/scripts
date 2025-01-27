@@ -74,7 +74,6 @@ def main() -> None:
 
     output_file = pathlib.Path(args.output_file)
 
-    instances = []
     with output_file.open("wt", encoding="utf-8") as fout:
         for file_path in file_paths:
             with file_path.open("rt", encoding="utf-8") as fin:

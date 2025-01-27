@@ -103,7 +103,6 @@ def main() -> None:
                     },
                 }
                 fout.write(json.dumps(instance, ensure_ascii=False) + "\n")
-                fout.flush()
 
 
 if __name__ == "__main__":

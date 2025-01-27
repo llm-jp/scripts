@@ -89,6 +89,7 @@ def main() -> None:
             }
             for speech in meeting.speechRecord:
                 instance["text"] += speech.speech.replace("\r\n", "\n").strip() + "\n\n"
+            instance["text"] = instance["text"].strip()
             instances.append(instance)
 
     with open(args.output_file, "wt", encoding="utf-8") as f:

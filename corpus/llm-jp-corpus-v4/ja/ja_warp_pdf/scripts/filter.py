@@ -62,7 +62,8 @@ def process_line(
     except Exception as e:
         logging.error(f"Error: {e}")
         return line
-    assert "meta" not in row
+    if "meta" not in row:
+        return ""  # Timeout or other errors
     text = row["text"]
     row["meta"] = {
         "line_break_or_white_space_ratio": get_line_break_or_white_space_ratio(text),

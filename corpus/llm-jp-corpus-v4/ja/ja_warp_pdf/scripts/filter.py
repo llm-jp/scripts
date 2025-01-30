@@ -63,13 +63,14 @@ def process_line(
     except Exception as e:
         logging.error(f"Error: {e}")
         return line
-    if "meta" not in row:
-        return ""  # Timeout or other errors
     text = row["text"]
+    orig_meta = row.get("meta", {})
     row["meta"] = {
         "line_break_or_white_space_ratio": get_line_break_or_white_space_ratio(text),
         "short_line_ratio": get_short_line_ratio(text),
     }
+    if orig_meta:
+        row["meta"]["meta"] = orig_meta
     if (
         row["meta"]["line_break_or_white_space_ratio"]
         > line_break_or_white_space_ratio_threshold

@@ -1,4 +1,5 @@
 """Remove low-quality documents."""
+
 import argparse
 import logging
 import json

@@ -69,7 +69,15 @@ def main() -> None:
         for line in f:
             host = line.strip()
             proc = subprocess.Popen(
-                ["ssh", "-i", "~/.ssh/id_ed_25519", "-o", "StrictHostKeyChecking=no", host, "true"],
+                [
+                    "ssh",
+                    "-i",
+                    "~/.ssh/id_ed_25519",
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    host,
+                    "true",
+                ],
                 stderr=subprocess.PIPE,
             )
             if proc.wait() != 0:
@@ -87,7 +95,15 @@ def main() -> None:
             command = queue.get()
             logger.info(f"Running {command} on {host}")
             proc = subprocess.Popen(
-                ["ssh", "-i", "~/.ssh/id_ed_25519", "-o", "StrictHostKeyChecking=no", host] + command,
+                [
+                    "ssh",
+                    "-i",
+                    "~/.ssh/id_ed_25519",
+                    "-o",
+                    "StrictHostKeyChecking=no",
+                    host,
+                ]
+                + command,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
             )

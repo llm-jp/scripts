@@ -13,6 +13,8 @@ set -eu -o pipefail
 #   ENV_DIR
 #   MODEL_DIR
 #   SCRIPT_DIR
+#   WANDB_ENTITY
+#   WANDB_PROJECT
 
 source ${ENV_DIR}/scripts/environment.sh
 source ${ENV_DIR}/scripts/mpi_variables.sh
@@ -135,9 +137,9 @@ IMPLEMENTATION_PARAMS=(
 LOGGING_PARAMS=(
     --log-interval 1
     --log-throughput
-    --wandb-entity llm-jp
-    --wandb-project 0111_train
-    --wandb-exp-name train
+    --wandb-entity ${WANDB_ENTITY}
+    --wandb-project ${WANDB_PROJECT}
+    --wandb-exp-name train_$(date '+%Y%m%d-%H%M%S')_${SLURM_JOB_ID}
 )
 
 python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \

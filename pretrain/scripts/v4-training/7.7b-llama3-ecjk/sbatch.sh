@@ -15,8 +15,8 @@ if [ $# -ne 4 ]; then
     >&2 echo "Usage: $0 ENV_DIR MODEL_DIR WANDB_ENTITY WANDB_PROJECT"
     exit 1
 fi
-ENV_DIR=$(realpath $1); shift
-MODEL_DIR=$(realpath $1); shift
+ENV_DIR=$(realpath -eP $1); shift
+MODEL_DIR=$(realpath -m $1); shift
 WANDB_ENTITY=$1; shift
 WANDB_PROJECT=$1; shift
 echo "ENV_DIR=${ENV_DIR}"

@@ -17,6 +17,7 @@ trg_dirs=(
     kokkai_giji
     nwc2010
     nwjc
+    patent
     sip_comprehensive_html
     sip_comprehensive_pdf-pdf2text
     sip_comprehensive_pdf-surya
@@ -40,7 +41,7 @@ wait_for_jobs() {
 }
 
 # reshard
-reshard_script=${work_dir}/scripts/subcorpus/reshard.sh
+reshard_script=${work_dir}/scripts/corpus/llm-jp-corpus-v4/common/dedup/subcorpus/reshard.sh
 unit_size=1G
 
 declare -A patterns=(

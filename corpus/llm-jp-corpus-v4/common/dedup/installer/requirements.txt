@@ -1,3 +1,4 @@
 datatrove[io,processing,cli]==0.4.0 # all w/o s3
 spacy[ja] # required when running minhash (data-trove)
-sudachipy==0.5.4
+sudachipy==0.5.4 # required when running minhash (data-trove)
+paramiko # for local multi node

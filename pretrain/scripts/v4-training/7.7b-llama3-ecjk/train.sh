@@ -71,8 +71,6 @@ OPTIMIZER_PARAMS=(
 
 # ceil( 15.6T / 8192 / 1024 ) == 1859665
 TRAIN_ITERS=1859665
-# NOTE(odashi): For testing: suppressing cost for preparing dataset
-#TRAIN_ITERS=10000
 
 SCHEDULER_PARAMS=(
     --train-iters ${TRAIN_ITERS}
@@ -96,12 +94,12 @@ PARALLELISM_PARAMS=(
     --use-distributed-optimizer
     --distributed-backend nccl
     # NOTE(odashi): Increasing timeout is required to prepare 15.6T dataset.
-    --distributed-timeout-minutes 60
+    --distributed-timeout-minutes 120
     --use-mpi
 )
 
 # Load TRAIN_DATA_PATH
-source ${SCRIPT_DIR}/train_data/llama3_simulation_15_6t.sh
+source ${SCRIPT_DIR}/../train_data/llama3_simulation_15_6t.sh
 
 DATASET_PARAMS=(
     --data-path ${TRAIN_DATA_PATH[@]}
@@ -126,13 +124,18 @@ IMPLEMENTATION_PARAMS=(
     # NOTE(odashi): For adjusting throughput
     #--recompute-activations
     #--recompute-granularity selective
-    --overlap-grad-reduce
-    --overlap-param-gather
+    #--overlap-grad-reduce
+    #--overlap-param-gather
 
     --attention-softmax-in-fp32
     --transformer-impl transformer_engine
-    --attention-backend flash
+
+    # NOTE(odashi): Newer implementation requires to set attention backend by parameter.
+    #--attention-backend flash
 )
+
+# NOTE(odashi): Disable fused attention for Sakura cluster due to some inconsistency.
+export NVTE_FUSED_ATTN=0
 
 LOGGING_PARAMS=(
     --log-interval 1

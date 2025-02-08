@@ -17,7 +17,11 @@ MEGATRON_HELPER_CPPFLAGS=(
   $(python -m pybind11 --includes)
 )
 MEGATRON_HELPER_EXT=$(${TARGET_DIR}/python/bin/python3-config --extension-suffix)
-g++ ${MEGATRON_HELPER_CPPFLAGS[@]} helpers.cpp -o helpers_cpp${MEGATRON_HELPER_EXT}
+
+# NOTE(odashi):
+# New version of Megatron-LM changed the extension name 'helpers' to 'helpers_cpp'
+#g++ ${MEGATRON_HELPER_CPPFLAGS[@]} helpers.cpp -o helpers_cpp${MEGATRON_HELPER_EXT}
+g++ ${MEGATRON_HELPER_CPPFLAGS[@]} helpers.cpp -o helpers${MEGATRON_HELPER_EXT}
 
 popd  # megatron/core/datasets
 popd  # Megatron-LM

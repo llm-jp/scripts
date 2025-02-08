@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # See manual's "4-3 OpenMPI / UCX / NCCL 環境変数パラメータ" section for detail
 
 if [[ $HOSTNAME =~ ^a[0-9]{3}$ ]]; then

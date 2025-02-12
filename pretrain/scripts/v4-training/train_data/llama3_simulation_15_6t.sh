@@ -1,6 +1,8 @@
 # See also: https://docs.google.com/spreadsheets/d/10f0nDuquFxAytZoBu32G1KDHNforNXCE8L8I9wjdmGk/edit?gid=1077033269#gid=1077033269
 
 TRAIN_DATA_PATH=(
+    --data-path
+
     # code
     104427769064 /home/shared/experiments/0111_v4-setup/corpus/tokenized/code/code_olmo-starcoder_0000_text_document
     114051163723 /home/shared/experiments/0111_v4-setup/corpus/tokenized/code/code_stack_0000_text_document

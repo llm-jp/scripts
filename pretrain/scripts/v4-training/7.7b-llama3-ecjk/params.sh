@@ -1,38 +1,10 @@
-#!/bin/bash
-
-# LLM-jp v4 7.7B (Llama3 8B compatible) training script.
+# Pretraining hyperparameters for v4 7.7B.
 # Model card: https://github.com/llm-jp/model-cards/pull/30
 
-set -eu -o pipefail
+ALL_PARAMS=()
 
-# Arguments from sbatch:
-#   MASTER_ADDR
-#   MASTER_PORT
-#   NUM_NODES
-#   NUM_GPUS_PER_NODE
-#   ENV_DIR
-#   MODEL_DIR
-#   SCRIPT_DIR
-#   WANDB_ENTITY
-#   WANDB_PROJECT
-
-source ${ENV_DIR}/scripts/environment.sh
-source ${ENV_DIR}/scripts/mpi_variables.sh
-source ${ENV_DIR}/venv/bin/activate
-
-# open file limit
-ulimit -n 65536 1048576
-
-export LOGLEVEL=INFO
-export NCCL_DEBUG=WARN
-export NCCL_DEBUG_SUBSYS=WARN
-export PYTHONFAULTHANDLER=1
-export CUDA_DEVICE_MAX_CONNECTIONS=1
-export CUDA_LAUNCH_BLOCKING=0
-export CUDNN_LOGDEST_DBG=stderr
-export CUDNN_LOGERR_DBG=1
-
-MODEL_PARAMS=(
+# Model hyperparameters
+ALL_PARAMS+=(
     --num-layers 32
     --hidden-size 4096
     --ffn-hidden-size 14336
@@ -50,12 +22,14 @@ MODEL_PARAMS=(
     --disable-bias-linear
 )
 
-TOKENIZER_PARAMS=(
+# Tokenizer
+ALL_PARAMS+=(
     --tokenizer-type Llama2Tokenizer
     --tokenizer-model ${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
 )
 
-OPTIMIZER_PARAMS=(
+# Optimizer hyperparameters
+ALL_PARAMS+=(
     --optimizer adam
     --lr 3e-4
     --min-lr 3e-5
@@ -72,7 +46,8 @@ OPTIMIZER_PARAMS=(
 # ceil( 15.6T / 8192 / 1024 ) == 1859665
 TRAIN_ITERS=1859665
 
-SCHEDULER_PARAMS=(
+# Scheduler
+ALL_PARAMS+=(
     --train-iters ${TRAIN_ITERS}
     --lr-warmup-iters 2000
     --lr-decay-iters ${TRAIN_ITERS}
@@ -81,12 +56,14 @@ SCHEDULER_PARAMS=(
     --eval-iters 0
 )
 
-BATCH_PARAMS=(
+# Batch sizes
+ALL_PARAMS+=(
     --micro-batch-size 1
     --global-batch-size 1024
 )
 
-PARALLELISM_PARAMS=(
+# Parallelism
+ALL_PARAMS+=(
     --tensor-model-parallel-size 1
     --pipeline-model-parallel-size 2
     --context-parallel-size 1
@@ -98,24 +75,23 @@ PARALLELISM_PARAMS=(
     --use-mpi
 )
 
-# Load TRAIN_DATA_PATH
-source ${SCRIPT_DIR}/../train_data/llama3_simulation_15_6t.sh
-
-DATASET_PARAMS=(
-    --data-path ${TRAIN_DATA_PATH[@]}
+# Dataset
+ALL_PARAMS+=(
     --data-cache-path ${MODEL_DIR}/cache
     --split 1,0,0
 )
 
 TASK_CHECKPOINT_DIR=${MODEL_DIR}/checkpoints
 
-CHECKPOINT_PARAMS=(
+# Checkpointing
+ALL_PARAMS+=(
     --load ${TASK_CHECKPOINT_DIR}
     --save ${TASK_CHECKPOINT_DIR}
     --save-interval 1000
 )
 
-IMPLEMENTATION_PARAMS=(
+# Other implementation-related parameters
+ALL_PARAMS+=(
     --bf16
     --use-mcore-models
     --no-masked-softmax-fusion
@@ -137,22 +113,11 @@ IMPLEMENTATION_PARAMS=(
 # NOTE(odashi): Disable fused attention for Sakura cluster due to some inconsistency.
 export NVTE_FUSED_ATTN=0
 
-LOGGING_PARAMS=(
+# Logging
+ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
     --wandb-entity ${WANDB_ENTITY}
     --wandb-project ${WANDB_PROJECT}
     --wandb-exp-name train_$(date '+%Y%m%d-%H%M%S')_${SLURM_JOB_ID}
 )
-
-python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
-    ${MODEL_PARAMS[@]} \
-    ${TOKENIZER_PARAMS[@]} \
-    ${BATCH_PARAMS[@]} \
-    ${OPTIMIZER_PARAMS[@]} \
-    ${SCHEDULER_PARAMS[@]} \
-    ${PARALLELISM_PARAMS[@]} \
-    ${DATASET_PARAMS[@]} \
-    ${CHECKPOINT_PARAMS[@]} \
-    ${IMPLEMENTATION_PARAMS[@]} \
-    ${LOGGING_PARAMS[@]}

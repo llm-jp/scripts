@@ -42,6 +42,9 @@ corpus=(
     corpus/json/ja/ja_fineweb2_*.jsonl.gz
     corpus/json/ja/ja_wiki_*.jsonl.gz
 
+    # ja-dedup
+    corpus/json/ja-dedup/ja-dedup_all_*.jsonl.gz
+
     # ko
     corpus/json/ko/ko_fineweb2_*.jsonl.gz
     corpus/json/ko/ko_wiki_*.jsonl.gz

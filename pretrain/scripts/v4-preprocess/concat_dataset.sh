@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p corpus/json/{code,en,ja,ja_dedup,ko,zh}
+
 # code
 #cat /data/llm-jp-corpus/v3.1.0/gitlab/code/code_stack/train_*.jsonl.gz > corpus/json/code/code_stack_0000.jsonl.gz
 #cat /data/llm-jp-corpus/v4.0.0/download/olmo-mix-1124/data/starcoder/v1-decon-100_to_20k-2star-top_token_030/documents/*json.gz > corpus/json/code/code_olmo-starcoder_0000.jsonl.gz
@@ -33,6 +35,11 @@
 #cat /data/llm-jp-corpus/v4.0.0/sample/ja_fineweb-2/001_*.jsonl.gz > corpus/json/ja/ja_fineweb2_0001.jsonl.gz
 #cat /data/llm-jp-corpus/v4.0.0/sample/ja_fineweb-2/002_*.jsonl.gz > corpus/json/ja/ja_fineweb2_0002.jsonl.gz
 #cat /data/llm-jp-corpus/v4.0.0/sample/ja_fineweb-2/003_*.jsonl.gz > corpus/json/ja/ja_fineweb2_0003.jsonl.gz
+
+# ja-dedup
+#for d in $(seq 0 9); do
+#    cat /home/shared/experiments/0118_dedup_corpusv4_ja/data/all/minhash-5gram-20buckets-10hashes/results/deduplicated_output/*$d.jsonl.gz > corpus/json/ja-dedup/ja-dedup_all_000$d.jsonl.gz
+#done
 
 # zh
 #cat /data/llm-jp-corpus/v3.1.0/gitlab/zh/zh_wiki/train_*.jsonl.gz > corpus/json/zh/zh_wiki_0000.jsonl.gz

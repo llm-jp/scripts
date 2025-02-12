@@ -2,6 +2,7 @@
 
 # For debug: only En/Ja wiki
 TRAIN_DATA_PATH=(
+    --data-path
     4744259830 /home/shared/experiments/0111_v4-setup/corpus/tokenized/en/en_wiki_0000_text_document
     1281902154 /home/shared/experiments/0111_v4-setup/corpus/tokenized/ja/ja_wiki_0000_text_document
 )

@@ -1,0 +1,50 @@
+# README
+日本語は[こちら](README-ja)
+
+## Overview
+This folder provides a set of scripts for processing **patent** data in four sequential steps:
+
+1. **Data Extraction (extract)**
+   - Convert text files into JSONL format, ensuring that each line represents a single document.
+   - Uses a blacklist file to exclude specified data.
+2. **Data Parsing (parse)**
+   - Parses JSONL data to extract structured information.
+3. **Data Analysis (analysis)**
+   - Computes statistical data and visualizes character length distributions.
+4. **Data Filtering (filter)**
+   - Extracts only the necessary data and format it as dataset.
+
+## Requirements
+- Python 3.11+
+
+## Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/llm-jp/scripts.git
+   cd scripts/corpus/llm-jp-corpus-v4/ja/patent
+   ```
+2. Install required libraries:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Execution Steps
+Run the scripts in the following order:
+
+1. **Data Extraction:** (Convert text files to JSONL format)
+   ```bash
+   bash extract/extract.sh
+   ```
+2. **Data Parsing:** (Parse original document data and generate ke-value data)
+   ```bash
+   bash parse/parse_all.sh <input_dir> <output_dir> <num_parallel>
+   ```
+3. **Data Analysis:** (Visualize data distribution and obtain statistical insights)
+   ```bash
+   python analysis/analyze_keys.py <input_dir> --worker <num_workers>
+   ```
+4. **Data Filtering:** (Extract data based on specified conditions)
+   ```bash
+   python filter/filter.py <input_dir> <output_dir> --char-limit <min_length> --worker <num_workers>
+   ```
+

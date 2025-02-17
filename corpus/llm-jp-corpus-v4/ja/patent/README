@@ -47,4 +47,8 @@ Run the scripts in the following order:
    ```bash
    python filter/filter.py <input_dir> <output_dir> --char-limit <min_length> --worker <num_workers>
    ```
+5.	(Optional) Analysis of Filtered Data: (Obtain statistical information on data distribution)
+   ```bash
+   python analysis/analyze_filtered.py <input_dir> --worker <num_workers>
+   ```
 

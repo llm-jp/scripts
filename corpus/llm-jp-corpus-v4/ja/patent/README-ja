@@ -38,12 +38,16 @@
    ```bash
    bash parse/parse_all.sh <input_dir> <output_dir> <num_parallel>
    ```
-3. **データの分析:** (データの分布を可視化・統計情報を取得)
+3. **データの分析:** (データの分布の統計情報を取得)
    ```bash
    python analysis/analyze_keys.py <input_dir> --worker <num_workers>
    ```
 4. **データのフィルタリング:** (指定した条件に基づきデータを抽出)
    ```bash
    python filter/filter.py <input_dir> <output_dir> --char-limit <min_length> --worker <num_workers>
+   ```
+5. (Optional) **フィルタ済みデータの分析:** (データの分布の統計情報を取得)
+   ```bash
+   python analysis/analyze_filterd.py <input_dir> --worker <num_workers>
    ```
 

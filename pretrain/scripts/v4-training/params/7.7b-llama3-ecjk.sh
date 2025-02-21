@@ -117,7 +117,4 @@ export NVTE_FUSED_ATTN=0
 ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
-    --wandb-entity ${WANDB_ENTITY}
-    --wandb-project ${WANDB_PROJECT}
-    --wandb-exp-name train_$(date '+%Y%m%d-%H%M%S')_${SLURM_JOB_ID}
 )

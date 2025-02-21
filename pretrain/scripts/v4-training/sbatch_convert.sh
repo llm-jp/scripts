@@ -62,8 +62,8 @@ ALL_PARAMS+=(
     --ckpt-convert-save /nvme34/ckpt
 )
 
-
-# Run the trainer script
+# Step 1: Convert `torch_dist` format to `torch`
+#
 mpirun \
     -np ${NUM_GPUS} \
     --npernode ${NUM_GPUS_PER_NODE} \
@@ -72,3 +72,5 @@ mpirun \
     python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
         ${ALL_PARAMS[@]} \
         ${TRAIN_DATA_PATH[@]}
+
+echo "Done"

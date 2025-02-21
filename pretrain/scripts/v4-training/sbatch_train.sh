@@ -57,6 +57,13 @@ source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh
 # Load TRAIN_DATA_PATH
 source ${SCRIPT_DIR}/train_data/llama3_simulation_15_6t.sh
 
+# Add W&B params
+ALL_PARAMS+=(
+    --wandb-entity ${WANDB_ENTITY}
+    --wandb-project ${WANDB_PROJECT}
+    --wandb-exp-name train_$(date '+%Y%m%d-%H%M%S')_${SLURM_JOB_ID}
+)
+
 # Run the trainer script
 mpirun \
     -np ${NUM_GPUS} \
@@ -66,3 +73,5 @@ mpirun \
     python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
         ${ALL_PARAMS[@]} \
         ${TRAIN_DATA_PATH[@]}
+
+echo "Done"

@@ -1,34 +1,10 @@
-"""
-This script processes JSONL files by extracting and filtering structured text data based on predefined regex patterns.
-
-It reads JSONL files from an input directory, applies text filtering based on character length, and stores the processed
-output in structured subdirectories based on matched text patterns. The script supports parallel processing using
-multiple worker threads.
-
-Usage:
-    python script.py <input_dir> <output_dir> --char-limit <min_length> --worker <num_workers>
-
-Arguments:
-    input_dir (str): Path to the input directory containing JSONL files.
-    output_dir (str): Path to the output directory where processed files will be stored.
-    --char-limit (int, optional): Minimum character length for filtering. Default is 0.
-    --worker (int, optional): Number of parallel workers for processing. Default is 64.
-
-Example:
-    python script.py ./input ./output --char-limit 100 --worker 32
-
-"""
-
 import argparse
-import copy
 import json
 import logging
-import re
 import sys
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
 from pathlib import Path
-from typing import Iterator, TextIO
 
 from tqdm.auto import tqdm
 
@@ -37,125 +13,70 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-extract_patterns = {
-    "seikyuukou": r"請求項\d+",
-    "tokkyo_koumoku": r"\d{4}",
-    "jijitsu_and_riyuu": r"事実及び理由",
-    "riyuu_1": r"理　由",
-    "hatsumei_syousai": r"発明の詳細な説明",
-    "kaiketsu": r"解決する",
-    "kaiketsu": r"解決しよう",
-    "juurai_gijutsu": r"従来の技術",
-    "hatsumei_kouka": r"発明の効果",
-    "deprecated-zumen_setsumei": r"図面の簡単な説",
-    "deprecated-hugou_setsumei": r"符号の説明",
-    "hatsumei_jissi_sairyou": r"発明を実施するための最良の形態",
-    "deprecated-jissirei": r"実施例\d*",
-    "riyuu_2": r"理由",
-    "deprecated-national_pamphlet": r"国際公開パンフレット",
-    "riyuu_3": r"理  由",
-    "tokkyo_hanni": r"特許請求の範囲",
-    "teisei_youshi": r"訂正の要旨",
-    "jijitsu": r"事実",
-    "souiten": r"相違点",
-    "hatsumei_haikei": r"発明の背景",
-    "hatsumei_jissi": r"発明の実施形態",
-    "deprecated-isyou_tokutyou": r"意匠の特徴",
+EXTRACT_FEATURES = {
+    "A": [["(57)【要約】"]],
+    "B9": [["(57)【特許請求の範囲】"]],
+    "T": [["(57)【要約】"]],
+    "S": [["(57)【要約】"]],
+    "A5": [["【手続補正書】", "【誤訳訂正書】"]],
+    "APC": [["【事件の表示】"], ["【審決日】", "【審理終結日】"]],
+    "T5": [["【手続補正書】", "【誤訳訂正書】"]],
+    "U9": [["(57)【要約】"]],
+    "APD": [
+        ["【事件の表示】", "【訂正の要旨】"],
+        ["【審判長】", "（２１）【出願番号】"],
+    ],
+    "ATC": [["【事件の表示】"], ["【審決日】", "【審理終結日】"]],
 }
 
-extract_patterns = {k: re.compile(v) for k, v in extract_patterns.items()}
+
+def is_match_patterns(text: str, patterns: list[str]):
+    for _pattern in patterns:
+        if _pattern in text:
+            return True
+    return False
 
 
-def pattern_filter(key: str) -> str | None:
-    """
-    Filters a given key based on predefined regex patterns.
+def process_file(input_file: Path, output_dir: Path):
+    symbol = input_file.stem[5:]
+    extract_range = EXTRACT_FEATURES[symbol]
+    output_file = output_dir / input_file.name
 
-    Args:
-        key (str): Input key to filter.
+    with input_file.open() as f_read, output_file.open("w", buffering=10**7) as f_write:
+        for i, line in enumerate(f_read):
+            data: dict[str, list[str]] = json.loads(line)
+            write_dict = {k: v for k, v in data.items() if k != "text"}
+            write_text = []
 
-    Returns:
-        str | None: Mapped key if a pattern matches, otherwise None.
-    """
-    for _save_to, _pattern in extract_patterns.items():
-        if _pattern.search(key):
-            return _save_to
-    return None
-
-
-def line_process_iterator(line: str, char_limit: int = 0) -> Iterator[tuple[str, dict]]:
-    """
-    Processes a JSON line and filters its contents based on text length.
-
-    Args:
-        line (str): JSON line to process.
-        char_limit (int, optional): Minimum character limit. Defaults to 0.
-
-    Yields:
-        tuple[str, dict]: Mapped key and processed JSON dictionary.
-    """
-    data: dict[str, list[str]] = json.loads(line)
-    meta = data["meta"]
-    for key, documents in data.items():
-        if key == "meta":
-            continue
-        _save_to = pattern_filter(key)
-        if _save_to is None:
-            continue
-        for i, _doc in enumerate(documents):
-            if len(_doc.strip()) <= char_limit:
-                continue
-            _meta = copy.deepcopy(meta)
-            _meta["key"] = key
-            _meta["order"] = i
-            write_dict = {"text": _doc.strip(), "meta": _meta}
-            yield _save_to, write_dict
-
-
-def process_file(input_file: Path, output_dir: Path, char_limit: int = 0):
-    """
-    Processes a file and saves filtered results in structured output directories.
-
-    Args:
-        input_file (Path): Path to the input JSONL file.
-        output_dir (Path): Directory where output files will be stored.
-        char_limit (int, optional): Minimum character limit. Defaults to 0.
-    """
-    f = input_file.open()
-    save_files: dict[str, TextIO] = {}
-    for line in f:
-        for _save_to, write_dict in line_process_iterator(line, char_limit=char_limit):
-            output_file = output_dir / _save_to / input_file.name
-            if not output_file.parent.exists():
-                output_file.parent.mkdir()
-            if _save_to not in save_files:
-                save_files[_save_to] = output_file.open("w", buffering=10**5)
-            save_files[_save_to].write(
-                json.dumps(write_dict, ensure_ascii=False) + "\n"
+            do_write = False
+            for _inner_line in data["text"].split("\n"):
+                if not do_write and is_match_patterns(_inner_line, extract_range[0]):
+                    # start condition
+                    do_write = True
+                if do_write:
+                    if len(extract_range) == 2 and is_match_patterns(
+                        _inner_line, extract_range[1]
+                    ):
+                        # end condition
+                        do_write = False
+                        continue
+                    write_text.append(_inner_line)
+            assert (
+                len(write_text) > 0
+            ), "Document have no extract feature.\n\tFile: {}\n\tLine: {} \n\tFeature:{}".format(
+                input_file, i, extract_range[0]
             )
-
-    # finalize
-    f.close()
-    for _file in save_files.values():
-        _file.close()
+            write_dict["text"] = "\n".join(write_text)
+            f_write.write(json.dumps(write_dict, ensure_ascii=False)+"\n")
 
 
-def main(input_dir: Path, output_dir: Path, char_limit: int, worker=16):
-    """
-    Main function to process JSONL files in parallel.
-
-    Args:
-        input_dir (Path): Input directory containing JSONL files.
-        output_dir (Path): Output directory for processed files.
-        char_limit (int): Minimum character length for filtering.
-        worker (int, optional): Number of parallel workers. Defaults to 16.
-    """
+def main(input_dir: Path, output_dir: Path, worker=16):
     logger.debug(f"{input_dir=}")
     logger.debug(f"{output_dir=}")
-    logger.debug(f"{char_limit=}")
-    all_files = list(input_dir.glob("*.jsonl"))
-    process_file_with_outdir = partial(
-        process_file, output_dir=output_dir, char_limit=char_limit
-    )
+    all_files = [
+        _f for _f in input_dir.glob("*.jsonl") if _f.stem[5:] in EXTRACT_FEATURES
+    ]
+    process_file_with_outdir = partial(process_file, output_dir=output_dir)
     with ProcessPoolExecutor(max_workers=worker) as executor:
         futures = {
             executor.submit(process_file_with_outdir, file): file for file in all_files
@@ -173,7 +94,6 @@ if __name__ == "__main__":
     class Args:
         input: str
         output: str
-        char_limit: int
         worker: int
 
     parser = argparse.ArgumentParser(
@@ -184,13 +104,6 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "output", type=str, help="Path to the output directory for processed files."
-    )
-    parser.add_argument(
-        "-char",
-        "--char-limit",
-        type=int,
-        default=0,
-        help="Minimum character length for filtering (default: 0).",
     )
     parser.add_argument(
         "--worker",
@@ -210,4 +123,4 @@ if __name__ == "__main__":
         logger.error("Directory already exists: %s", output_dir)
         sys.exit()
 
-    main(input_dir, output_dir, args.char_limit, args.worker)
+    main(input_dir, output_dir, args.worker)

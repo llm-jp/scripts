@@ -1,0 +1,22 @@
+explicit_log_dir: null
+exp_dir: ${exp_dir}
+name: ${name}
+create_wandb_logger: True
+wandb_logger_kwargs:
+    name: ${name}
+    project: ${project}
+    entity: ${entity}
+resume_if_exists: True
+resume_ignore_no_checkpoint: True
+create_checkpoint_callback: True
+checkpoint_callback_params:
+    monitor: val_loss
+    always_save_nemo: False
+    save_weights_only: True
+    save_top_k: 1
+    save_last: False
+    mode: min
+    save_nemo_on_train_end: False
+    filename: "{step}"
+    model_parallel_size: ${multiply:${model.tensor_model_parallel_size}, ${model.pipeline_model_parallel_size}}
+    save_best_model: False   # need to keep this false otherwise it will create multiple last.ckpt files because restore reset the previous best model

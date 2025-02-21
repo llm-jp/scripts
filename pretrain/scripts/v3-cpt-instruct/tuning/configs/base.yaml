@@ -1,0 +1,55 @@
+# specify here default training configuration
+defaults:
+  - _self_
+
+project: 0095_sft
+entity: llm-jp
+
+# path to original working directory
+# hydra hijacks working directory by changing it to the current log directory,
+# so it's useful to have this path as a special variable
+# https://hydra.cc/docs/next/tutorials/basic/running_your_app/working_directory
+work_dir: ${hydra:runtime.cwd}     # FIXME: This directory is for storing models and logs
+data_dir: /data/tuning_eval_data/instruct2/tuning/train
+
+# seed for random number generators in pytorch, numpy and python.random
+seed: 42
+
+# name of the run is accessed by loggers
+# should be used along with experiment mode
+exp_dir: ${work_dir}/result
+run_dir: ${exp_dir}/${now:%m%d}_${now:%H%M%S}
+config_name: ${hydra:job.config_name}
+
+name: ${config_name}-${now:%Y%m%d}_${now:%H%M%S}
+
+hydra:
+  run:
+    dir: ${exp_dir}
+  sweep:
+    dir: ${work_dir}/multirun_result
+    subdir: ${name}-${hydra:job.num}
+  job:
+    env_set:
+      TOKENIZERS_PARALLELISM: false
+      HF_HOME: ""
+      TMPDIR: ""
+    config:
+      override_dirname:
+        kv_sep: ':'
+        item_sep: '-'
+        exclude_keys:
+          - seed
+          - name
+          - exp_dir
+          - run_dir
+          - logger
+          - per_device_train_batch_size
+          - per_device_eval_batch_size
+          - gradient_checkpointing
+          - logging_steps
+          - eval_steps
+          - save_steps
+          - trainer.num_nodes
+          - use_mpi
+          - use_slurm

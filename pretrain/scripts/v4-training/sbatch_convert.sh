@@ -62,8 +62,6 @@ ALL_PARAMS+=(
     --ckpt-convert-save /nvme34/ckpt
 )
 
-echo "$(hostname) ${ALL_PARAMS[@]}"
-exit 0
 
 # Run the trainer script
 mpirun \

@@ -5,7 +5,7 @@
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks-per-node=8
 
-# LLM-jp v4 7.7B launcher script.
+# LLM-jp v4 trainer launcher
 # Usage:
 #   sbatch \
 #     --job-name=9999_train \

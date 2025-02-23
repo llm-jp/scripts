@@ -81,15 +81,6 @@ ALL_PARAMS+=(
     --split 1,0,0
 )
 
-TASK_CHECKPOINT_DIR=${MODEL_DIR}/checkpoints
-
-# Checkpointing
-ALL_PARAMS+=(
-    --load ${TASK_CHECKPOINT_DIR}
-    --save ${TASK_CHECKPOINT_DIR}
-    --save-interval 1000
-)
-
 # Other implementation-related parameters
 ALL_PARAMS+=(
     --bf16

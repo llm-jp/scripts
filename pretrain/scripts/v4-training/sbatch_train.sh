@@ -64,6 +64,14 @@ ALL_PARAMS+=(
     --wandb-exp-name train_$(date '+%Y%m%d-%H%M%S')_${SLURM_JOB_ID}
 )
 
+# Add Checkpointing params
+TASK_CHECKPOINT_DIR=${MODEL_DIR}/checkpoints
+ALL_PARAMS+=(
+    --load ${TASK_CHECKPOINT_DIR}
+    --save ${TASK_CHECKPOINT_DIR}
+    --save-interval 1000
+)
+
 # Run the trainer script
 mpirun \
     -np ${NUM_GPUS} \

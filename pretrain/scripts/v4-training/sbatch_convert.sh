@@ -87,11 +87,10 @@ source ${SCRIPT_DIR}/train_data/llama3_simulation_15_6t.sh
 
 # Add params specific to model conversion
 ALL_PARAMS+=(
+    --load ${TEMP_DIR}/torch_dist
     --ckpt-convert-format torch
     --ckpt-convert-save ${TEMP_DIR}
 )
-
-# NOTE(odashi): We don't need to set W&B parmas
 
 # Launch trainer script to convert the checkpoint
 mpirun \

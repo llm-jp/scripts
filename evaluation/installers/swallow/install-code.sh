@@ -57,7 +57,7 @@ source $INSTALLER_COMMON
 mkdir -p $TARGET_DIR
 
 # Copy basic scripts for swallow eval
-cp scripts/run-eval.sh $TARGET_DIR
+cp scripts/run-eval-code.sh ${TARGET_DIR}/run-eval.sh
 cp -r scripts/scripts $TARGET_DIR
 
 
@@ -104,6 +104,18 @@ pushd src/swallow-evaluation/lm-evaluation-harness-en
 pip install --upgrade pip
 pip install -e .
 pip install sentencepiece vllm protobuf
+deactivate
+popd # $ENV_DIR
+
+# Install bigcode
+source venv-bigcode/bin/activate
+pushd src/swallow-evaluation/bigcode-evaluation-harness
+make DOCKERFILE=Dockerfile all
+pip install --upgrade pip
+pip install -e .
+# For Llama
+pip install sentencepiece
+pip install protobuf
 deactivate
 popd # $ENV_DIR
 popd  # $TARGET_DIR

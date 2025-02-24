@@ -48,7 +48,14 @@ pushd ${EVAL_DIR}
 bash scripts/evaluate_english-vllm.sh $MODEL $GPU_MEM_PROPORTION
 popd
 cp -r ${EVAL_DIR}/results .
-deactivate   
+deactivate
+
+source ${ENV_DIR}/venv-bigcode/bin/activate     
+pushd ${EVAL_DIR}                                                             
+bash scripts/evaluate_english_humaneval-unstripped.sh $MODEL true true
+popd
+cp -r ${EVAL_DIR}/results .                                                   
+deactivate      
 
 source ${ENV_DIR}/venv-postprocessing/bin/activate     
 python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result results/${MODEL}/aggregated_result.json

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-work_dir=/model/ytsuta/workspace-model/space-dedup_analysis
+work_dir=/model/experiments/0118_dedup_corpusv4_ja
 env_dir=${work_dir}/environment
 venv_dir=${env_dir}/.venv
 src_dir=${env_dir}/src

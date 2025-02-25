@@ -22,6 +22,23 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Define extraction patterns for different document types.
+# Each key corresponds to a document type symbol found in the input filenames.
+# The value is a list of one or two lists of patterns:
+# - The first list defines patterns that mark the start of the text to be extracted.
+# - The second list (if present) defines patterns that mark the end of the text to be extracted.
+# 
+# Extraction rules:
+# 1. A, B9, T, S, U9:
+#    - Extract text starting from the line that contains the first pattern, excluding all lines above it.
+# 2. A5, T5:
+#    - Extract text as in rule 1, but only if either "【手続補正書】" or "【誤訳訂正書】" is present (mutually exclusive).
+# 3. APC, ATC:
+#    - Extract text as in rule 1, but stop extraction at the line containing the second pattern (if present).
+# 4. APD:
+#    - Extract text from "【事件の表示】" to "【審判長】" by default.
+#    - If "【訂正の要旨】" is present, extend extraction until "（２１）【出願番号】" but exclude the section between
+#      "【審判長】" and "【訂正の要旨】".
 EXTRACT_FEATURES = {
     "A": [["(57)【要約】"]],
     "B9": [["(57)【特許請求の範囲】"]],

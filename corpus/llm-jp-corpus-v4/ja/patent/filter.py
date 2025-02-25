@@ -1,3 +1,8 @@
+"""
+This script reads JSONL files from a specified input directory, extracts text matching
+predefined patterns, and writes the extracted text to new JSONL files in an output directory.
+"""
+
 import argparse
 import json
 import logging
@@ -9,8 +14,7 @@ from pathlib import Path
 try:
     from tqdm.auto import tqdm
 except ImportError:
-    tqdm = lambda x: x 
-
+    tqdm = lambda x: x
 
 
 logging.basicConfig(
@@ -35,14 +39,35 @@ EXTRACT_FEATURES = {
 }
 
 
-def is_match_patterns(text: str, patterns: list[str]):
-    for _pattern in patterns:
-        if _pattern in text:
-            return True
-    return False
+def is_match_patterns(text: str, patterns: list[str]) -> bool:
+    """
+    Check if any of the given patterns is found in the provided text.
+
+    Args:
+        text (str): The text to be searched.
+        patterns (list[str]): A list of pattern strings to search for in the text.
+
+    Returns:
+        bool: True if at least one pattern is found in the text; otherwise, False.
+    """
+    return any(_pattern in text for _pattern in patterns)
 
 
-def process_file(input_file: Path, output_dir: Path):
+def extract_text_from_file(input_file: Path, output_dir: Path) -> None:
+    """
+    Read a single JSONL file, extract text according to predefined patterns,
+    and write the extracted text to a new JSONL file.
+
+    Extraction is performed by identifying start and end patterns defined
+    in the EXTRACT_FEATURES dictionary.
+
+    Args:
+        input_file (Path): Path to the input JSONL file.
+        output_dir (Path): Path to the directory where the output file will be written.
+
+    Raises:
+        AssertionError: If no text matches the defined extraction patterns.
+    """
     symbol = input_file.stem[5:]
     extract_range = EXTRACT_FEATURES[symbol]
     output_file = output_dir / input_file.name
@@ -55,36 +80,50 @@ def process_file(input_file: Path, output_dir: Path):
 
             do_write = False
             for _inner_line in data["text"].split("\n"):
+                # Start extraction if the line matches any start pattern
                 if not do_write and is_match_patterns(_inner_line, extract_range[0]):
-                    # start condition
                     do_write = True
+
                 if do_write:
+                    # If a second pattern list exists and matches, stop extraction
                     if len(extract_range) == 2 and is_match_patterns(
                         _inner_line, extract_range[1]
                     ):
-                        # end condition
                         do_write = False
                         continue
                     write_text.append(_inner_line)
+
+            # Ensure we actually extracted something
             assert (
                 len(write_text) > 0
-            ), "Document have no extract feature.\n\tFile: {}\n\tLine: {} \n\tFeature:{}".format(
+            ), "No matching text found in document.\n\tFile: {}\n\tLine: {}\n\tFeature: {}".format(
                 input_file, i, extract_range[0]
             )
+
             write_dict["text"] = "\n".join(write_text)
-            f_write.write(json.dumps(write_dict, ensure_ascii=False)+"\n")
+            f_write.write(json.dumps(write_dict, ensure_ascii=False) + "\n")
 
 
-def main(input_dir: Path, output_dir: Path, worker=16):
+def main(input_dir: Path, output_dir: Path, worker: int = 16) -> None:
+    """
+    Traverse the input directory to find JSONL files matching known patterns,
+    extract relevant text from each file, and write it to the output directory.
+
+    Args:
+        input_dir (Path): Path to the directory containing the input JSONL files.
+        output_dir (Path): Path to the directory where extracted files will be created.
+        worker (int, optional): Number of worker processes for parallel file handling. Defaults to 16.
+    """
     logger.debug(f"{input_dir=}")
     logger.debug(f"{output_dir=}")
     all_files = [
         _f for _f in input_dir.glob("*.jsonl") if _f.stem[5:] in EXTRACT_FEATURES
     ]
-    process_file_with_outdir = partial(process_file, output_dir=output_dir)
+    extract_text_with_outdir = partial(extract_text_from_file, output_dir=output_dir)
+
     with ProcessPoolExecutor(max_workers=worker) as executor:
         futures = {
-            executor.submit(process_file_with_outdir, file): file for file in all_files
+            executor.submit(extract_text_with_outdir, file): file for file in all_files
         }
 
         for future in tqdm(as_completed(futures), total=len(futures), ncols=0):
@@ -97,18 +136,22 @@ def main(input_dir: Path, output_dir: Path, worker=16):
 if __name__ == "__main__":
 
     class Args:
+        """
+        A placeholder class to store command-line arguments provided by argparse.
+        """
+
         input: str
         output: str
         worker: int
 
     parser = argparse.ArgumentParser(
-        description="Process JSONL files and filter text data based on length."
+        description="Read JSONL files, extract text based on predefined patterns, and write the results to output."
     )
     parser.add_argument(
         "input", type=str, help="Path to the input directory containing JSONL files."
     )
     parser.add_argument(
-        "output", type=str, help="Path to the output directory for processed files."
+        "output", type=str, help="Path to the output directory for extracted files."
     )
     parser.add_argument(
         "--worker",
@@ -120,9 +163,12 @@ if __name__ == "__main__":
 
     input_dir = Path(args.input)
     output_dir = Path(args.output)
-    assert input_dir.exists() and input_dir.is_dir()
+
+    assert (
+        input_dir.exists() and input_dir.is_dir()
+    ), "Input directory does not exist or is not a directory."
     if not output_dir.exists():
-        logger.info("Create directory: %s", output_dir)
+        logger.info("Creating directory: %s", output_dir)
         output_dir.mkdir(parents=True)
     else:
         logger.error("Directory already exists: %s", output_dir)

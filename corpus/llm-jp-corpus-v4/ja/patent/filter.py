@@ -6,7 +6,12 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
 from pathlib import Path
 
-from tqdm.auto import tqdm
+try:
+    from tqdm.auto import tqdm
+except ImportError:
+    tqdm = lambda x: x 
+
+
 
 logging.basicConfig(
     level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -82,7 +87,7 @@ def main(input_dir: Path, output_dir: Path, worker=16):
             executor.submit(process_file_with_outdir, file): file for file in all_files
         }
 
-        for future in tqdm(as_completed(futures), total=len(futures), ncols=80):
+        for future in tqdm(as_completed(futures), total=len(futures), ncols=0):
             try:
                 future.result()
             except Exception as e:

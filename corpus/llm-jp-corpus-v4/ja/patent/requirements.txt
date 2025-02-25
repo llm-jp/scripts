@@ -1,4 +1,0 @@
-tqdm
-pyyaml
-matplotlib
-japanize-matplotlib

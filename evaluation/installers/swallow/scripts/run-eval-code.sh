@@ -14,8 +14,8 @@ set -eux
 ulimit -n 65536 1048576
 
 #wandb configs
-WANDB_ENTITY=llm-jp-eval
-WANDB_PROJECT=junjie-swallow-test
+WANDB_ENTITY=swallow-eval # FIX_ME
+WANDB_PROJECT=test # FIX_ME
 WANDB_RUN_NAME=$2
 
 

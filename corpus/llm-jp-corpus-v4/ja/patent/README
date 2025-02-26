@@ -40,6 +40,6 @@ The filtering script `filter.py` does not support all data. It only processes a 
 - `*-{A,B9,T,S,A5,APC,T5,U9,APD,ATC}.jsonl`.
 
 Additionally, some other files were considered but do not contain any usable data, so they are not processed:
-- `*-{UT,TG,A5,APC,DG,IT,UTA,IR,TR,T_R1,ITA,T_T1}.jsonl`.
+- `*-{UT,TG,APC,DG,IT,UTA,IR,TR,T_R1,ITA,T_T1}.jsonl`.
 
 These supported files account for 99.5% of the total file size extracted by `extract.sh`.

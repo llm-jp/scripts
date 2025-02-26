@@ -91,7 +91,7 @@ install_python v${PYTHON_VERSION} ${ENV_DIR}/python
 popd # $ENV_DIR
 
 # Prepare venv for swallow harness_en and bigcode
-python/bin/python3 -m venv venv-harness venv-bigcode venv-postprocessing
+python/bin/python3 -m venv venv-harness venv-postprocessing
 
 source venv-postprocessing/bin/activate
 pip install wandb pandas

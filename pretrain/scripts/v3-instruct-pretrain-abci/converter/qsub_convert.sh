@@ -21,7 +21,7 @@ echo $HF_CHECKPOINT_DIR
 
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining
 SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v3-instruct-pretrain-abci/pretrain
-ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain-test
+ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain
 
 ## Setup environment
 source ${SCRIPT_DIR}/common/setup.sh

@@ -2,12 +2,11 @@
 #PBS -P gcg51557
 #PBS -q R10415
 #PBS -N 0130_train
-#PBS -l select=1:host=hnode040+1:host=hnode042
+#PBS -l select=4
 #PBS -l walltime=168:00:00
 #PBS -m n
 
 cd $PBS_O_WORKDIR
-#-l select=4
 
 JOBID=${PBS_JOBID%%.*}
 mkdir -p ${TASK_DIR}/logs
@@ -19,7 +18,7 @@ set -eu -o pipefail
 
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining
 SCRIPT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining/scripts/pretrain/scripts/v3-instruct-pretrain-abci/pretrain
-ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain-test
+ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain
 
 # Setup environment
 source ${SCRIPT_DIR}/common/setup.sh

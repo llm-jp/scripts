@@ -17,15 +17,14 @@ script_root=scripts/pretrain/scripts/v3-instruct-pretrain-abci
 source ${script_root}/venv/bin/activate
 
 host_list=(
-    hnode126
-    hnode151
-    hnode152
-    hnode153
-    hnode154
-    hnode155
-    hnode156
-    hnode157
-    hnode158
+    hnode110
+    hnode111
+    hnode112
+    hnode113
+    hnode114
+    hnode115
+    hnode116
+    hnode117
 )
 
 #python ${script_root}/preprocess/configure_corpus.py \

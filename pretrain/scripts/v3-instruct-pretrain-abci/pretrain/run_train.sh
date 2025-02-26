@@ -22,7 +22,7 @@ python ${script_root}/preprocess/configure_corpus.py \
     --output ${task_dir}/train_data.sh
 
 
-qsub \
+qsub -l select=${num_nodes} \
   -v TASK_DIR=${task_dir},PARAM_NAME=${param_name},RTYPE=rt_HF \
   -o /dev/null -e /dev/null \
   -m n \

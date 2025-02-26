@@ -107,7 +107,7 @@ else
   echo "Start new training from scratch"
 fi
 ALL_PARAMS+=(
-    --save-interval 10000
+    --save-interval 1000
 )
 
 # Other implementation-related parameters

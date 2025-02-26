@@ -23,8 +23,6 @@ ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain
 # Setup environment
 source ${SCRIPT_DIR}/common/setup.sh
 
-source ${ENV_DIR}/venv/bin/activate
-
 export MASTER_ADDR=$(head -n 1 $PBS_NODEFILE | hostname -f)
 export MASTER_PORT=$((10000 + RANDOM % 1000))
 echo "hostname: ${MASTER_ADDR}"
@@ -38,10 +36,6 @@ echo NUM_GPUS_PER_NODE=$NUM_GPUS_PER_NODE
 echo NUM_GPUS=$NUM_GPUS
 
 cat $PBS_NODEFILE
-
-# Load TRAIN_DATA_PATH
-source ${TASK_DIR}/train_data.sh
-echo "TRAIN_DATA_PATH: ${TRAIN_DATA_PATH}"
 
 # Load ALL_PARAMS
 source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh

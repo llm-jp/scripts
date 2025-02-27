@@ -68,11 +68,15 @@ Modify the variables in the `run-eval.sh` files as needed:
 VRAM needs to be 2.5-3.5 times the model size (e.g., 13B model -> 33GB-45GB).
 Memory usage will be automatically estimated from model size.
 When running in a SLURM environment, the default is `--gpus 1`, so adjust to the appropriate size for your cluster along with `--mem`.
+
+> [!NOTE]
+> Currently, only the WITHOUT CODE GENERATION setting is supported for specifying output directories.
+
 ```shell
 # For a cluster with SLURM
-sbatch --partition {FIX_ME} run-eval.sh {path/to/model} {wandb.run_name} {model size in billion}
+sbatch --partition {FIX_ME} run-eval.sh {path/to/model} {wandb.run_name} {model size in billion} {output/dir}
 # For a cluster without SLURM
-CUDA_VISIBLE_DEVICES={FIX_ME} bash run-eval.sh {path/to/model} {wandb.run_name} {model size in billion}
+CUDA_VISIBLE_DEVICES={FIX_ME} bash run-eval.sh {path/to/model} {wandb.run_name} {model size in billion} {output/dir}
 ```
 
 #### Sample Code

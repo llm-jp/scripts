@@ -18,24 +18,29 @@ WANDB_ENTITY=swallow-eval # FIX_ME
 WANDB_PROJECT=test # FIX_ME
 WANDB_RUN_NAME=$2
 
-
 ENV_DIR=environment
 source ${ENV_DIR}/scripts/environment.sh
 
 # Arguments
 MODEL=$1
-NUM_PARAMETERS_IN_BILLION=$3
-OUTPUT_DIR=${4:-results/${MODEL_NAME_PATH}}
+OUTPUT_DIR=${3:-results/${MODEL_NAME_PATH}}
+NUM_PARAMETERS_IN_BILLION=${4:--1}
 
 # Convert OUTPUT_DIR to an absolute path
 OUTPUT_DIR=$(realpath $OUTPUT_DIR)
 
 echo "OUTPUT_DIR" $OUTPUT_DIR
 
-# Estimate the proportion of GPU MEMORY NEEDED
-. scripts/estimate_vllm_memory_usage.sh
-GPU_MEM_PROPORTION=$(estimate_vllm_memory $NUM_PARAMETERS_IN_BILLION)
-echo "MEMORY PROPORTION" $GPU_MEM_PROPORTION
+# Set GPU_MEM_PROPORTION
+if [ "$NUM_PARAMETERS_IN_BILLION" -eq -1 ]; then
+    echo "NUM_PARAMETERS_IN_BILLION not provided. Setting GPU_MEM_PROPORTION to 0.4."
+    GPU_MEM_PROPORTION=0.4
+else
+    # Estimate the proportion of GPU MEMORY NEEDED
+    . scripts/estimate_vllm_memory_usage.sh
+    GPU_MEM_PROPORTION=$(estimate_vllm_memory $NUM_PARAMETERS_IN_BILLION)
+    echo "MEMORY PROPORTION" $GPU_MEM_PROPORTION
+fi
 
 # fixed vars
 EVAL_DIR=${ENV_DIR}/src/swallow-evaluation

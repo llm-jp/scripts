@@ -24,19 +24,18 @@ source ${ENV_DIR}/scripts/environment.sh
 
 # Arguments
 MODEL=$1
-NUM_PARAMETERS_IN_BILLION=$3
+NUM_PARAMETERS_IN_BILLION=${3:--1}
 
-# Estimate the proportion of GPU MEMORY NEEDED
-. scripts/estimate_vllm_memory_usage.sh
-GPU_MEM_PROPORTION=$(estimate_vllm_memory $NUM_PARAMETERS_IN_BILLION)
-echo "MEMORY PROPORTION" $GPU_MEM_PROPORTION
-
-# WANDB_RUN_NAME=$2
-
-# # Semi-fixed vars
-# CONFIG_TEMPLATE=resources/config_base.yaml
-# OFFLINE_CONFIG_TEMPLATE=resources/config_offline_inference_vllm.yaml
-# TOKENIZER=$MODEL
+# Set GPU_MEM_PROPORTION
+if [ "$NUM_PARAMETERS_IN_BILLION" -eq -1 ]; then
+    echo "NUM_PARAMETERS_IN_BILLION not provided. Setting GPU_MEM_PROPORTION to 0.4."
+    GPU_MEM_PROPORTION=0.4
+else
+    # Estimate the proportion of GPU MEMORY NEEDED
+    . scripts/estimate_vllm_memory_usage.sh
+    GPU_MEM_PROPORTION=$(estimate_vllm_memory $NUM_PARAMETERS_IN_BILLION)
+    echo "MEMORY PROPORTION" $GPU_MEM_PROPORTION
+fi
 
 # fixed vars
 EVAL_DIR=${ENV_DIR}/src/swallow-evaluation

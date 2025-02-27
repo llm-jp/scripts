@@ -74,16 +74,16 @@ When running in a SLURM environment, the default is `--gpus 1`, so adjust to the
 
 ```shell
 # For a cluster with SLURM
-sbatch --partition {FIX_ME} run-eval.sh {path/to/model} {wandb.run_name} {model size in billion} {output/dir}
+sbatch --partition {FIX_ME} run-eval.sh {path/to/model} {wandb.run_name} {output/dir} {OPTIONAL: model size in billion}
 # For a cluster without SLURM
-CUDA_VISIBLE_DEVICES={FIX_ME} bash run-eval.sh {path/to/model} {wandb.run_name} {model size in billion} {output/dir}
+CUDA_VISIBLE_DEVICES={FIX_ME} bash run-eval.sh {path/to/model} {wandb.run_name} {output/dir} {OPTIONAL: model size in billion}
 ```
 
 #### Sample Code
 ```shell
 # Evaluate 70B model on a cluster with SLURM using H100 (VRAM: 80GB)
-sbatch --partition {FIX_ME} --gpus 4 --mem 8G run-eval.sh sbintuitions/sarashina2-70b test-$(whoami) 70
+sbatch --partition {FIX_ME} --gpus 4 --mem 8G run-eval.sh sbintuitions/sarashina2-70b test-$(whoami) ./test-$(whoami) 70
 # Evaluate 13B model on a cluster without SLURM using A100 (VRAM: 40GB)
-CUDA_VISIBLE_DEVICES=0,1 bash run-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami) 13
+CUDA_VISIBLE_DEVICES=0,1 bash run-eval.sh llm-jp/llm-jp-13b-v2.0 test-$(whoami) ./test-$(whoami) 13
 ```
 

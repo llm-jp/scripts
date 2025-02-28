@@ -26,10 +26,11 @@ MODEL=$1
 OUTPUT_DIR=${3:-results/${MODEL_NAME_PATH}}
 NUM_PARAMETERS_IN_BILLION=${4:--1}
 
+# Create OUTPUT_DIR if it does not exist
+mkdir -p $OUTPUT_DIR
+
 # Convert OUTPUT_DIR to an absolute path
 OUTPUT_DIR=$(realpath $OUTPUT_DIR)
-
-echo "OUTPUT_DIR" $OUTPUT_DIR
 
 # Set GPU_MEM_PROPORTION
 if [ "$NUM_PARAMETERS_IN_BILLION" -eq -1 ]; then

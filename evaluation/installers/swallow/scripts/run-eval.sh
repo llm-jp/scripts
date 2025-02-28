@@ -54,7 +54,7 @@ popd
 deactivate   
 
 source ${ENV_DIR}/venv-postprocessing/bin/activate     
-python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result ${OUTPUT_DIR}/aggregated_result.json
+python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result ${OUTPUT_DIR}/result.json
 deactivate
 
 echo "Done"

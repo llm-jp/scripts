@@ -57,7 +57,7 @@ cp -r ${EVAL_DIR}/results .
 deactivate      
 
 source ${ENV_DIR}/venv-postprocessing/bin/activate     
-python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result results/${MODEL}/aggregated_result.json
+python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result results/${MODEL}/result.json
 deactivate      
 
 cp install.sh ${ENV_DIR}

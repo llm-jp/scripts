@@ -136,5 +136,5 @@ ALL_PARAMS+=(
     --log-throughput
     --wandb-entity llm-jp
     --wandb-project 0130_instruction_pretraining
-    --wandb-exp-name train_$(basename ${TASK_DIR})
+    --wandb-exp-name $(basename ${TASK_DIR})
 )

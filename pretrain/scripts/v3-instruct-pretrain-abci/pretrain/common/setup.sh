@@ -7,7 +7,7 @@ module load hpcx/2.20
 module load nccl/2.23/2.23.4-1
 echo $(module list)
 
-ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain
+ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain_torch_v2.4.0
 
 source ${ENV_DIR}/venv/bin/activate
 

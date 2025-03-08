@@ -13,7 +13,7 @@ estimate_vllm_memory() {
     local model_memory_gb=$(( model_params_billion * bytes_per_param  ))
 
     # Overhead (~20% extra for activations, KV cache, optimizations)
-    local overhead_gb=$(( model_memory_gb / 5 ))
+    local overhead_gb=$(( model_memory_gb / 3 ))
     local total_required_gb=$(( model_memory_gb + overhead_gb ))
 
     # Get total GPU memory in GB
@@ -21,8 +21,9 @@ estimate_vllm_memory() {
     # echo $total_gpu_memory_gb
     # echo "sep"
 
-    # Estimate proportion needed
+    # Estimate proportion needed, set minimum propotion as 0.2 to prevent insufficient memory for KV cache
     local proportion_needed=$(echo "scale=2; $total_required_gb / $total_gpu_memory_gb" | bc)
+    proportion_needed=$(echo "if ($proportion_needed < 0.2) 0.2 else $proportion_needed" | bc)
 
     echo "$proportion_needed"
 }

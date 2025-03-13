@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=0080
-#SBATCH --partition=gpu
-#SBATCH --nodes=8
+#SBATCH --partition=gpu-small
+#SBATCH --nodes=2
 #SBATCH --gpus-per-node=8
 #SBATCH --ntasks-per-node=8
 #SBATCH --output=outputs/%x-%j.out

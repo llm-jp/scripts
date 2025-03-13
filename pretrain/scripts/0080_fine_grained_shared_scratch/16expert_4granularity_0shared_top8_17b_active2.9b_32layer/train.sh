@@ -298,7 +298,7 @@ LOGGING_ARGS=(
     --log-interval 1
     --log-throughput
     --moe-per-layer-logging
-    --save-interval 250
+    --save-interval 500
     --eval-interval ${TRAIN_STEPS}
     --eval-iters 0
     --save ${CHECKPOINT_SAVE_DIR}

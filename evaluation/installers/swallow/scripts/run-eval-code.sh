@@ -18,19 +18,13 @@ WANDB_ENTITY=swallow-eval # FIX_ME
 WANDB_PROJECT=test # FIX_ME
 WANDB_RUN_NAME=$2
 
+
 ENV_DIR=environment
 source ${ENV_DIR}/scripts/environment.sh
 
 # Arguments
 MODEL=$1
-OUTPUT_DIR=${3:-results/${MODEL_NAME_PATH}}
-NUM_PARAMETERS_IN_BILLION=${4:--1}
-
-# Create OUTPUT_DIR if it does not exist
-mkdir -p $OUTPUT_DIR
-
-# Convert OUTPUT_DIR to an absolute path
-OUTPUT_DIR=$(realpath $OUTPUT_DIR)
+NUM_PARAMETERS_IN_BILLION=${3:--1}
 
 # Set GPU_MEM_PROPORTION
 if [ "$NUM_PARAMETERS_IN_BILLION" -eq -1 ]; then
@@ -50,12 +44,22 @@ HARNESS_SCRIPT_PATH=${EVAL_DIR}/scripts/evaluate_english.sh
 
 source ${ENV_DIR}/venv-harness/bin/activate
 pushd ${EVAL_DIR}
-bash scripts/evaluate_english-vllm.sh $MODEL $GPU_MEM_PROPORTION $OUTPUT_DIR
+bash scripts/evaluate_english-vllm.sh $MODEL $GPU_MEM_PROPORTION
 popd
-deactivate   
+cp -r ${EVAL_DIR}/results .
+deactivate
+
+source ${ENV_DIR}/venv-bigcode/bin/activate     
+pushd ${EVAL_DIR}                                                             
+bash scripts/evaluate_english_humaneval-unstripped.sh $MODEL true true
+popd
+cp -r ${EVAL_DIR}/results .                                                   
+deactivate      
 
 source ${ENV_DIR}/venv-postprocessing/bin/activate     
-python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result ${OUTPUT_DIR}/result.json
-deactivate
+python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result results/${MODEL}/result.json
+deactivate      
+
+cp install.sh ${ENV_DIR}
 
 echo "Done"

@@ -23,7 +23,7 @@ source ${ENV_DIR}/scripts/environment.sh
 
 # Arguments
 MODEL=$1
-OUTPUT_DIR=${3:-results/${MODEL_NAME_PATH}}
+OUTPUT_DIR=${3:-results/${MODEL}}
 NUM_PARAMETERS_IN_BILLION=${4:--1}
 
 # Create OUTPUT_DIR if it does not exist

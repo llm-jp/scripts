@@ -38,9 +38,12 @@ if [ "$NUM_PARAMETERS_IN_BILLION" -eq -1 ]; then
     GPU_MEM_PROPORTION=0.4
 else
     # Estimate the proportion of GPU MEMORY NEEDED
+    GPU_MEM_PROPORTION=""
+    TARGETED_DP_SIZE=""
+    TARGETED_TP_SIZE=""
     . scripts/estimate_vllm_memory_usage.sh
-    GPU_MEM_PROPORTION=$(estimate_vllm_memory $NUM_PARAMETERS_IN_BILLION)
-    echo "MEMORY PROPORTION" $GPU_MEM_PROPORTION
+    estimate_vllm_memory_tpdp $NUM_PARAMETERS_IN_BILLION GPU_MEM_PROPORTION TARGETED_TP_SIZE TARGETED_DP_SIZE
+    echo "VLLM TPDP CONFIG" $GPU_MEM_PROPORTION $TARGETED_TP_SIZE $TARGETED_DP_SIZE
 fi
 
 # fixed vars
@@ -50,7 +53,7 @@ HARNESS_SCRIPT_PATH=${EVAL_DIR}/scripts/evaluate_english.sh
 
 source ${ENV_DIR}/venv-harness/bin/activate
 pushd ${EVAL_DIR}
-bash scripts/evaluate_english-vllm.sh $MODEL $GPU_MEM_PROPORTION $OUTPUT_DIR
+bash scripts/evaluate_english-vllm.sh $MODEL $GPU_MEM_PROPORTION $OUTPUT_DIR $TARGETED_TP_SIZE $TARGETED_DP_SIZE
 popd
 deactivate   
 

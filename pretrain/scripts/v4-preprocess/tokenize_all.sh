@@ -38,6 +38,9 @@ corpus=(
     corpus/json/en/en_fineweb-eduscore2_*.jsonl.gz
     corpus/json/en/en_fineweb-rest_*.jsonl.gz
 
+    # en-fineweb
+    corpus/json/en-fineweb/en-fineweb_*.jsonl.gz
+
     # ja
     corpus/json/ja/ja_fineweb2_*.jsonl.gz
     corpus/json/ja/ja_wiki_*.jsonl.gz

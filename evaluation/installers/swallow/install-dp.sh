@@ -57,7 +57,7 @@ source $INSTALLER_COMMON
 mkdir -p $TARGET_DIR
 
 # Copy basic scripts for swallow eval
-cp scripts/run-eval-code.sh ${TARGET_DIR}/run-eval.sh
+cp scripts/run-eval.sh $TARGET_DIR
 cp -r scripts/scripts $TARGET_DIR
 
 
@@ -72,8 +72,8 @@ pushd $ENV_DIR # $ENV_DIR
 # src is used to store all resources for from-scratch builds
 mkdir -p src
 # Retrieve swallow repository
-SWALLOW_REPO_URL=https://github.com/junjiechen-chris/swallow-eval-customization.git 
-git clone $SWALLOW_REPO_URL src/swallow-evaluation -b dev/swallow-llmjp-1
+SWALLOW_REPO_URL=https://github.com/junjiechen-chris/swallow-eval-customization.git
+git clone $SWALLOW_REPO_URL src/swallow-evaluation
 
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/install.sh .
@@ -91,7 +91,7 @@ install_python v${PYTHON_VERSION} ${ENV_DIR}/python
 popd # $ENV_DIR
 
 # Prepare venv for swallow harness_en and bigcode
-python/bin/python3 -m venv venv-harness venv-bigcode venv-postprocessing
+python/bin/python3 -m venv venv-harness venv-postprocessing
 
 source venv-postprocessing/bin/activate
 pip install wandb pandas
@@ -103,19 +103,8 @@ source venv-harness/bin/activate
 pushd src/swallow-evaluation/lm-evaluation-harness-en
 pip install --upgrade pip
 pip install -e .
-pip install sentencepiece vllm protobuf
-deactivate
-popd # $ENV_DIR
-
-# Install bigcode
-source venv-bigcode/bin/activate
-pushd src/swallow-evaluation/bigcode-evaluation-harness
-make DOCKERFILE=Dockerfile all
-pip install --upgrade pip
-pip install -e .
-# For Llama
-pip install sentencepiece
-pip install protobuf
+pip install sentencepiece protobuf
+pip install vllm==0.3.2
 deactivate
 popd # $ENV_DIR
 popd  # $TARGET_DIR

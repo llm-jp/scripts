@@ -73,7 +73,7 @@ pushd $ENV_DIR # $ENV_DIR
 mkdir -p src
 # Retrieve swallow repository
 SWALLOW_REPO_URL=https://github.com/junjiechen-chris/swallow-eval-customization.git 
-git clone $SWALLOW_REPO_URL src/swallow-evaluation -b dev/swallow-llmjp-1
+git clone $SWALLOW_REPO_URL src/swallow-evaluation 
 
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/install.sh .

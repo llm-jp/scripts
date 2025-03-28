@@ -72,7 +72,7 @@ ALL_PARAMS+=(
 ALL_PARAMS+=(
     --tensor-model-parallel-size 2
     --pipeline-model-parallel-size 2
-    --expert-model-parallel-size 4
+    --expert-model-parallel-size 2
     --context-parallel-size 1
     --sequence-parallel
     --use-distributed-optimizer

@@ -1,0 +1,45 @@
+# README
+
+## Overview
+This folder provides a set of scripts for processing **patent** data in two steps:
+
+1. **Data Extraction (extract.sh)**
+   - Convert text files into JSONL format, ensuring that each line represents a single document.
+   - Uses a blacklist file to exclude specified data.
+2. **Data Filtering (filter.py)**
+   - Remove unnecessary meta data text.
+
+## Requirements
+- Python 3.11+
+
+## Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/llm-jp/scripts.git
+   cd scripts/corpus/llm-jp-corpus-v4/ja/patent
+   ```
+2. (Optional) Install required libraries:
+   ```bash
+   pip install tqdm
+   ```
+
+## Execution Steps
+Run the scripts in the following order:
+
+1. **Data Extraction:** (Convert text files to JSONL format)
+   ```bash
+   bash extract.sh
+   ```
+2. **Data Filtering:** (Extract data)
+   ```bash
+   python filter.py <input_dir> <output_dir> --worker <num_workers>
+   ```
+
+## Note
+The filtering script `filter.py` does not support all data. It only processes a subset of the files extracted by `extract.sh`:
+- `*-{A,B9,T,S,A5,APC,T5,U9,APD,ATC}.jsonl`.
+
+Additionally, some other files were considered but do not contain any usable data, so they are not processed:
+- `*-{UT,TG,APC,DG,IT,UTA,IR,TR,T_R1,ITA,T_T1}.jsonl`.
+
+These supported files account for 99.5% of the total file size extracted by `extract.sh`.

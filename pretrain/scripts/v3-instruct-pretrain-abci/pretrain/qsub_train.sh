@@ -2,7 +2,7 @@
 #PBS -P gcg51557
 #PBS -q R10415
 #PBS -N 0130_train
-#PBS -l select=4
+#PBS -l select=8:ncpus=192
 #PBS -l walltime=168:00:00
 #PBS -m n
 
@@ -18,7 +18,7 @@ set -eu -o pipefail
 
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining
 SCRIPT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining/scripts/pretrain/scripts/v3-instruct-pretrain-abci/pretrain
-ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain_torch_v2.4.0
+ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain_torch_v2.5.1
 
 # Setup environment
 source ${SCRIPT_DIR}/common/setup.sh
@@ -41,16 +41,16 @@ cat $PBS_NODEFILE
 source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh
 echo "ALL_PARAMS: ${ALL_PARAMS[@]}"
 
-export NVTE_FUSED_ATTN=0
-
 mpirun \
   --display-allocation \
   --report-bindings \
   --oversubscribe \
   -np $NUM_GPUS \
   --npernode $NUM_GPUS_PER_NODE \
+  -x MASTER_ADDR=$MASTER_ADDR \
+  -x MASTER_PORT=$MASTER_PORT \
   -bind-to none \
   -map-by slot \
+  -x PATH \
   python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
     ${ALL_PARAMS[@]}
-

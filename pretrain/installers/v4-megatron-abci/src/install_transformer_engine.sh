@@ -7,6 +7,6 @@ source ${TARGET_DIR}/venv/bin/activate
 # NOTE(odashi):
 # This implicitly installs flash-attn with their recommended version.
 # If the auto-installed flash-attn causes some problems, we need to re-install it.
-pip install --no-build-isolation --no-cache-dir transformer_engine[pytorch]==1.9.0
+pip install --no-build-isolation --no-cache-dir transformer_engine[pytorch]==${PRETRAIN_TRANSFORMER_ENGINE_VERSION}
 
 deactivate

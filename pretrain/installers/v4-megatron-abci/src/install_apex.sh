@@ -1,11 +1,17 @@
 # Install 
 
-echo "Installing apex ${PRETRAIN_APEX_VERSION}"
+echo "Installing apex with commit ${PRETRAIN_APEX_COMMIT}"
 source ${TARGET_DIR}/venv/bin/activate
 pushd ${TARGET_DIR}/src
 
-git clone --recurse-submodules https://github.com/NVIDIA/apex -b ${PRETRAIN_APEX_VERSION}
+git clone --recurse-submodules https://github.com/NVIDIA/apex
 pushd apex
+
+# Checkout the specific commit
+git checkout ${PRETRAIN_APEX_COMMIT}
+git submodule update --init --recursive
+
+
 python -m pip install \
   -v \
   --no-cache-dir \

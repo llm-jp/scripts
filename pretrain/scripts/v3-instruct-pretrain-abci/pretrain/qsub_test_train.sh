@@ -18,7 +18,7 @@ set -eu -o pipefail
 
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining
 SCRIPT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining/scripts/pretrain/scripts/v3-instruct-pretrain-abci/pretrain
-ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain
+ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain_torch_v2.6.0
 
 # Setup environment
 source ${SCRIPT_DIR}/common/setup.sh
@@ -49,8 +49,11 @@ mpirun \
   --oversubscribe \
   -np $NUM_GPUS \
   --npernode $NUM_GPUS_PER_NODE \
+  -x MASTER_ADDR=$MASTER_ADDR \
+  -x MASTER_PORT=$MASTER_PORT \
   -bind-to none \
   -map-by slot \
+  -x PATH \
   python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
     ${ALL_PARAMS[@]}
 

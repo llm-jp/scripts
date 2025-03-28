@@ -18,7 +18,7 @@ set -eu -o pipefail
 
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining
 SCRIPT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining/scripts/pretrain/scripts/v3-instruct-pretrain-abci/pretrain
-ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain_torch_v2.5.1
+ENV_DIR=${EXPERIMENT_DIR}/environments/pretrain_torch_v2.6.0
 
 # Setup environment
 source ${SCRIPT_DIR}/common/setup.sh

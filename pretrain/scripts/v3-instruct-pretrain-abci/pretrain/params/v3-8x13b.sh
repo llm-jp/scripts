@@ -64,15 +64,15 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 2
+    --micro-batch-size 1
     --global-batch-size 1024
 )
 
 # Parallelism
 ALL_PARAMS+=(
-    --tensor-model-parallel-size 2
+    --tensor-model-parallel-size 1
     --pipeline-model-parallel-size 2
-    --expert-model-parallel-size 2
+    --expert-model-parallel-size 8
     --context-parallel-size 1
     --sequence-parallel
     --use-distributed-optimizer

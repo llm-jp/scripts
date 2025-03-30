@@ -29,8 +29,8 @@ TOKENIZER_MODEL=${ENV_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.
 MEGATRON_PATH=${ENV_DIR}/src/Megatron-LM
 export PYTHONPATH=${MEGATRON_PATH}:${PYTHONPATH:-}
 
-TARGET_TP_SIZE=2
-TARGET_EP_SIZE=1
+TARGET_TP_SIZE=1
+TARGET_EP_SIZE=8
 TARGET_PP_SIZE=2
 
 HF_FORMAT_DIR=/groups/gcg51557/experiments/0130_instruction_pretraining/pretrained_checkpoints/llmjp3-8x13b-hf/iter_0494120

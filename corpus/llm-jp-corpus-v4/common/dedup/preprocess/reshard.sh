@@ -6,45 +6,49 @@
 #SBATCH --output=slurm_logs/%j-%x.out
 #SBATCH --error=slurm_logs/%j-%x.err
 
+# This script splits files from an input directory into smaller compressed chunks,
+# preserving directory structure. Supports optional file pattern filtering and .gz input.
+# 
+# Usage:
+#   sbatch this_script.sh <input_dir> <output_dir> [unit_size] [pattern]
+# Example:
+#   sbatch this_script.sh ./data ./sharded 500M '\.jsonl$'
+
 set -eux
 
 input_dir=$1
 output_dir=$2
-unit_size=${3:-"1G"}
-pattern=${4:-""}
+unit_size=${3:-"1G"}  # Target size per split chunk (default: 1G)
+pattern=${4:-""}    # Optional pattern to filter files
 
 input_dir=$(realpath "$input_dir")
 mkdir -p "$output_dir"
 
-# ファイル一覧取得（フォルダ構造を考慮）
+# Get list of all files (respecting directory structure)
 all_files=$(find -L "$input_dir" -type f)
 
-# パターンが指定された場合はフィルタリング
+# Filter files if a pattern is specified
 if [[ -n "$pattern" ]]; then
     all_files=$(echo "$all_files" | grep -E "$pattern" || true)
 fi
 
-# ファイルが見つからない場合の処理
+# Exit if no files match the pattern
 if [[ -z "$all_files" ]]; then
     echo "No matching files found. Exiting."
     exit 1
 fi
 
-# 各フォルダごとに処理するため、ディレクトリ単位でグループ化
+# Group files by their parent directory (relative to input_dir)
 declare -A dir_files_map
 while IFS= read -r file; do
-    # ファイルの属するディレクトリ（input_dir からの相対パス）を取得
     relative_dir=$(dirname "${file#$input_dir/}")
     output_subdir="$output_dir/$relative_dir"
 
-    # ディレクトリ構造を再現
     mkdir -p "$output_subdir"
-
-    # ディレクトリごとにファイルリストを格納
     dir_files_map["$output_subdir"]+="$file "
 done <<< "$all_files"
 
-# 各ディレクトリごとに分割処理を実行
+# For each group of files, perform splitting
 for subdir in "${!dir_files_map[@]}"; do
     file_list=${dir_files_map["$subdir"]}
 
@@ -57,7 +61,7 @@ for subdir in "${!dir_files_map[@]}"; do
         --verbose
     )
 
-    # ファイルを適切に処理（.gz ファイルは解凍）
+    # Concatenate and split each file; decompress if .gz
     for file in $file_list; do
         if [[ "$file" == *.gz ]]; then
             gunzip -c "$file"

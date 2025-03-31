@@ -13,7 +13,17 @@ parallel_jobs = 32
 patterns = ["s3://commoncrawl/crawl-data", "/fsx/guilherme/cc2023-50"]
 
 
-def convert_patterns(path):
+def convert_patterns(path: str) -> str:
+    """
+    Normalize the file path based on known prefix patterns.
+
+    Examples:
+        >>> convert_patterns("s3://commoncrawl/crawl-data/CC-MAIN-2023/file1")
+        "s3://commoncrawl/crawl-data"
+
+        >>> convert_patterns("/data/local/custom_corpus/file3")
+        "/data/local/custom_corpus/file3"
+    """
     for _pat in patterns:
         if _pat in path:
             return _pat

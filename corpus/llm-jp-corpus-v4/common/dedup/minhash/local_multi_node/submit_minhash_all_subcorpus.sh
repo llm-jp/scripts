@@ -34,7 +34,6 @@ target_dirs=(
     wiki
 )
 
-
 # reshard
 python_submit_script=${work_dir}/scripts/corpus/llm-jp-corpus-v4/common/dedup/minhash/local_multi_node/submit_minhash.py
 python_minhash_script=${work_dir}/scripts/corpus/llm-jp-corpus-v4/common/dedup/minhash/local_multi_node/minhash_dedup.py
@@ -51,7 +50,7 @@ for _dirname in "${target_dirs[@]}"; do
         --input_dir "${_target_dir}/reshard_1B" \
         --output_dir "$_target_dir" \
         --stage "${stage}" \
-        --log_dir "${log_root}/${stage}/${_dirname}"\
+        --log_dir "${log_root}/${stage}/${_dirname}" \
         --venv_path $env_path \
         --python_script $python_minhash_script \
         --node_list "${node_list[@]}" \

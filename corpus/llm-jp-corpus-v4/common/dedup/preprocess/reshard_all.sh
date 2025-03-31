@@ -25,7 +25,6 @@ target_dirs=(
     wiki
 )
 
-
 # reshard
 reshard_script=${work_dir}/scripts/corpus/llm-jp-corpus-v4/common/dedup/preprocess/reshard.sh
 unit_size=1G

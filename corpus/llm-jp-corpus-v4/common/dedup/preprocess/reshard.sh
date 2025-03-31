@@ -8,7 +8,7 @@
 
 # This script splits files from an input directory into smaller compressed chunks,
 # preserving directory structure. Supports optional file pattern filtering and .gz input.
-# 
+#
 # Usage:
 #   sbatch this_script.sh <input_dir> <output_dir> [unit_size] [pattern]
 # Example:
@@ -18,8 +18,8 @@ set -eux
 
 input_dir=$1
 output_dir=$2
-unit_size=${3:-"1G"}  # Target size per split chunk (default: 1G)
-pattern=${4:-""}    # Optional pattern to filter files
+unit_size=${3:-"1G"} # Target size per split chunk (default: 1G)
+pattern=${4:-""}     # Optional pattern to filter files
 
 input_dir=$(realpath "$input_dir")
 mkdir -p "$output_dir"
@@ -46,7 +46,7 @@ while IFS= read -r file; do
 
     mkdir -p "$output_subdir"
     dir_files_map["$output_subdir"]+="$file "
-done <<< "$all_files"
+done <<<"$all_files"
 
 # For each group of files, perform splitting
 for subdir in "${!dir_files_map[@]}"; do

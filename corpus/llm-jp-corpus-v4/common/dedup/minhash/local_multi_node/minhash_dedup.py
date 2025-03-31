@@ -14,19 +14,19 @@ from datatrove.pipeline.writers.jsonl import JsonlWriter
 from datatrove.utils.hashing import HashConfig
 from datatrove.utils.typeshelper import Languages
 
-WORK_DIR = "/home/shared/experiments/0118_dedup_corpusv4_ja"
-VENV_PATH = f"{WORK_DIR}/environment/.venv/bin/activate"
 
 @dataclass
 class Args:
+    input: str
+    output: str
     ngram: int
     buckets: int
     hashes_per_bucket: int
-    input: str
-    output: str
-    local_tasks:int
-    local_rank_offset:int
-    
+    local_tasks: int
+    local_rank_offset: int
+    max_worker: int
+    stage:int
+
 
 argparser = ArgumentParser()
 argparser.add_argument("input", type=str)
@@ -34,19 +34,24 @@ argparser.add_argument("output", type=str)
 argparser.add_argument("--ngram", default=5, type=int)
 argparser.add_argument("-r", "--buckets", default=20, type=int)
 argparser.add_argument("-b", "--hashes_per_bucket", default=10, type=int)
-argparser.add_argument("-task","--local_tasks", type=int)
-argparser.add_argument("-rank","--local_rank_offset", type=int)
+argparser.add_argument("-task", "--local_tasks", type=int, default=-1)
+argparser.add_argument("-rank", "--local_rank_offset", type=int, default=0)
+argparser.add_argument("-worker", "--max_worker", type=int, default=16)
+argparser.add_argument("-stage", "--stage", type=int, choices=[1,2,3,4],default=4)
 args = argparser.parse_args(namespace=Args)
 
 
-MINHASH_DIRNAME = f"minhash-{args.ngram}gram-{args.buckets}buckets-{args.hashes_per_bucket}hashes"
-MINHASH_DIR=Path(args.output)/MINHASH_DIRNAME
+MINHASH_DIRNAME = (
+    f"minhash-{args.ngram}gram-{args.buckets}buckets-{args.hashes_per_bucket}hashes"
+)
+MINHASH_DIR = Path(args.output) / MINHASH_DIRNAME
 RESULT_DIR = f"{MINHASH_DIR}/results"
 LOG_DIR = f"{MINHASH_DIR}/logs"
 SLURM_LOGS_DIR = f"{MINHASH_DIR}/slurm_logs"
 
-all_files=[_f for _f in Path(args.input).rglob("*") if _f.resolve().is_file()]
+all_files = [_f for _f in Path(args.input).rglob("*") if _f.resolve().is_file()]
 TOTAL_TASKS = len(all_files)
+
 # this is the original data that we want to deduplicate
 INPUT_READER = JsonlReader(args.input)
 # you can also change ngrams or the number of buckets and their size here
@@ -56,7 +61,6 @@ minhash_config = MinhashConfig(
     num_buckets=args.buckets,
     hashes_per_bucket=args.hashes_per_bucket,
 )  # better precision -> fewer false positives (collisions)
-
 
 # stage 1 computes minhash signatures for each task (each task gets a set of files)
 stage1 = LocalPipelineExecutor(
@@ -70,7 +74,7 @@ stage1 = LocalPipelineExecutor(
         ),
     ],
     tasks=TOTAL_TASKS,
-    workers=args.local_tasks,
+    workers=args.max_worker,
     logging_dir=f"{LOG_DIR}/signatures",
     local_tasks=args.local_tasks,
     local_rank_offset=args.local_rank_offset,
@@ -87,6 +91,7 @@ stage2 = LocalPipelineExecutor(
         ),
     ],
     tasks=minhash_config.num_buckets,
+    workers=args.max_worker,
     logging_dir=f"{LOG_DIR}/buckets",
     depends=stage1,
 )
@@ -102,7 +107,7 @@ stage3 = LocalPipelineExecutor(
             save_cluster_size=True,
         ),
     ],
-    tasks=1,
+    tasks=args.max_worker,
     logging_dir=f"{LOG_DIR}/clusters",
     depends=stage2,
 )
@@ -112,7 +117,7 @@ stage3 = LocalPipelineExecutor(
 stage4 = LocalPipelineExecutor(
     pipeline=[
         INPUT_READER,
-        TokensCounter(),  # nice way to see how many tokens we had before and after deduplication
+        # TokensCounter(),  # nice way to see how many tokens we had before and after deduplication
         MinhashDedupFilter(
             input_folder=f"{RESULT_DIR}/remove_ids",
             exclusion_writer=JsonlWriter(f"{RESULT_DIR}/removed"),
@@ -124,9 +129,10 @@ stage4 = LocalPipelineExecutor(
     tasks=TOTAL_TASKS,
     logging_dir=f"{LOG_DIR}/filter",
     depends=stage3,
-    #local_tasks=args.local_tasks,
-    #local_rank_offset=args.local_rank_offset,
+    workers=args.max_worker,
+    local_tasks=args.local_tasks,
+    local_rank_offset=args.local_rank_offset,
 )
 
 if __name__ == "__main__":
-    stage1.run()
+    exec(f"stage{args.stage}.run()")

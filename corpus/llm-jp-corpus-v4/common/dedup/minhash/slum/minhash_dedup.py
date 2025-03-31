@@ -17,34 +17,36 @@ from datatrove.utils.typeshelper import Languages
 WORK_DIR = "/home/shared/experiments/0118_dedup_corpusv4_ja"
 VENV_PATH = f"{WORK_DIR}/environment/.venv/bin/activate"
 
+
 @dataclass
 class Args:
+    input: str
+    output: str
     ngram: int
     buckets: int
     hashes_per_bucket: int
-    input: str
-    input_pattern:str
-    output: str
-    venv:str
+    venv: str
+
 
 argparser = ArgumentParser()
+argparser.add_argument("input", type=str)
+argparser.add_argument("output", type=str)
 argparser.add_argument("--ngram", default=5, type=int)
 argparser.add_argument("-r", "--buckets", default=20, type=int)
 argparser.add_argument("-b", "--hashes_per_bucket", default=10, type=int)
-argparser.add_argument("--input", type=str)
-argparser.add_argument("--output", type=str)
-argparser.add_argument("--venv", default=VENV_PATH,type=str)
+argparser.add_argument("--venv", default=VENV_PATH, type=str)
 args = argparser.parse_args(namespace=Args)
 
 
-
-MINHASH_DIRNAME = f"minhash-{args.ngram}gram-{args.buckets}buckets-{args.hashes_per_bucket}hashes"
-MINHASH_DIR=Path(args.output)/MINHASH_DIRNAME
+MINHASH_DIRNAME = (
+    f"minhash-{args.ngram}gram-{args.buckets}buckets-{args.hashes_per_bucket}hashes"
+)
+MINHASH_DIR = Path(args.output) / MINHASH_DIRNAME
 RESULT_DIR = f"{MINHASH_DIR}/results"
 LOG_DIR = f"{MINHASH_DIR}/logs"
 SLURM_LOGS_DIR = f"{MINHASH_DIR}/slurm_logs"
 
-all_files=[_f for _f in Path(args.input).rglob("*") if _f.is_file()]
+all_files = [_f for _f in Path(args.input).rglob("*") if _f.resolve().is_file()]
 TOTAL_TASKS = len(all_files)
 
 # this is the original data that we want to deduplicate
@@ -75,7 +77,7 @@ stage1 = SlurmPipelineExecutor(
     partition="cpu",
     logging_dir=f"{LOG_DIR}/signatures",
     slurm_logs_folder=SLURM_LOGS_DIR,
-    venv_path=VENV_PATH,
+    venv_path=args.venv,
     max_array_launch_parallel=True,
     stagger_max_array_jobs=5,
 )
@@ -96,7 +98,7 @@ stage2 = SlurmPipelineExecutor(
     logging_dir=f"{LOG_DIR}/buckets",
     depends=stage1,
     slurm_logs_folder=SLURM_LOGS_DIR,
-    venv_path=VENV_PATH,
+    venv_path=args.venv,
     max_array_launch_parallel=True,
     stagger_max_array_jobs=5,
 )
@@ -121,7 +123,7 @@ stage3 = SlurmPipelineExecutor(
     cpus_per_task=2,
     depends=stage2,
     slurm_logs_folder=SLURM_LOGS_DIR,
-    venv_path=VENV_PATH,
+    venv_path=args.venv,
     max_array_launch_parallel=True,
     stagger_max_array_jobs=5,
 )
@@ -147,7 +149,7 @@ stage4 = SlurmPipelineExecutor(
     logging_dir=f"{LOG_DIR}/filter",
     depends=stage3,
     slurm_logs_folder=SLURM_LOGS_DIR,
-    venv_path=VENV_PATH,
+    venv_path=args.venv,
     max_array_launch_parallel=True,
     stagger_max_array_jobs=5,
 )

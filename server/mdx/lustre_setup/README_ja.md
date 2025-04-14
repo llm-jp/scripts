@@ -15,7 +15,7 @@
 以下のコマンドを実行してスクリプトを使用します。
 
 ```shell
-sudo bash setup_mdx.sh [-f] [-v] STORAGE_NETWORK1_IPV4
+sudo bash setup.sh [-f] [-v] STORAGE_NETWORK1_IPV4
 ```
 
 スクリプト実行後に再起動が必要です。<br>
@@ -35,19 +35,19 @@ sudo bash setup_mdx.sh [-f] [-v] STORAGE_NETWORK1_IPV4
 ストレージネットワーク1のIPv4アドレスが `192.168.1.100` の場合、以下のように実行します。
 
 ```shell
-sudo bash setup_mdx.sh 192.168.1.100
+sudo bash setup.sh 192.168.1.100
 ```
 
 再起動を確認せずに強制的に再起動したい場合は、`-f`オプションを追加します。
 
 ```shell
-sudo bash setup_mdx.sh -f 192.168.1.100
+sudo bash setup.sh -f 192.168.1.100
 ```
 
 デバッグモードを有効にする場合は、`-v`オプションを使用します。
 
 ```shell
-sudo bash setup_mdx.sh -v 192.168.1.100
+sudo bash setup.sh -v 192.168.1.100
 ```
 
 ## Notes

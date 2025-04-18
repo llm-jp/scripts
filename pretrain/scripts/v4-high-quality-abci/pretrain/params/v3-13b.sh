@@ -60,7 +60,7 @@ ALL_PARAMS+=(
 # Parallelism
 ALL_PARAMS+=(
     --tensor-model-parallel-size 2
-    --pipeline-model-parallel-size 2
+    --pipeline-model-parallel-size 1
     --context-parallel-size 1
     --sequence-parallel
     --use-distributed-optimizer

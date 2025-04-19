@@ -53,13 +53,13 @@ estimate_vllm_memory_tpdp() {
     local total_gpu_memory_gb=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | awk '{sum+=$1} END {print sum / 1024}')
     local single_gpu_memory_gb=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits | head -n 1 | awk '{print $1 / 1024}')
     local total_num_gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
-    local targeted_per_gpu_memory_gb=$(( single_gpu_memory_gb / 2 ))
+    local targeted_per_gpu_memory_gb=$(awk "BEGIN {print $single_gpu_memory_gb / 1.8}") #  $(( single_gpu_memory_gb / 2 ))
     echo "single gpu memory" $single_gpu_memory_gb
-    local targeted_tp_size=$(awk "BEGIN {res = $total_model_gb * 1.33 / $targeted_per_gpu_memory_gb; ceil = (res == int(res)) ? int(res) : int(res)+1; print ceil} ")
+    local targeted_tp_size=$(awk "BEGIN {res = $total_model_gb * 1.25 / $targeted_per_gpu_memory_gb; ceil = (res == int(res)) ? int(res) : int(res)+1; print ceil} ")
     echo "tp size" $targeted_tp_size
     # local possible_tp_size=$(( total_model_gb * 1.33 / targeted_per_gpu_memory_gb ))
     local possible_dp_size=$(( total_num_gpu / targeted_tp_size ))
-    local proportion_needed=$(awk "BEGIN {print $total_model_gb * 1.33 / $targeted_tp_size / $single_gpu_memory_gb}")
+    local proportion_needed=$(awk "BEGIN {print $total_model_gb * 1.25 / $targeted_tp_size / $single_gpu_memory_gb}")
     proportion_needed=$(echo "if ($proportion_needed < 0.3) 0.3 else $proportion_needed" | bc)
 
     if [[ $possible_dp_size -eq 0 ]]; then
@@ -78,4 +78,3 @@ estimate_vllm_memory_tpdp() {
 
     # echo "$proportion_needed"
 }
-

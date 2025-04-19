@@ -72,8 +72,8 @@ pushd $ENV_DIR # $ENV_DIR
 # src is used to store all resources for from-scratch builds
 mkdir -p src
 # Retrieve swallow repository
-SWALLOW_REPO_URL=https://github.com/junjiechen-chris/swallow-eval-customization.git
-git clone $SWALLOW_REPO_URL src/swallow-evaluation
+SWALLOW_REPO_URL=https://github.com/junjiechen-chris/swallow-eval-customization.git 
+git clone $SWALLOW_REPO_URL src/swallow-evaluation 
 
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/install.sh .

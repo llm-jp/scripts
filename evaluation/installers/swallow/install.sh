@@ -103,7 +103,8 @@ source venv-harness/bin/activate
 pushd src/swallow-evaluation/lm-evaluation-harness-en
 pip install --upgrade pip
 pip install -e .
-pip install sentencepiece vllm protobuf
+pip install sentencepiece protobuf
+pip install vllm==0.3.2
 deactivate
 popd # $ENV_DIR
 popd  # $TARGET_DIR

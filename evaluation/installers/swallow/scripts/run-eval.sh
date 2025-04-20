@@ -34,17 +34,16 @@ OUTPUT_DIR=$(realpath $OUTPUT_DIR)
 
 # Set GPU_MEM_PROPORTION
 if [ "$NUM_PARAMETERS_IN_BILLION" -eq -1 ]; then
-    echo "NUM_PARAMETERS_IN_BILLION not provided. Setting GPU_MEM_PROPORTION to 0.4."
-    GPU_MEM_PROPORTION=0.4
-else
-    # Estimate the proportion of GPU MEMORY NEEDED
-    GPU_MEM_PROPORTION=""
-    TARGETED_DP_SIZE=""
-    TARGETED_TP_SIZE=""
-    . scripts/estimate_vllm_memory_usage.sh
-    estimate_vllm_memory_tpdp $NUM_PARAMETERS_IN_BILLION GPU_MEM_PROPORTION TARGETED_TP_SIZE TARGETED_DP_SIZE
-    echo "VLLM TPDP CONFIG" $GPU_MEM_PROPORTION $TARGETED_TP_SIZE $TARGETED_DP_SIZE
+    NUM_PARAMETERS_IN_BILLION=$(${ENV_DIR}/venv-harness/bin/python3 ./scripts/count_params_billion.py $MODEL)
 fi
+
+# Estimate the proportion of GPU MEMORY NEEDED
+GPU_MEM_PROPORTION=""
+TARGETED_DP_SIZE=""
+TARGETED_TP_SIZE=""
+. scripts/estimate_vllm_memory_usage.sh
+estimate_vllm_memory_tpdp $NUM_PARAMETERS_IN_BILLION GPU_MEM_PROPORTION TARGETED_TP_SIZE TARGETED_DP_SIZE
+echo "VLLM TPDP CONFIG" $NUM_PARAMETERS_IN_BILLION B $GPU_MEM_PROPORTION $TARGETED_TP_SIZE $TARGETED_DP_SIZE
 
 # fixed vars
 EVAL_DIR=${ENV_DIR}/src/swallow-evaluation

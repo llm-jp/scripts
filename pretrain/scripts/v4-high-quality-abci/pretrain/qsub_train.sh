@@ -3,7 +3,7 @@
 #PBS -q R9920251000
 #PBS -N 0150_pretrain
 #PBS -l select=4
-#PBS -l walltime=168:00:00
+#PBS -l walltime=10000:00:00
 #PBS -m n
 
 cd $PBS_O_WORKDIR

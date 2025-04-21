@@ -23,18 +23,20 @@
 set -eu -o pipefail
 
 # Arguments
-if [ $# -ne 5 ]; then
-    >&2 echo "Usage: $0 ENV_DIR MODEL_DIR PARAM_NAME WANDB_ENTITY WANDB_PROJECT"
+if [ $# -ne 6 ]; then
+    >&2 echo "Usage: $0 ENV_DIR MODEL_DIR PARAM_NAME DATASET_NAME WANDB_ENTITY WANDB_PROJECT"
     exit 1
 fi
 ENV_DIR=$(realpath -eP $1); shift
 MODEL_DIR=$(realpath -m $1); shift
 PARAM_NAME=$1; shift
+DATASET_NAME=$1; shift
 WANDB_ENTITY=$1; shift
 WANDB_PROJECT=$1; shift
 echo "ENV_DIR=${ENV_DIR}"
 echo "MODEL_DIR=${MODEL_DIR}"
 echo "PARAM_NAME=${PARAM_NAME}"
+echo "DATASET_NAME=${DATASET_NAME}"
 
 # Find the script directory
 if [ -n "${SLURM_JOB_ID:-}" ]; then
@@ -56,7 +58,7 @@ source ${SCRIPT_DIR}/common/setup.sh
 source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh
 
 # Load TRAIN_DATA_PATH
-source ${SCRIPT_DIR}/train_data/llama3_simulation_15_6t.sh
+source ${SCRIPT_DIR}/train_data/${DATASET_NAME}.sh
 
 # Add W&B params
 ALL_PARAMS+=(

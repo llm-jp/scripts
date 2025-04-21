@@ -58,7 +58,7 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 4
+    --micro-batch-size 2
     --global-batch-size 1024
 )
 

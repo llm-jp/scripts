@@ -3,11 +3,11 @@
 set -eu -o pipefail
 
 DATA_ROOT="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124/data"
-OUTPUT_ROOT="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-uncompressed"
+OUTPUT_ROOT="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-extracted"
 
 mkdir -p "$OUTPUT_ROOT"
 
-uncompress_zstd() {
+extract_zstd() {
     local input_file="$1"
     local output_file="${input_file%.zst}"
     output_file="${output_file/$DATA_ROOT/$OUTPUT_ROOT}"
@@ -16,7 +16,7 @@ uncompress_zstd() {
     zstd -f -d "$input_file" -o "$output_file"
 }
 
-uncompress_gzip() {
+extract_gzip() {
     local input_file="$1"
     local output_file="${input_file%.gz}"
     output_file="${output_file/$DATA_ROOT/$OUTPUT_ROOT}"
@@ -36,43 +36,43 @@ copy_only() {
 
 # DCLM
 for file in $(find "$DATA_ROOT/dclm" -name "*.json.zst" -type f); do
-    uncompress_zstd "$file"
+    extract_zstd "$file"
 done
 
 # flan
 for file in $(find "$DATA_ROOT/flan" -name "*.json.gz" -type f); do
-    uncompress_gzip "$file"
+    extract_gzip "$file"
 done
 
 # pes2o
 for file in $(find "$DATA_ROOT/pes2o" -name "*.json.gz" -type f); do
-    uncompress_gzip "$file"
+    extract_gzip "$file"
 done
 
 # stackexchange
 for file in $(find "$DATA_ROOT/stackexchange" -name "*.json.gz" -type f); do
-    uncompress_gzip "$file"
+    extract_gzip "$file"
 done
 
 # wiki
 for file in $(find "$DATA_ROOT/wiki" -name "*.json.gz" -type f); do
-    uncompress_gzip "$file"
+    extract_gzip "$file"
 done
 
 # math
 ## codesearchnet-owmfilter
 for file in $(find "$DATA_ROOT/math/codesearchnet-owmfilter" -name "*.jsonl.gz" -type f); do
-    uncompress_gzip "$file"
+    extract_gzip "$file"
 done
 
 ## gsm8k (train only)
 for file in $(find "$DATA_ROOT/math/gsm8k/*/train" -name "*.jsonl.zst" -type f); do
-    uncompress_zstd "$file"
+    extract_zstd "$file"
 done
 
 ## metamath-owmfilter
 for file in $(find "$DATA_ROOT/math/metamath-owmfilter" -name "*.jsonl.gz" -type f); do
-    uncompress_gzip "$file"
+    extract_gzip "$file"
 done
 
 ## tulu_math
@@ -92,5 +92,6 @@ done
 
 ## tinyGSM-MIND
 for file in $(find "$DATA_ROOT/math/tinyGSM-MIND" -name "*.jsonl.zst" -type f); do
-    uncompress_gzip "$file"
+    extract_gzip "$file"
 done
+

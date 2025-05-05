@@ -18,8 +18,8 @@ exec > $LOGFILE 2> $ERRFILE
 set -eu -o pipefail
 
 # Arguments
-EXPERIMENT_DIR=/groups/gcg51557/experiments/0150_corpus-v3-vs-v4
-SCRIPT_DIR=/groups/gcg51557/experiments/0150_corpus-v3-vs-v4/scripts/pretrain/scripts/v4-high-quality-abci/pretrain
+EXPERIMENT_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction
+SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v4-midtraining/midtrain
 ENV_DIR=${EXPERIMENT_DIR}/environments
 echo "EXPERIMENT_DIR=${EXPERIMENT_DIR}"
 echo "SCRIPT_DIR=${SCRIPT_DIR}"

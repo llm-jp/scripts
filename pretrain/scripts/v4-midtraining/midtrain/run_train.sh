@@ -12,10 +12,10 @@ task_dir=$1; shift
 param_name=$1; shift
 num_nodes=$1; shift
 
-script_root=/groups/gcg51557/experiments/0150_corpus-v3-vs-v4/scripts/pretrain/scripts/v4-high-quality-abci
+script_root=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining
 
 qsub -l select=${num_nodes} \
   -v TASK_DIR=${task_dir},PARAM_NAME=${param_name},RTYPE=rt_HF \
   -o /dev/null -e /dev/null \
   -m n \
-  ${script_root}/pretrain/qsub_train.sh
+  ${script_root}/midtrain/qsub_train.sh

@@ -4,10 +4,3 @@
 
 OLMo2におけるMidtrainingをLL-jp-4-enのモデルで再現する実験を行う
 
-## ディレクトリ構造
-
-TODO
-
-## Details
-
-TODO

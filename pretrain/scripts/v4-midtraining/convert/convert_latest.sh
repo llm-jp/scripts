@@ -12,9 +12,11 @@ task_dir=$1; shift
 param_name=$1; shift
 iter=$(cat ${task_dir}/checkpoints/latest_checkpointed_iteration.txt)
 
+script_root=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining
+
 qsub \
   -v TASK_DIR=${task_dir},PARAM_NAME=${param_name},ITER=${iter},RTYPE=rt_HF \
   -m n \
   -o /dev/null \
   -e /dev/null \
-  /groups/gcg51557/experiments/0150_corpus-v3-vs-v4/scripts/pretrain/scripts/v4-high-quality-abci/convert/qsub_convert.sh
+  ${script_root}/convert/qsub_convert.sh

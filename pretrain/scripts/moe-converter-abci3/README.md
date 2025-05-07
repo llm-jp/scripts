@@ -25,17 +25,17 @@ The expected directory structure is as follows:
 Before running the conversion, make sure to check and update the following paths in `convert.sh`:
 
 1. `MEGATRON_PATH="/path/to/default/megatron"`
-
    - Update this to point to your Megatron-LM installation
 
 2. `TOKENIZER_DIR=src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2/`
-
    - Verify that this path contains all necessary tokenizer files
 
 3. Ensure that `scripts/sakura/ckpt/mcore_to_hf_mixtral.py` exists
    - This is the main conversion script that will be executed
 
-Your README looks good, but there's an issue with the Usage section. The examples provided are confusing and don't follow a consistent format. Here's a revised version of the Usage section to make it clearer:
+4. Update the PBS job name to match your experiment number:
+   - Change `#PBS -N xxx_conv` to include your specific experiment identifier
+   - For example: `#PBS -N 0134_conv`
 
 ## Usage
 

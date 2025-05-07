@@ -66,7 +66,7 @@ for file in $(find "$DATA_ROOT/math/codesearchnet-owmfilter" -name "*.jsonl.gz" 
 done
 
 ## gsm8k (train only)
-for file in $(find "$DATA_ROOT/math/gsm8k/*/train" -name "*.jsonl.zst" -type f); do
+for file in $(find $DATA_ROOT/math/gsm8k/**/train -name "*.jsonl.zst" -type f); do
     extract_zstd "$file"
 done
 

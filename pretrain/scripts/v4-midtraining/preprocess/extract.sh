@@ -21,7 +21,7 @@ extract_gzip() {
     local output_file="${input_file%.gz}"
     output_file="${output_file/$DATA_ROOT/$OUTPUT_ROOT}"
     mkdir -p "$(dirname "$output_file")"
-    echo gunzip -c "$input_file" > "$output_file"
+    echo gunzip -c "$input_file" \> "$output_file"
     gunzip -c "$input_file" > "$output_file"
 }
 
@@ -91,7 +91,7 @@ for file in $(find "$DATA_ROOT/math/mathcoder2-synthmath" -name "*.jsonl" -type 
 done
 
 ## tinyGSM-MIND
-for file in $(find "$DATA_ROOT/math/tinyGSM-MIND" -name "*.jsonl.zst" -type f); do
+for file in $(find "$DATA_ROOT/math/tinyGSM-MIND" -name "*.jsonl.gz" -type f); do
     extract_gzip "$file"
 done
 

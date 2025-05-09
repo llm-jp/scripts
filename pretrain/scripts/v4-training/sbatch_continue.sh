@@ -12,10 +12,11 @@
 #     --partition=gpu \
 #     --nodes=64 \
 #     --outpout=train_%j.log \
-#     sbatch_train.sh \
+#     sbatch_continue.sh \
 #       /path/to/env \            ... ENV_DIR: path to the trainer environment
+#       /path/to/old_model \      ... OLD_MODEL_DIR: path to the model to load
 #       /path/to/model \          ... MODEL_DIR: path to the model to save
-#       7.7b-llama3-ecjk \        ... PARAM_NAME: model config; corresponding file in `params/` should exist
+#       7.7b-llama3-ecjk \        ... PARAM_NAME: model config; corresponding file in `params/` must exist
 #       llama3-simulation_15_6t \ ... DATASET_NAME: training dataset config: corresponding file in `train_data` must exist
 #       llm-jp \                  ... WANDB_ENTITY
 #       9999_train                ... WANDB_PROJECT
@@ -23,17 +24,19 @@
 set -eu -o pipefail
 
 # Arguments
-if [ $# -ne 6 ]; then
-    >&2 echo "Usage: $0 ENV_DIR MODEL_DIR PARAM_NAME DATASET_NAME WANDB_ENTITY WANDB_PROJECT"
+if [ $# -ne 7 ]; then
+    >&2 echo "Usage: $0 ENV_DIR OLD_MODEL_DIR MODEL_DIR PARAM_NAME DATASET_NAME WANDB_ENTITY WANDB_PROJECT"
     exit 1
 fi
 ENV_DIR=$(realpath -eP $1); shift
+OLD_MODEL_DIR=$(realpath -m $1); shift
 MODEL_DIR=$(realpath -m $1); shift
 PARAM_NAME=$1; shift
 DATASET_NAME=$1; shift
 WANDB_ENTITY=$1; shift
 WANDB_PROJECT=$1; shift
 echo "ENV_DIR=${ENV_DIR}"
+echo "OLD_MODEL_DIR=${MODEL_DIR}"
 echo "MODEL_DIR=${MODEL_DIR}"
 echo "PARAM_NAME=${PARAM_NAME}"
 echo "DATASET_NAME=${DATASET_NAME}"
@@ -68,11 +71,16 @@ ALL_PARAMS+=(
 )
 
 # Add Checkpointing params
-TASK_CHECKPOINT_DIR=${MODEL_DIR}/checkpoints
+OLD_CHECKPOINT_DIR=${OLD_MODEL_DIR}/checkpoints
+CHECKPOINT_DIR=${MODEL_DIR}/checkpoints
 ALL_PARAMS+=(
-    --load ${TASK_CHECKPOINT_DIR}
-    --save ${TASK_CHECKPOINT_DIR}
+    --load ${OLD_CHECKPOINT_DIR}
+    --save ${CHECKPOINT_DIR}
     --save-interval 1000
+    
+    # Coneinued training
+    --finetune
+    --override-opt_param-scheduler
 )
 
 # Run the trainer script

@@ -32,7 +32,7 @@ for iter_name in $(ls ${MODEL_DIR}/checkpoints | grep iter_.......); do
     if [ ${iter_name} == iter_0000000 ]; then
         iter=0
     else
-        iter=$(echo ${iter_name} | sed 's/iter_0\+//g')
+        iter=$(echo ${iter_name} | sed 's/iter_0*//g')
     fi
 
     if [ -e ${MODEL_DIR}/checkpoints_hf/${iter_name}/tokenizer.json ]; then

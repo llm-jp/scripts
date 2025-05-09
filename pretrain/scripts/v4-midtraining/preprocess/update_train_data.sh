@@ -8,10 +8,8 @@ update_train_data () {
     BEGIN {
       FS = OFS = " "
     }
-    # ceil 関数
     function ceil(x) { return (x == int(x) ? x : int(x) + 1) }
 
-    # データ行（先頭が数字）のみ処理
     /^[[:space:]]*[0-9]/ {
       tok  = $1
       path = $2
@@ -28,7 +26,6 @@ update_train_data () {
       next
     }
 
-    # コメントや配列の括弧など数字以外の行はそのままコピー
     { print }
   ' "$IN" > "$OUT"
 

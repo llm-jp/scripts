@@ -44,8 +44,8 @@ ALL_PARAMS+=(
     --hidden-dropout 0.0
 )
 
-# FIXME: ceil( 15.6T / 8192 / 1024 ) == 1859665
-TRAIN_ITERS=1859665
+# ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
+TRAIN_ITERS=6652
 
 # Scheduler
 ALL_PARAMS+=(
@@ -59,7 +59,7 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 2 # FIXME: 1
+    --micro-batch-size 2
     --global-batch-size 1024
 )
 

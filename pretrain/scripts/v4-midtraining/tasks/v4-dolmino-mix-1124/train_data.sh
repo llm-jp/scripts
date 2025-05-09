@@ -1,4 +1,4 @@
-# Auto-generated: 2025-05-09 15:08:04
+# Auto-generated: 2025-05-09 17:59:55
 export TRAIN_DATA_PATH=(
 1074221928 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/dclm/dclm-0000-0009_text_document
 1084576663 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/dclm/dclm-0010-0019_text_document
@@ -29,10 +29,10 @@ export TRAIN_DATA_PATH=(
 2174159 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/codesearchnet-owmfilter-all_text_document
 31677007 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/dolmino_math_synth-all_text_document
 2841494 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/gsm8k-all_text_document
-1047908 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/mathcoder2-synthmath-all_text_document
+4098243004 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/mathcoder2-synthmath-all_text_document
 85423408 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/metamath-owmfilter-all_text_document
-4193163 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/tinyGSM-MIND-all_text_document
-9433366 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/tulu_math-all_text_document
+6944299886 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/tinyGSM-MIND-all_text_document
+250390697 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/math/tulu_math-all_text_document
 3236969300 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/pes2o/pes2o-all_text_document
 1464772187 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/stackexchange/stackexchange-all_text_document
 3896965449 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/wiki/wiki-all_text_document

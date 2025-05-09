@@ -45,7 +45,9 @@ ALL_PARAMS+=(
 )
 
 # ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
-TRAIN_ITERS=6652
+# pretrain_iters: 1859665
+# sum: 1859665+6652=1,866,317
+TRAIN_ITERS=1866317
 
 # Scheduler
 ALL_PARAMS+=(
@@ -78,7 +80,7 @@ ALL_PARAMS+=(
 
 # Dataset
 ALL_PARAMS+=(
-    --data-cache-path ${MODEL_DIR}/cache
+    --data-cache-path ${TASK_DIR}/cache
     --split 1,0,0
 )
 

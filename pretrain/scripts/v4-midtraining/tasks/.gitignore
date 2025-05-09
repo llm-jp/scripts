@@ -2,3 +2,4 @@ cache/
 checkpoints/
 checkpoints_hf/
 logs/
+checkpoints_bak/

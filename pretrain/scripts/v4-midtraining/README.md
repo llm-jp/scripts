@@ -50,6 +50,7 @@ TODO
 ```sh
 cd /path/to/v4-midtraining
 
+# example:
 # 1.3b-llama3-ecjk
 bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk 16
 

@@ -18,7 +18,8 @@ set -eu -o pipefail
 
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction
 SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v4-midtraining/midtrain
-ENV_DIR=${EXPERIMENT_DIR}/environments
+# ENV_DIR=${EXPERIMENT_DIR}/environments
+ENV_DIR=${EXPERIMENT_DIR}/environment
 
 # Setup environment
 source ${SCRIPT_DIR}/common/setup.sh

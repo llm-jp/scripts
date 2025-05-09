@@ -1,14 +1,21 @@
+# Pretraining hyperparameters for v4 7.7B.
+# Model card: https://github.com/llm-jp/model-cards/pull/30
+# Ref: https://github.com/llm-jp/scripts/blob/ec3516a38f93047b7bc0d8305879d62a375e6ee2/pretrain/scripts/v4-training/params/7.7b-cont1.sh
+
 ALL_PARAMS=()
 
 # Model hyperparameters
 ALL_PARAMS+=(
-    --num-layers 40
-    --hidden-size 5120
-    --ffn-hidden-size 13824
-    --num-attention-heads 40
-    --seq-length 4096
-    --max-position-embeddings 4096
+    --num-layers 32
+    --hidden-size 4096
+    --ffn-hidden-size 14336
+    --num-attention-heads 32
+    --group-query-attention
+    --num-query-groups 8
+    --seq-length 8192
+    --max-position-embeddings 8192
     --position-embedding-type rope
+    --rotary-base 500000
     --untie-embeddings-and-output-weights
     --swiglu
     --normalization RMSNorm
@@ -25,8 +32,8 @@ ALL_PARAMS+=(
 # Optimizer hyperparameters
 ALL_PARAMS+=(
     --optimizer adam
-    --lr 2e-4
-    --min-lr 2e-5
+    --lr 3e-4
+    --min-lr 3e-5
     --adam-beta1 0.9
     --adam-beta2 0.95
     --adam-eps 1e-8
@@ -35,11 +42,10 @@ ALL_PARAMS+=(
     --init-method-std 0.02
     --attention-dropout 0.0
     --hidden-dropout 0.0
-    # NOTE(kiyomaru): Use z-loss for compatibility with v3
-    --use-z-loss
 )
 
-TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
+# FIXME: ceil( 15.6T / 8192 / 1024 ) == 1859665
+TRAIN_ITERS=1859665
 
 # Scheduler
 ALL_PARAMS+=(
@@ -53,52 +59,27 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 4
+    --micro-batch-size 1
     --global-batch-size 1024
 )
 
 # Parallelism
 ALL_PARAMS+=(
-    --tensor-model-parallel-size 2
-    --pipeline-model-parallel-size 1
+    --tensor-model-parallel-size 1
+    --pipeline-model-parallel-size 2
     --context-parallel-size 1
     --sequence-parallel
     --use-distributed-optimizer
     --distributed-backend nccl
     # NOTE(odashi): Increasing timeout is required to prepare 15.6T dataset.
-    --distributed-timeout-minutes 10
+    --distributed-timeout-minutes 120
     --use-mpi
 )
 
-# Load TRAIN_DATA_PATH
-source ${TASK_DIR}/train_data.sh
 # Dataset
 ALL_PARAMS+=(
-    --data-path ${TRAIN_DATA_PATH[@]}
-    --data-cache-path ${TASK_DIR}/cache
+    --data-cache-path ${MODEL_DIR}/cache
     --split 1,0,0
-)
-
-TASK_CHECKPOINT_DIR=${TASK_DIR}/checkpoints
-mkdir -p ${TASK_CHECKPOINT_DIR}
-
-if [ -e ${TASK_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
-  # Continue existing training
-  ALL_PARAMS+=(
-    --load ${TASK_CHECKPOINT_DIR}
-    --save ${TASK_CHECKPOINT_DIR}
-  )
-  echo "Continue existing training"
-else
-  # Start new training from scratch
-  ALL_PARAMS+=(
-    --load ${TASK_CHECKPOINT_DIR}
-    --save ${TASK_CHECKPOINT_DIR}
-  )
-  echo "Start new training from scratch"
-fi
-ALL_PARAMS+=(
-    --save-interval 1000
 )
 
 # Other implementation-related parameters
@@ -118,14 +99,14 @@ ALL_PARAMS+=(
     --transformer-impl transformer_engine
 
     # NOTE(odashi): Newer implementation requires to set attention backend by parameter.
-#    --attention-backend flash
+    #--attention-backend flash
 )
+
+# NOTE(odashi): Disable fused attention for Sakura cluster due to some inconsistency.
+export NVTE_FUSED_ATTN=0
 
 # Logging
 ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
-    --wandb-entity llm-jp
-    --wandb-project 0150_v4-high-quality
-    --wandb-exp-name train_$(basename ${TASK_DIR})
 )

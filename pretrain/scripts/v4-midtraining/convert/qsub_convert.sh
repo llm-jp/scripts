@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -P gcg51557
 #PBS -q R9920251000
-#PBS -N 0150_convert
+#PBS -N 0156_convert
 #PBS -l select=1
 #PBS -o /dev/null
 #PBS -e /dev/null

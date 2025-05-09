@@ -1,14 +1,15 @@
-# Pretraining hyperparameters for v4 7.7B.
-# Model card: https://github.com/llm-jp/model-cards/pull/30
+# Pretraining hyperparameters for v4 1.3B.
+# Model card: https://github.com/llm-jp/model-cards/pull/31
+# Ref: https://github.com/llm-jp/scripts/blob/ec3516a38f93047b7bc0d8305879d62a375e6ee2/pretrain/scripts/v4-training/params/1.3b-cont1.sh
 
 ALL_PARAMS=()
 
 # Model hyperparameters
 ALL_PARAMS+=(
-    --num-layers 32
-    --hidden-size 4096
-    --ffn-hidden-size 14336
-    --num-attention-heads 32
+    --num-layers 16
+    --hidden-size 2048
+    --ffn-hidden-size 7168
+    --num-attention-heads 16
     --group-query-attention
     --num-query-groups 8
     --seq-length 8192
@@ -43,7 +44,7 @@ ALL_PARAMS+=(
     --hidden-dropout 0.0
 )
 
-# ceil( 15.6T / 8192 / 1024 ) == 1859665
+# FIXME: ceil( 15.6T / 8192 / 1024 ) == 1859665
 TRAIN_ITERS=1859665
 
 # Scheduler
@@ -58,14 +59,14 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 1
+    --micro-batch-size 2 # FIXME: 1
     --global-batch-size 1024
 )
 
 # Parallelism
 ALL_PARAMS+=(
     --tensor-model-parallel-size 1
-    --pipeline-model-parallel-size 2
+    --pipeline-model-parallel-size 1
     --context-parallel-size 1
     --sequence-parallel
     --use-distributed-optimizer

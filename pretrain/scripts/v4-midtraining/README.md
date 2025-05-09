@@ -17,7 +17,19 @@ OLMo2におけるMidtrainingをLL-jp-4-enのモデルで再現する実験を行
 | Stackexchange | 1,464,772,187  | 100.00%   | 2.63%  | 2.45%                  |
 | Math          | 11,415,049,655 | 100.00%   | 20.46% | 20.80%                 |
 
+### データセットの作成
 
+データセットの作成前に事前にtokenizeが完了している必要がある。
+
+```sh
+# ./tasks/v4-dolmino-mix-1124/train_data.all.shを作成する
+# 自動的にtoken数を計算し、"token数 PATH"をtrain_data.all.shに書き込む
+./preprocess/build_train_data.sh
+
+# ./tasks/v4-dolmino-mix-1124/train_data.all.shから./tasks/v4-dolmino-mix-1124/train_data.shを作成する
+# dolminoのmidtrainingと同じ配合の50Bのデータセットサイズになるようにtoken数を更新する
+./preprocess/update_train_data_to_50B.sh
+```
 
 
 
@@ -38,11 +50,11 @@ TODO
 ```sh
 cd /path/to/v4-midtraining
 
-# 1.3b-count1
-bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-count1 16
+# 1.3b-llama3-ecjk
+bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk 16
 
-# 7.7b-count1
-bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-count1 16
+# 7.7b-llama3-ecjk
+bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecjk 16
 ```
 
 ## Checkpoint変換

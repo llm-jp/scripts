@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized"
 OUT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining/tasks/v4-dolmino-mix-1124"
-OUT_FILE="${OUT_DIR}/train_data.sh"
+OUT_FILE="${OUT_DIR}/train_data.all.sh"
 
 mkdir -p "${OUT_DIR}"
 

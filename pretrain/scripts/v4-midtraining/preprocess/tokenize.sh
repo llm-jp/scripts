@@ -14,7 +14,7 @@ cd $PBS_O_WORKDIR
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction
 SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v4-midtraining
 # ENV_DIR=${EXPERIMENT_DIR}/environments
-ENV_DIR=${EXPERIMENT_DIR}/environment
+ENV_DIR=${EXPERIMENT_DIR}/environment2
 MEGATRON_PATH=${ENV_DIR}/src/Megatron-LM
 
 JOBID=${PBS_JOBID%%.*}

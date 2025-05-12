@@ -42,6 +42,9 @@ ALL_PARAMS+=(
     --init-method-std 0.02
     --attention-dropout 0.0
     --hidden-dropout 0.0
+    # --use_checkpoint_opt_param_scheduler True
+    # --override_opt_param_scheduler True
+    --override-opt_param-scheduler
 )
 
 # ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
@@ -137,7 +140,7 @@ export NVTE_FUSED_ATTN=0
 ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
-    # --wandb-entity llm-jp
-    # --wandb-project 0156_midtrain
-    # --wandb-exp-name train_$(basename ${TASK_DIR})
+    --wandb-entity llm-jp
+    --wandb-project 0156_midtrain
+    --wandb-exp-name train_$(basename ${TASK_DIR})
 )

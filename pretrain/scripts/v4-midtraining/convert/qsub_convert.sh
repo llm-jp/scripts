@@ -2,7 +2,7 @@
 #PBS -P gcg51557
 #PBS -q R9920251000
 #PBS -N 0156_convert
-#PBS -l select=1
+#PBS -l select=16
 #PBS -o /dev/null
 #PBS -e /dev/null
 #PBS -m n
@@ -21,7 +21,7 @@ set -eu -o pipefail
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction
 SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v4-midtraining/midtrain
 # ENV_DIR=${EXPERIMENT_DIR}/environments
-ENV_DIR=${EXPERIMENT_DIR}/environment
+ENV_DIR=${EXPERIMENT_DIR}/environment2
 echo "EXPERIMENT_DIR=${EXPERIMENT_DIR}"
 echo "SCRIPT_DIR=${SCRIPT_DIR}"
 echo "TASK_DIR=${TASK_DIR}"

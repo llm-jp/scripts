@@ -1,6 +1,6 @@
 #!/bin/bash
 #PBS -P gcg51557
-#PBS -q R10415
+#PBS -q R9920251000
 #PBS -v RTYPE=rt_HF
 #PBS -l select=1
 #PBS -l walltime=01:00:00

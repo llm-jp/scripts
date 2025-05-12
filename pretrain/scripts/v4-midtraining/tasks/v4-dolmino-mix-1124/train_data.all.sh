@@ -1,4 +1,3 @@
-# Auto-generated: 2025-05-09 17:59:55
 export TRAIN_DATA_PATH=(
     33257644821 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/dclm/dclm-0000-0009_text_document
     33578224849 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized/dclm/dclm-0010-0019_text_document

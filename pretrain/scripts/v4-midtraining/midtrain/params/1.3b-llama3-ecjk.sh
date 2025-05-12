@@ -47,7 +47,8 @@ ALL_PARAMS+=(
 # ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
 # pretrain_iters: 1859665
 # sum: 1859665+6652=1,866,317
-TRAIN_ITERS=1866317
+# TRAIN_ITERS=1866317
+TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
 
 # Scheduler
 ALL_PARAMS+=(
@@ -78,10 +79,35 @@ ALL_PARAMS+=(
     --use-mpi
 )
 
+# Load TRAIN_DATA_PATH
+source ${TASK_DIR}/train_data.sh
 # Dataset
 ALL_PARAMS+=(
+    --data-path ${TRAIN_DATA_PATH[@]}
     --data-cache-path ${TASK_DIR}/cache
     --split 1,0,0
+)
+
+    TASK_CHECKPOINT_DIR=${TASK_DIR}/checkpoints
+mkdir -p ${TASK_CHECKPOINT_DIR}
+
+if [ -e ${TASK_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
+  # Continue existing training
+  ALL_PARAMS+=(
+    --load ${TASK_CHECKPOINT_DIR}
+    --save ${TASK_CHECKPOINT_DIR}
+  )
+  echo "Continue existing training"
+else
+  # Start new training from scratch
+  ALL_PARAMS+=(
+    --load ${TASK_CHECKPOINT_DIR}
+    --save ${TASK_CHECKPOINT_DIR}
+  )
+  echo "Start new training from scratch"
+fi
+ALL_PARAMS+=(
+    --save-interval 1000
 )
 
 # Other implementation-related parameters
@@ -111,4 +137,7 @@ export NVTE_FUSED_ATTN=0
 ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
+    # --wandb-entity llm-jp
+    # --wandb-project 0156_midtrain
+    # --wandb-exp-name train_$(basename ${TASK_DIR})
 )

@@ -43,7 +43,7 @@ bash run_setup.sh /path/to/target_dir
 
 ## tokenize
 
-TODO
+FILL LATER
 
 ## job実行
 
@@ -64,4 +64,7 @@ bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecj
 cd /path/to/v4-midtraining
 
 bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) {PARAM_NAME} {ITER}
+
+# example:
+bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk 1
 ```

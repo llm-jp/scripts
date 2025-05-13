@@ -64,13 +64,14 @@ ref: [scripts/pretrain/installers/v4-megatron-abci at 0130-instruct-pretrain · 
 bash run_setup.sh /path/to/target_dir
 ```
 
-> [!NOTE]
-> environment2を今回は利用している（Transformer engineのversionを1.9にdowngradeした。）
+> [!CAUTION]
+> Transformer engineのv1.10以上を使うとエラーが出るため、environment2を今回利用している（Transformer engineのversionを1.9にdowngradeした。）
 > ref: https://docs.nvidia.com/nemo-framework/user-guide/24.07/knownissues.html
 
-## tokenize
+> [!CAUTION]
+> `environment/src/Megatron-LM/megatron/core/dist_checkpointing/strategies/common.py`の72行目に"weights_only=False"を加えた
+> ref: https://github.com/huggingface/accelerate/issues/3539
 
-FILL LATER
 
 ## job実行
 
@@ -90,8 +91,15 @@ bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecj
 ```sh
 cd /path/to/v4-midtraining
 
-bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) {PARAM_NAME} {ITER}
+bash convert/convert_latest.sh {TASK_DIR} {PARAM_NAME}
 
 # example:
-bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk 1
+bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk
 ```
+
+> [!CAUTION]
+> `/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/environment2/src/Megatron-LM/tools/checkpoint/loader_mcore.py`の先頭に以下のコードを加えた
+> ```
+> import json, os, sys, torch, functools
+> torch.load = functools.partial(torch.load, weights_only=False)
+> ```

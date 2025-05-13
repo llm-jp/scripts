@@ -10,7 +10,7 @@ set -eu -o pipefail
 
 task_dir=$1; shift
 param_name=$1; shift
-iter=$(cat ${task_dir}/checkpoints/latest_checkpointed_iteration.txt)
+iter=$(cat ${task_dir}/${param_name}/checkpoints/latest_checkpointed_iteration.txt)
 
 script_root=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining
 

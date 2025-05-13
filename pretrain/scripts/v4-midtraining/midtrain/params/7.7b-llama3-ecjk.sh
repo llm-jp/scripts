@@ -42,6 +42,8 @@ ALL_PARAMS+=(
     --init-method-std 0.02
     --attention-dropout 0.0
     --hidden-dropout 0.0
+    # --use_checkpoint_opt_param_scheduler
+    --override-opt_param-scheduler
 )
 
 # ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
@@ -84,14 +86,14 @@ source ${TASK_DIR}/train_data.sh
 # Dataset
 ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}
-    --data-cache-path ${TASK_DIR}/cache
+    --data-cache-path ${TASK_DIR}/${PARAM_NAME}/cache
     --split 1,0,0
 )
 
-    TASK_CHECKPOINT_DIR=${TASK_DIR}/checkpoints
+    TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/checkpoints
 mkdir -p ${TASK_CHECKPOINT_DIR}
 
-if [ -e ${TASK_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
+if [ -e ${TASK_CHECKPOINT_DIR}/${PARAM_NAME}/latest_checkpointed_iteration.txt ]; then
   # Continue existing training
   ALL_PARAMS+=(
     --load ${TASK_CHECKPOINT_DIR}

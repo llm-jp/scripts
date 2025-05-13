@@ -2,7 +2,7 @@
 #PBS -P gcg51557
 #PBS -q R9920251000
 #PBS -N 0156_convert
-#PBS -l select=16
+#PBS -l select=1
 #PBS -o /dev/null
 #PBS -e /dev/null
 #PBS -m n
@@ -39,7 +39,7 @@ ITER_NAME=iter_$(printf %07d ${ITER})  # iter_0123456
 
 MEGATRON_PATH=${ENV_DIR}/src/Megatron-LM
 TOKENIZER_MODEL_PATH=${ENV_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2
-OUTPUT_DIR=${TASK_DIR}/checkpoints_hf/${ITER_NAME}
+OUTPUT_DIR=${TASK_DIR}/${PARAM_NAME}/checkpoints_hf/${ITER_NAME}
 
 # Setup working directory
 TEMP_DIR=$(mktemp -d "${HOME}/converter_${JOBID}_XXXXXX")
@@ -63,7 +63,7 @@ echo "Start converting: torch_dist --> torch"
 # Prepare source model at specific iteration
 mkdir ${TEMP_DIR}/torch_dist
 echo ${ITER} > ${TEMP_DIR}/torch_dist/latest_checkpointed_iteration.txt
-ln -s ${TASK_DIR}/checkpoints/${ITER_NAME} ${TEMP_DIR}/torch_dist/${ITER_NAME}
+ln -s ${TASK_DIR}/${PARAM_NAME}/checkpoints/${ITER_NAME} ${TEMP_DIR}/torch_dist/${ITER_NAME}
 
 # Load ALL_PARAMS
 source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh

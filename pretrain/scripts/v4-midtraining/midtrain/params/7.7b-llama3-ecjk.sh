@@ -139,7 +139,7 @@ export NVTE_FUSED_ATTN=0
 ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
-    # --wandb-entity llm-jp
-    # --wandb-project 0156_midtrain
-    # --wandb-exp-name train_$(basename ${TASK_DIR})
+    --wandb-entity llm-jp
+    --wandb-project 0156_midtrain
+    --wandb-exp-name train_$(basename ${TASK_DIR})
 )

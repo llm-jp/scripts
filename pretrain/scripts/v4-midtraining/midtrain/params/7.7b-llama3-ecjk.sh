@@ -46,20 +46,23 @@ ALL_PARAMS+=(
     --override-opt_param-scheduler
 )
 
-# ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
 # pretrain_iters: 1,859,665
-# sum: 1,859,665 + 6652 = 1,866,317
+# 50B: ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
+# 50B sum: 1,859,665 + 6,652 = 1,866,317
+# 100B: ceil( 113,460,356,693 / 8192 / 1024 ) == 13,526
+# 100B sum: 1,859,665 + 13,526 = 1,873,191
+# 300B: ceil( 337,681,167,151 / 8192 / 1024 ) == 40,255
+# 300B sum: 1,859,665 + 40,255 = 1,899,920
 MIDTRAIN_START=1859665
-MIDTRAIN_END=1866317
-MIDTRAIN_ITERS=$((MIDTRAIN_END - MIDTRAIN_START))
-TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
+TRAIN_ITERS=$(cat ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/train_iters.txt)
+MIDTRAIN_ITERS=$((TRAIN_ITERS - MIDTRAIN_START))
 
 # Scheduler
 ALL_PARAMS+=(
-    --lr 3e-5              # Start LR
-    --min-lr 0             # End LR
-    --lr-warmup-iters 0    # No warmup
-    --lr-decay-iters ${MIDTRAIN_ITERS}
+    --lr 3e-5   # Start LR
+    --min-lr 0  # End LR
+    --lr-warmup-iters ${MIDTRAIN_START} # No warmup
+    --lr-decay-iters ${TRAIN_ITERS}
     --lr-decay-style linear
     --train-iters ${TRAIN_ITERS}
     --eval-interval 999999999

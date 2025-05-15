@@ -2,7 +2,7 @@
 
 update_train_data () {
   local IN="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining/tasks/v4-dolmino-mix-1124/train_data.all.sh"
-  local OUT="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining/tasks/v4-dolmino-mix-1124/train_data_50B.sh"
+  local OUT="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining/tasks/v4-dolmino-mix-1124/train_data_100B.sh"
 
   awk '
     BEGIN {
@@ -15,10 +15,10 @@ update_train_data () {
       path = $2
 
       ratio = 1          # default 100%
-      if (path ~ /\/dclm\//)      ratio = 0.0323   # 3.23 %
-      else if (path ~ /\/flan\//) ratio = 0.5      # 50 %
-      else if (path ~ /\/pes2o\//) ratio = 0.0515  # 5.15 %
-      # math / stackexchange / wiki: ratio = 1
+      if (path ~ /\/dclm\//)      ratio = 0.0685   # 6.85 %
+      else if (path ~ /\/pes2o\//) ratio = 0.167   # 16.7 %
+      else if (path ~ /\/math\//) ratio = 2.0      # 200 %
+      # flan / stackexchange / wiki は ratio = 1
 
       newtok = ceil(tok * ratio)
       $1 = newtok

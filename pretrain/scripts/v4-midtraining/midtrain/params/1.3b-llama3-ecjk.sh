@@ -47,17 +47,21 @@ ALL_PARAMS+=(
 )
 
 # ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
-# pretrain_iters: 1859665
-# sum: 1859665+6652=1,866,317
-# TRAIN_ITERS=1866317
-TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
+# pretrain_iters: 1,859,665
+# sum: 1,859,665 + 6652 = 1,866,317
+MIDTRAIN_START=1859665
+MIDTRAIN_END=1866317
+MIDTRAIN_ITERS=$((MIDTRAIN_END - MIDTRAIN_START))
+TRAIN_ITERS=${MIDTRAIN_ITERS}
 
 # Scheduler
 ALL_PARAMS+=(
+    --lr 3e-5              # Start LR
+    --min-lr 0             # End LR
+    --lr-warmup-iters 0    # No warmup
+    --lr-decay-iters ${MIDTRAIN_ITERS}
+    --lr-decay-style linear
     --train-iters ${TRAIN_ITERS}
-    --lr-warmup-iters 2000
-    --lr-decay-iters ${TRAIN_ITERS}
-    --lr-decay-style cosine
     --eval-interval 999999999
     --eval-iters 0
 )
@@ -82,12 +86,14 @@ ALL_PARAMS+=(
 )
 
 # Load TRAIN_DATA_PATH
-source ${TASK_DIR}/train_data.sh
+source ${TASK_DIR}/train_data_50B.sh # options: 50B, 100B, and 300B
+SEED=42
 # Dataset
 ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}
     --data-cache-path ${TASK_DIR}/${PARAM_NAME}/cache
     --split 1,0,0
+    --seed ${SEED}
 )
 
     TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/checkpoints

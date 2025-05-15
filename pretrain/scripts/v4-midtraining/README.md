@@ -47,13 +47,14 @@ rm -rf $EXP_DIR/dolmino-mix-1124-extracted $EXP_DIR/dolmino-mix-1124-extracted-m
 データセットの作成前に事前にtokenizeが完了している必要がある。
 
 ```sh
-# ./tasks/v4-dolmino-mix-1124/train_data.all.shを作成する
+# ./tasks/v4-dolmino-mix-1124/train_data.all.shを作成
 # 自動的にtoken数を計算し、"token数 PATH"をtrain_data.all.shに書き込む
 ./preprocess/build_train_data.sh
 
-# ./tasks/v4-dolmino-mix-1124/train_data.all.shから./tasks/v4-dolmino-mix-1124/train_data.shを作成する
+# ./tasks/v4-dolmino-mix-1124/train_data.all.shから./tasks/v4-dolmino-mix-1124/train_data_50B.shを作成
 # dolminoのmidtrainingと同じ配合の50Bのデータセットサイズになるようにtoken数を更新する
 ./preprocess/update_train_data_to_50B.sh
+# 100B, 300Bも同様
 ```
 
 ## 環境構築

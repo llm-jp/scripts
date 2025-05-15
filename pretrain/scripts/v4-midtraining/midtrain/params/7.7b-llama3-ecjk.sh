@@ -32,8 +32,8 @@ ALL_PARAMS+=(
 # Optimizer hyperparameters
 ALL_PARAMS+=(
     --optimizer adam
-    --lr 3e-4
-    --min-lr 3e-5
+    # --lr 3e-4 # will be defined later
+    # --min-lr 3e-5 # will be defined later
     --adam-beta1 0.9
     --adam-beta2 0.95
     --adam-eps 1e-8
@@ -43,28 +43,32 @@ ALL_PARAMS+=(
     --attention-dropout 0.0
     --hidden-dropout 0.0
     # --use_checkpoint_opt_param_scheduler
-    --override-opt_param-scheduler
+    # --override-opt_param-scheduler
 )
 
 # ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
-# pretrain_iters: 1859665
-# sum: 1859665+6652=1,866,317
-# TRAIN_ITERS=1866317
+# pretrain_iters: 1,859,665
+# sum: 1,859,665 + 6652 = 1,866,317
+MIDTRAIN_START=1859665
+MIDTRAIN_END=1866317
+MIDTRAIN_ITERS=$((MIDTRAIN_END - MIDTRAIN_START))
 TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
 
 # Scheduler
 ALL_PARAMS+=(
+    --lr 3e-5              # Start LR
+    --min-lr 0             # End LR
+    --lr-warmup-iters 0    # No warmup
+    --lr-decay-iters ${MIDTRAIN_ITERS}
+    --lr-decay-style linear
     --train-iters ${TRAIN_ITERS}
-    --lr-warmup-iters 2000
-    --lr-decay-iters ${TRAIN_ITERS}
-    --lr-decay-style cosine
     --eval-interval 999999999
     --eval-iters 0
 )
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 1
+    --micro-batch-size 2
     --global-batch-size 1024
 )
 
@@ -82,12 +86,14 @@ ALL_PARAMS+=(
 )
 
 # Load TRAIN_DATA_PATH
-source ${TASK_DIR}/train_data.sh
+source ${TASK_DIR}/train_data_50B.sh # options: 50B, 100B, and 300B
+SEED=42
 # Dataset
 ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}
     --data-cache-path ${TASK_DIR}/${PARAM_NAME}/cache
     --split 1,0,0
+    --seed ${SEED}
 )
 
     TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/checkpoints

@@ -87,6 +87,18 @@ bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecj
 bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecjk 50B 16
 ```
 
+### [Option] 依存関係付きのjob実行
+
+qsub の `-W depend=...` の機能を利用して、ジョブ間に依存関係をつけて実行するためのスクリプトを用意している。
+`run_train.sh` ではなく `run_train_with_deps.sh` を利用して実行する。
+
+```sh
+# 最後の引数に `-W depend=` に渡す値を書く
+bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecjk 50B 16 afterok:xxxx.pbs1:yyyy.pbs1
+```
+
+依存関係の詳しい記法は ABCI 3.0 上で `man qsub` を参照すること
+
 ## Checkpoint変換
 
 ```sh

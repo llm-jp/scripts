@@ -39,7 +39,7 @@ ITER_NAME=iter_$(printf %07d ${ITER})  # iter_0123456
 
 MEGATRON_PATH=${ENV_DIR}/src/Megatron-LM
 TOKENIZER_MODEL_PATH=${ENV_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2
-OUTPUT_DIR=${TASK_DIR}/${PARAM_NAME}/checkpoints_hf/${ITER_NAME}
+OUTPUT_DIR=${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/checkpoints_hf/${ITER_NAME}
 
 # Setup working directory
 TEMP_DIR=$(mktemp -d "${HOME}/converter_${JOBID}_XXXXXX")

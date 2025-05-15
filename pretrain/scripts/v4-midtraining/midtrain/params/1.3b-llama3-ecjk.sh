@@ -32,8 +32,8 @@ ALL_PARAMS+=(
 # Optimizer hyperparameters
 ALL_PARAMS+=(
     --optimizer adam
-    --lr 3e-4
-    --min-lr 3e-5
+    # --lr 3e-4 # will be defined later
+    # --min-lr 3e-5 # will be defined later
     --adam-beta1 0.9
     --adam-beta2 0.95
     --adam-eps 1e-8
@@ -52,7 +52,7 @@ ALL_PARAMS+=(
 MIDTRAIN_START=1859665
 MIDTRAIN_END=1866317
 MIDTRAIN_ITERS=$((MIDTRAIN_END - MIDTRAIN_START))
-TRAIN_ITERS=${MIDTRAIN_ITERS}
+TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
 
 # Scheduler
 ALL_PARAMS+=(
@@ -68,7 +68,7 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 2
+    --micro-batch-size 4
     --global-batch-size 1024
 )
 
@@ -86,20 +86,20 @@ ALL_PARAMS+=(
 )
 
 # Load TRAIN_DATA_PATH
-source ${TASK_DIR}/train_data_50B.sh # options: 50B, 100B, and 300B
+source ${TASK_DIR}/train_data_${DATASET_SIZE}.sh # options: 50B, 100B, and 300B
 SEED=42
 # Dataset
 ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}
-    --data-cache-path ${TASK_DIR}/${PARAM_NAME}/cache
+    --data-cache-path ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/cache
     --split 1,0,0
     --seed ${SEED}
 )
 
-    TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/checkpoints
+    TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/checkpoints
 mkdir -p ${TASK_CHECKPOINT_DIR}
 
-if [ -e ${TASK_CHECKPOINT_DIR}/${PARAM_NAME}/latest_checkpointed_iteration.txt ]; then
+if [ -e ${TASK_CHECKPOINT_DIR}/${PARAM_NAME}/${DATASET_SIZE}/latest_checkpointed_iteration.txt ]; then
   # Continue existing training
   ALL_PARAMS+=(
     --load ${TASK_CHECKPOINT_DIR}

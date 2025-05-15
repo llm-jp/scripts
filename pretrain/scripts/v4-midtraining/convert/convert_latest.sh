@@ -10,12 +10,13 @@ set -eu -o pipefail
 
 task_dir=$1; shift
 param_name=$1; shift
+dataset_size=$1; shift # 50B or 100B or 300B
 iter=$(cat ${task_dir}/${param_name}/checkpoints/latest_checkpointed_iteration.txt)
 
 script_root=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining
 
 qsub \
-  -v TASK_DIR=${task_dir},PARAM_NAME=${param_name},ITER=${iter},RTYPE=rt_HF \
+  -v TASK_DIR=${task_dir},PARAM_NAME=${param_name},DATASET_SIZE=${dataset_size},ITER=${iter},RTYPE=rt_HF \
   -m n \
   -o /dev/null \
   -e /dev/null \

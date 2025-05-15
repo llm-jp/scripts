@@ -41,7 +41,7 @@ echo NUM_GPUS=$NUM_GPUS
 cat $PBS_NODEFILE
 
 # Load TRAIN_DATA_PATH
-source ${TASK_DIR}/train_data_50B.sh # options: 50B, 100B, and 300B
+source ${TASK_DIR}/train_data_${DATASET_SIZE}.sh # options: 50B, 100B, and 300B
 echo "TRAIN_DATA_PATH: ${TRAIN_DATA_PATH}"
 
 # Load ALL_PARAMS

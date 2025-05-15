@@ -81,10 +81,10 @@ cd /path/to/v4-midtraining
 
 # example:
 # 1.3b-llama3-ecjk
-bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk 16
+bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk 50B 16
 
 # 7.7b-llama3-ecjk
-bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecjk 16
+bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecjk 50B 16
 ```
 
 ## Checkpoint変換
@@ -92,10 +92,10 @@ bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecj
 ```sh
 cd /path/to/v4-midtraining
 
-bash convert/convert_latest.sh {TASK_DIR} {PARAM_NAME}
+bash convert/convert_latest.sh {TASK_DIR} {PARAM_NAME} {DATASET_SIZE}
 
 # example:
-bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk
+bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3-ecjk 50B
 ```
 
 > [!CAUTION]

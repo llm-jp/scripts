@@ -43,7 +43,7 @@ ALL_PARAMS+=(
     --attention-dropout 0.0
     --hidden-dropout 0.0
     # --use_checkpoint_opt_param_scheduler
-    # --override-opt_param-scheduler
+    --override-opt_param-scheduler
 )
 
 # ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
@@ -86,20 +86,20 @@ ALL_PARAMS+=(
 )
 
 # Load TRAIN_DATA_PATH
-source ${TASK_DIR}/train_data_50B.sh # options: 50B, 100B, and 300B
+source ${TASK_DIR}/train_data_${DATASET_SIZE}.sh # options: 50B, 100B, and 300B
 SEED=42
 # Dataset
 ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}
-    --data-cache-path ${TASK_DIR}/${PARAM_NAME}/cache
+    --data-cache-path ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/cache
     --split 1,0,0
     --seed ${SEED}
 )
 
-    TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/checkpoints
+    TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/checkpoints
 mkdir -p ${TASK_CHECKPOINT_DIR}
 
-if [ -e ${TASK_CHECKPOINT_DIR}/${PARAM_NAME}/latest_checkpointed_iteration.txt ]; then
+if [ -e ${TASK_CHECKPOINT_DIR}/${PARAM_NAME}/${DATASET_SIZE}/latest_checkpointed_iteration.txt ]; then
   # Continue existing training
   ALL_PARAMS+=(
     --load ${TASK_CHECKPOINT_DIR}

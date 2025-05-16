@@ -26,6 +26,7 @@ echo "EXPERIMENT_DIR=${EXPERIMENT_DIR}"
 echo "SCRIPT_DIR=${SCRIPT_DIR}"
 echo "TASK_DIR=${TASK_DIR}"
 echo "PARAM_NAME=${PARAM_NAME}"
+echo "DATASET_SIZE=${DATASET_SIZE}"
 echo "ITER=${ITER}"
 
 # Setup environment
@@ -40,6 +41,7 @@ ITER_NAME=iter_$(printf %07d ${ITER})  # iter_0123456
 MEGATRON_PATH=${ENV_DIR}/src/Megatron-LM
 TOKENIZER_MODEL_PATH=${ENV_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2
 OUTPUT_DIR=${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/checkpoints_hf/${ITER_NAME}
+echo "OUTPUT_DIR=${OUTPUT_DIR}"
 
 # Setup working directory
 TEMP_DIR=$(mktemp -d "${HOME}/converter_${JOBID}_XXXXXX")
@@ -63,7 +65,7 @@ echo "Start converting: torch_dist --> torch"
 # Prepare source model at specific iteration
 mkdir ${TEMP_DIR}/torch_dist
 echo ${ITER} > ${TEMP_DIR}/torch_dist/latest_checkpointed_iteration.txt
-ln -s ${TASK_DIR}/${PARAM_NAME}/checkpoints/${ITER_NAME} ${TEMP_DIR}/torch_dist/${ITER_NAME}
+ln -s ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/checkpoints/${ITER_NAME} ${TEMP_DIR}/torch_dist/${ITER_NAME}
 
 # Load ALL_PARAMS
 source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh

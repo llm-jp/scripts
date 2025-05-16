@@ -101,6 +101,9 @@ bash midtrain/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecj
 
 ## Checkpoint変換
 
+> [!CAUTION]
+> 下のスクリプトを実行する前に、`scripts/pretrain/scripts/v4-midtraining/midtrain/params`の`--no-load-optim`を外してください。
+
 ```sh
 cd /path/to/v4-midtraining
 

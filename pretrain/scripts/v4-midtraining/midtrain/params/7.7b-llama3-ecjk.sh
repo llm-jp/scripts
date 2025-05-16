@@ -42,8 +42,8 @@ ALL_PARAMS+=(
     --init-method-std 0.02
     --attention-dropout 0.0
     --hidden-dropout 0.0
-    # --use_checkpoint_opt_param_scheduler
     --override-opt_param-scheduler
+    --no-load-optim
 )
 
 # pretrain_iters: 1,859,665
@@ -58,11 +58,14 @@ TRAIN_ITERS=$(cat ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/train_iters.txt)
 MIDTRAIN_ITERS=$((TRAIN_ITERS - MIDTRAIN_START))
 
 # Scheduler
+# Scheduler
 ALL_PARAMS+=(
     --lr 3e-5   # Start LR
     --min-lr 0  # End LR
-    --lr-warmup-iters ${MIDTRAIN_START} # No warmup
-    --lr-decay-iters ${TRAIN_ITERS}
+    # --lr-warmup-iters ${MIDTRAIN_START} # No warmup
+    --lr-warmup-iters 0 # No warmup
+    # --lr-decay-iters ${TRAIN_ITERS}
+    --lr-decay-iters ${MIDTRAIN_ITERS}
     --lr-decay-style linear
     --train-iters ${TRAIN_ITERS}
     --eval-interval 999999999

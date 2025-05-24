@@ -1,0 +1,14 @@
+accelerate==1.3.0
+cmake==3.31.4
+einops==0.8.1
+ninja==1.11.1.3
+numpy==2.1.2
+packaging==24.2
+pybind11==2.13.6
+regex==2024.11.6
+safetensors==0.5.2
+sentencepiece==0.2.0
+six==1.17.0
+transformers==4.48.3
+wandb==0.19.3
+wheel==0.45.1

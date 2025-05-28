@@ -119,3 +119,24 @@ bash convert/convert_latest.sh $(realpath tasks/v4-dolmino-mix-1124) 1.3b-llama3
 > import json, os, sys, torch, functools
 > torch.load = functools.partial(torch.load, weights_only=False)
 > ```
+
+## Model soup
+
+[arcee-ai/mergekit](https://github.com/arcee-ai/mergekit) を利用して、モデルのマージを行う
+
+モデルマージ用の環境は `$EXP_DIR/venv-mergekit` に用意した
+
+```sh
+source $EXP_DIR/venv-mergekit/bin/activate
+
+# 初回にmergekitをインストール
+pip install mergekit
+```
+
+`./merge/` 配下にマージの設定ファイルを配置している
+
+merge実行コマンド
+
+```sh
+mergekit-yaml merge/your_config.yaml model/output/path/
+```

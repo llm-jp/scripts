@@ -43,7 +43,7 @@ ALL_PARAMS+=(
     --attention-dropout 0.0
     --hidden-dropout 0.0
     --override-opt_param-scheduler
-    --no-load-optim
+    # --no-load-optim
 )
 
 # pretrain_iters: 1,859,665
@@ -60,7 +60,8 @@ MIDTRAIN_ITERS=$((TRAIN_ITERS - MIDTRAIN_START))
 # Scheduler
 ALL_PARAMS+=(
     --lr 3e-5   # Start LR
-    --min-lr 0  # End LR
+    --min-lr 3e-5  # End LR
+    # --min-lr 0  # End LR
     # --lr-warmup-iters ${MIDTRAIN_START} # No warmup
     --lr-warmup-iters 0 # No warmup
     # --lr-decay-iters ${TRAIN_ITERS}
@@ -92,7 +93,7 @@ ALL_PARAMS+=(
 
 # Load TRAIN_DATA_PATH
 source ${TASK_DIR}/train_data_${DATASET_SIZE}.sh # options: 50B, 100B, and 300B
-SEED=42
+SEED=42069
 # Dataset
 ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}

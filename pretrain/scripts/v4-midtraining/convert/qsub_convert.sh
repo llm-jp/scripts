@@ -20,8 +20,8 @@ set -eu -o pipefail
 # Arguments
 EXPERIMENT_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction
 SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v4-midtraining/midtrain
-# ENV_DIR=${EXPERIMENT_DIR}/environments
-ENV_DIR=${EXPERIMENT_DIR}/environment2
+# ENV_DIR=${EXPERIMENT_DIR}/environment2
+ENV_DIR=${EXPERIMENT_DIR}/environment3
 echo "EXPERIMENT_DIR=${EXPERIMENT_DIR}"
 echo "SCRIPT_DIR=${SCRIPT_DIR}"
 echo "TASK_DIR=${TASK_DIR}"

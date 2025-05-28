@@ -14,7 +14,8 @@ echo "Modules: $loaded"
 echo "-----"
 
 # ENV_DIR=${EXPERIMENT_DIR}/environments
-ENV_DIR=${EXPERIMENT_DIR}/environment2
+# ENV_DIR=${EXPERIMENT_DIR}/environment2
+ENV_DIR=${EXPERIMENT_DIR}/environment3
 
 source ${ENV_DIR}/venv/bin/activate
 # source ${ENV_DIR}/scripts/environment.sh # ADD

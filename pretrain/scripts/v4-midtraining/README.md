@@ -62,7 +62,10 @@ rm -rf $EXP_DIR/dolmino-mix-1124-extracted $EXP_DIR/dolmino-mix-1124-extracted-m
 ref: [scripts/pretrain/installers/v4-megatron-abci at 0130-instruct-pretrain · llm-jp/scripts](https://github.com/llm-jp/scripts/tree/0130-instruct-pretrain/pretrain/installers/v4-megatron-abci)
 
 ```sh
+cd /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/install-scripts/pretrain/installers/v4-megatron-abci
 bash run_setup.sh /path/to/target_dir
+# ex
+# bash run_setup.sh /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/environment
 ```
 
 > [!CAUTION]

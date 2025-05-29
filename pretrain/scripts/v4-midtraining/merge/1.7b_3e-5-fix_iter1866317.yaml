@@ -1,0 +1,14 @@
+# Merge configuration for 1.7B model with fixed 3e-5 learning rate and iteration 1866317
+
+merge_method: linear
+models:
+  - model: /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining/tasks/v4-dolmino-mix-1124/1.3b-llama3-ecjk/50B/checkpoints_hf/3e-5-fix/seed42/iter_1866317/
+    parameters:
+      weight: 1.0
+  - model: /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining/tasks/v4-dolmino-mix-1124/1.3b-llama3-ecjk/50B/checkpoints_hf/3e-5-fix/seed666/iter_1866317/
+    parameters:
+      weight: 1.0
+  - model: /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining/tasks/v4-dolmino-mix-1124/1.3b-llama3-ecjk/50B/checkpoints_hf/3e-5-fix/seed42069/iter_1866317/
+    parameters:
+      weight: 1.0
+dtype: bfloat16

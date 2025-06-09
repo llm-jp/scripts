@@ -1,11 +1,4 @@
 #!/bin/bash
-#PBS -P gcg51557
-#PBS -q R10415
-#PBS -v RTYPE=rt_HF
-#PBS -l select=1
-#PBS -l walltime=01:00:00
-#PBS -o /dev/null
-#PBS -e /dev/null
 
 cd $PBS_O_WORKDIR
 

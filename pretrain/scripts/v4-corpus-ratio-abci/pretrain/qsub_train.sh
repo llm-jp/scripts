@@ -2,12 +2,16 @@
 
 # Predefined variables:
 # * ENV_DIR: Directory containing the Megatron-LM environment
-# * TASK_DIR: Directory for the task, containing train_data.sh and logs
+# * TASK_ROOT_DIR: Directory for the task, containing train_data.sh and logs
+# * TASK_NAME: Name of the task
 # * WANDB_PROJECT: W&B project name
 
 cd $PBS_O_WORKDIR
 
+TASK_DIR=${TASK_ROOT_DIR}/${TASK_NAME}
 job_id=${PBS_JOBID%%.*}
+experiment_name=pretrain_${TASK_NAME}_${job_id}
+
 mkdir -p ${TASK_DIR}/logs
 logfile=${TASK_DIR}/logs/pretrain-${job_id}.out
 errfile=${TASK_DIR}/logs/pretrain-${job_id}.err
@@ -27,7 +31,8 @@ module load cuda/${PRETRAIN_CUDA_VERSION}/${PRETRAIN_CUDA_VERSION}.${PRETRAIN_CU
 module load cudnn/${PRETRAIN_CUDNN_VERSION}/${PRETRAIN_CUDNN_VERSION_WITH_PATCH}
 module load hpcx/${PRETRAIN_HPCX_VERSION}
 module load nccl/${PRETRAIN_NCCL_VERSION}/${PRETRAIN_NCCL_VERSION_WITH_PATCH}
-echo $(module list)
+# For logging
+module list
 
 # Load Python venv
 source ${ENV_DIR}/venv/bin/activate
@@ -67,11 +72,13 @@ source ${TASK_DIR}/train_data.sh
 # Requires TRAIN_ITERS and TRAIN_DATA_PATH
 source ${TASK_DIR}/params.sh
 
-# Add W&B params
+# Add logging params
 ALL_PARAMS+=(
+    --log-interval 1
+    --log-throughput
     --wandb-entity llm-jp
     --wandb-project ${WANDB_PROJECT}
-    --wandb-exp-name pretrain_${JOBID}
+    --wandb-exp-name ${experiment_name}
 )
 
 # Add Checkpointing params

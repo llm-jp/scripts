@@ -17,9 +17,10 @@ set -eu -o pipefail
 
 EXPERIMENT_DIR=/home/ach17726fj/experiments/0176_megatron_upstream_merge/
 SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v5-test/train
+# Takes $ENV_DIR from the environment variable
 # ENV_DIR=${EXPERIMENT_DIR}/environments
 # ENV_DIR=${EXPERIMENT_DIR}/environment2
-ENV_DIR=${EXPERIMENT_DIR}/test_environment
+# ENV_DIR=${EXPERIMENT_DIR}/test_environment
 
 # Setup environment
 source ${SCRIPT_DIR}/common/setup.sh

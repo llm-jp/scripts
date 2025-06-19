@@ -13,7 +13,6 @@ echo "-----"
 echo "Modules: $loaded"
 echo "-----"
 
-ENV_DIR=${EXPERIMENT_DIR}/test_environment
 
 source ${ENV_DIR}/venv/bin/activate
 # source ${ENV_DIR}/scripts/environment.sh # ADD

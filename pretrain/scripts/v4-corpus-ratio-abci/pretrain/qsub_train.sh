@@ -15,7 +15,7 @@ experiment_name=pretrain_${TASK_NAME}_${job_id}
 mkdir -p ${TASK_DIR}/logs
 logfile=${TASK_DIR}/logs/pretrain-${job_id}.out
 errfile=${TASK_DIR}/logs/pretrain-${job_id}.err
-exec > $logfile 2> $errfile
+exec > ${logfile} 2> ${errfile}
 
 set -eu -o pipefail
 
@@ -56,11 +56,11 @@ num_nodes=$(wc -l < $PBS_NODEFILE)
 num_gpus_per_node=8
 num_gpus=$((${num_nodes} * ${num_gpus_per_node}))
 echo "nnodes: ${num_nodes}; ngpus: ${num_gpus}"
-echo NUM_NODES=$num_nodes
-echo NUM_GPUS_PER_NODE=$num_gpus_per_node
-echo NUM_GPUS=$num_gpus
+echo NUM_NODES=${num_nodes}
+echo NUM_GPUS_PER_NODE=${num_gpus_per_node}
+echo NUM_GPUS=${num_gpus}
 
-cat $PBS_NODEFILE
+cat ${PBS_NODEFILE}
 
 # Training steps
 TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
@@ -95,8 +95,8 @@ mpirun \
   --display-allocation \
   --report-bindings \
   --oversubscribe \
-  -np $num_gpus \
-  --npernode $num_gpus_per_node \
+  -np ${num_gpus} \
+  --npernode ${num_gpus_per_node} \
   -bind-to none \
   -map-by slot \
   python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \

@@ -6,21 +6,21 @@
 # * TASK_NAME: Name of the task
 # * WANDB_PROJECT: W&B project name
 
-cd $PBS_O_WORKDIR
+cd ${PBS_O_WORKDIR}
 
 TASK_DIR=${TASK_ROOT_DIR}/${TASK_NAME}
-job_id=${PBS_JOBID%%.*}
-experiment_name=pretrain_${TASK_NAME}_${job_id}
+JOB_ID=${PBS_JOBID%%.*}
+EXPERIMENT_NAME=pretrain_${TASK_NAME}_${JOB_ID}
 
 mkdir -p ${TASK_DIR}/logs
-logfile=${TASK_DIR}/logs/pretrain-${job_id}.out
-errfile=${TASK_DIR}/logs/pretrain-${job_id}.err
-exec > ${logfile} 2> ${errfile}
+LOGFILE=${TASK_DIR}/logs/pretrain-${JOB_ID}.out
+ERRFILE=${TASK_DIR}/logs/pretrain-${JOB_ID}.err
+exec > ${LOGFILE} 2> ${ERRFILE}
 
 set -eu -o pipefail
 
 # This directory
-script_root=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+SCRIPT_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Load common environment variables
 source ${ENV_DIR}/scripts/environment.sh
@@ -48,17 +48,17 @@ export CUDNN_LOGDEST_DBG=stderr
 export CUDNN_LOGERR_DBG=1
 
 # Set up environment variables for distributed training
-export MASTER_ADDR=$(head -n 1 $PBS_NODEFILE | hostname -f)
+export MASTER_ADDR=$(head -n 1 ${PBS_NODEFILE} | hostname -f)
 export MASTER_PORT=$((10000 + RANDOM % 1000))
 echo "hostname: ${MASTER_ADDR}"
 
-num_nodes=$(wc -l < $PBS_NODEFILE)
-num_gpus_per_node=8
-num_gpus=$((${num_nodes} * ${num_gpus_per_node}))
-echo "nnodes: ${num_nodes}; ngpus: ${num_gpus}"
-echo NUM_NODES=${num_nodes}
-echo NUM_GPUS_PER_NODE=${num_gpus_per_node}
-echo NUM_GPUS=${num_gpus}
+NUM_NODES=$(wc -l < ${PBS_NODEFILE})
+NUM_GPUS_PER_NODE=8
+NUM_GPUS=$((${NUM_NODES} * ${NUM_GPUS_PER_NODE}))
+echo "nnodes: ${NUM_NODES}; ngpus: ${NUM_GPUS}"
+echo NUM_NODES=${NUM_NODES}
+echo NUM_GPUS_PER_NODE=${NUM_GPUS_PER_NODE}
+echo NUM_GPUS=${NUM_GPUS}
 
 cat ${PBS_NODEFILE}
 
@@ -78,26 +78,27 @@ ALL_PARAMS+=(
     --log-throughput
     --wandb-entity llm-jp
     --wandb-project ${WANDB_PROJECT}
-    --wandb-exp-name ${experiment_name}
+    --wandb-exp-name ${EXPERIMENT_NAME}
 )
 
 # Add Checkpointing params
-task_checkpoint_dir=${TASK_DIR}/checkpoints
+TASK_CHECKPOINT_DIR=${TASK_DIR}/checkpoints
 ALL_PARAMS+=(
-    --load ${task_checkpoint_dir}
-    --save ${task_checkpoint_dir}
+    --load ${TASK_CHECKPOINT_DIR}
+    --save ${TASK_CHECKPOINT_DIR}
     --save-interval 1000
 )
 
 echo "ALL_PARAMS: ${ALL_PARAMS[@]}"
 
 mpirun \
-  --display-allocation \
-  --report-bindings \
-  --oversubscribe \
-  -np ${num_gpus} \
-  --npernode ${num_gpus_per_node} \
-  -bind-to none \
-  -map-by slot \
-  python ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
-    ${ALL_PARAMS[@]}
+    --display-allocation \
+    --report-bindings \
+    --oversubscribe \
+    -np ${NUM_GPUS} \
+    --npernode ${NUM_GPUS_PER_NODE} \
+    -bind-to none \
+    -map-by slot \
+    python \
+        ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
+        ${ALL_PARAMS[@]}

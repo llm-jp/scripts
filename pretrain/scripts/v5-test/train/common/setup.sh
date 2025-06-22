@@ -27,3 +27,7 @@ export CUDA_DEVICE_MAX_CONNECTIONS=1
 export CUDA_LAUNCH_BLOCKING=0
 export CUDNN_LOGDEST_DBG=stderr
 export CUDNN_LOGERR_DBG=1
+
+# For debugging
+export NVTE_DEBUG=1
+export NVTE_DEBUG_LEVEL=2

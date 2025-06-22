@@ -2,7 +2,7 @@
 #PBS -P gcg51557
 #PBS -q R9920251000
 #PBS -N 0176_merge_megatron_upstream
-#PBS -l walltime=10000:00:00
+#PBS -l walltime=100:00:00
 #PBS -m n
 
 cd $PBS_O_WORKDIR

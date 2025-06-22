@@ -2,6 +2,9 @@
 # Model card: https://github.com/llm-jp/model-cards/pull/30
 # Ref: https://github.com/llm-jp/scripts/blob/ec3516a38f93047b7bc0d8305879d62a375e6ee2/pretrain/scripts/v4-training/params/7.7b-cont1.sh
 
+ENV_NAME="$(basename ${ENV_DIR})"
+RUN_NAME="8x1.3B--${ATTN_BACKEND}--${ENV_NAME}"
+
 ALL_PARAMS=()
 
 # Model hyperparameters
@@ -56,7 +59,7 @@ ALL_PARAMS+=(
 MIDTRAIN_START=1859665
 # TRAIN_ITERS=$(cat ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/train_iters.txt)
 DATASET_SIZE=50B
-TRAIN_ITERS=6652 # 50B
+TRAIN_ITERS=500 # Stop with 500 steps
 # MIDTRAIN_ITERS=$((TRAIN_ITERS - MIDTRAIN_START))
 
 # Scheduler
@@ -102,28 +105,29 @@ SEED=42
 # Dataset
 ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}
-    --data-cache-path ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/cache
+    --data-cache-path ${TASK_DIR}/${RUN_NAME}/cache
     --split 1,0,0
     --seed ${SEED}
 )
 
-TASK_CHECKPOINT_DIR=${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/checkpoints
+TASK_CHECKPOINT_DIR=${TASK_DIR}/${RUN_NAME}/checkpoints
 mkdir -p ${TASK_CHECKPOINT_DIR}
 
-if [ -e ${TASK_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
-  # Continue existing training
-  ALL_PARAMS+=(
-    --load ${TASK_CHECKPOINT_DIR}
-    --save ${TASK_CHECKPOINT_DIR}
-  )
-  echo "Continue existing training"
-else
+# Always start from scratch and disable saving
+# if [ -e ${TASK_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
+#   # Continue existing training
+#   ALL_PARAMS+=(
+#     --load ${TASK_CHECKPOINT_DIR}
+#     --save ${TASK_CHECKPOINT_DIR}
+#   )
+#   echo "Continue existing training"
+# else
   # Start new training from scratch
   ALL_PARAMS+=(
     --save ${TASK_CHECKPOINT_DIR}
   )
   echo "Start new training from scratch"
-fi
+# fi
 ALL_PARAMS+=(
     --save-interval 1000
 )
@@ -145,7 +149,7 @@ ALL_PARAMS+=(
     --transformer-impl transformer_engine
 
     # NOTE(odashi): Newer implementation requires to set attention backend by parameter.
-    #--attention-backend flash
+    --attention-backend ${ATTN_BACKEND}
 )
 
 # MoE args
@@ -171,5 +175,5 @@ ALL_PARAMS+=(
     --log-throughput
     --wandb-entity llm-jp
     --wandb-project 0176_merge_megatron_upstream
-    --wandb-exp-name train_$(basename ${TASK_DIR})
+    --wandb-exp-name "${RUN_NAME}"
 )

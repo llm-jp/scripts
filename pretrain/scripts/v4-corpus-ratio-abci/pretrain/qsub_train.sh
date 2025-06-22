@@ -1,16 +1,14 @@
 #!/bin/bash
 
 # Predefined variables:
-# * ENV_DIR: Directory containing the Megatron-LM environment
-# * TASK_ROOT_DIR: Directory for the task, containing train_data.sh and logs
+# * EXPERIMENT_DIR: Experiment directory
 # * TASK_NAME: Name of the task
 # * WANDB_PROJECT: W&B project name
 
 cd ${PBS_O_WORKDIR}
 
-TASK_DIR=${TASK_ROOT_DIR}/${TASK_NAME}
+TASK_DIR=${EXPERIMENT_DIR}/tasks/${TASK_NAME}
 JOB_ID=${PBS_JOBID%%.*}
-EXPERIMENT_NAME=pretrain_${TASK_NAME}_${JOB_ID}
 
 mkdir -p ${TASK_DIR}/logs
 LOGFILE=${TASK_DIR}/logs/pretrain-${JOB_ID}.out
@@ -19,8 +17,10 @@ exec > ${LOGFILE} 2> ${ERRFILE}
 
 set -eu -o pipefail
 
-# This directory
-SCRIPT_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+ENV_DIR=${EXPERIMENT_DIR}/env
+SCRIPT_DIR=${EXPERIMENT_DIR}/scripts
+
+EXPERIMENT_NAME=pretrain_${TASK_NAME}_${JOB_ID}
 
 # Load common environment variables
 source ${ENV_DIR}/scripts/environment.sh

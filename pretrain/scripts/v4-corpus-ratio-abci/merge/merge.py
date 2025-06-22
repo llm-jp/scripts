@@ -93,6 +93,9 @@ def main():
         param_sums[key] /= model_count
 
     logging.info("Merging completed. Saving the merged model...")
+
+    # Create output directory if it does not exist
+    args.output_model.mkdir(parents=True, exist_ok=True)
     
     # Copy original files other than .safetensors
     for file in args.source_models[0].iterdir():

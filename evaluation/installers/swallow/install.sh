@@ -72,9 +72,9 @@ pushd $ENV_DIR # $ENV_DIR
 # src is used to store all resources for from-scratch builds
 mkdir -p src
 # Retrieve swallow repository
-SWALLOW_REPO_URL=https://github.com/junjiechen-chris/swallow-eval-customization.git
-git clone $SWALLOW_REPO_URL src/swallow-evaluation
-
+SWALLOW_REPO_URL=https://github.com/junjiechen-chris/swallow-eval-customization.git 
+# TODO: switch to experimental branch for development
+git clone $SWALLOW_REPO_URL src/swallow-evaluation -b swallow-gpqanmath
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/install.sh .
 mkdir scripts
@@ -102,9 +102,12 @@ deactivate
 source venv-harness/bin/activate
 pushd src/swallow-evaluation/lm-evaluation-harness-en
 pip install --upgrade pip
-pip install -e .
-pip install sentencepiece protobuf
-pip install vllm==0.3.2
+pip install -e .[math]
+pip install sentencepiece==0.2.0 protobuf==5.28.3 transformers==4.46.2
+pip install 'accelerate>=0.26.0'
+pip install datasets==2.21.0
+pip install vllm==v0.6.3.post1
+pip install torch==2.4.0 --index-url https://download.pytorch.org/whl/cu121
 deactivate
 popd # $ENV_DIR
 popd  # $TARGET_DIR

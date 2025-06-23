@@ -43,6 +43,7 @@ for iter in $(seq 1000 1000 ${LAST_ITER}); do
         -v RTYPE=rt_HF,EXPERIMENT_DIR=${EXPERIMENT_DIR},TASK_NAME=${TASK_NAME},ITER=${iter} \
         -o /dev/null \
         -e /dev/null \
+        -m n \
         ${SCRIPT_ROOT}/qsub_convert.sh
     )
     echo "Submitted iter=${iter}: job_id=${job_id}"

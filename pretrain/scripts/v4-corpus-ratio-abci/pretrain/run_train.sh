@@ -18,11 +18,13 @@ NUM_NODES=$1; shift
 # This directory
 SCRIPT_ROOT=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
+WALLTIME=720:00:00 # 30 days
+
 qsub \
     -P gcg51557 \
     -q ${RESERVATION_ID} \
     -N ${EXPERIMENT_ID}_pretrain \
-    -l select=${NUM_NODES},walltime=1000:00:00 \
+    -l select=${NUM_NODES},walltime=${WALLTIME} \
     -v RTYPE=rt_HF,EXPERIMENT_DIR=${EXPERIMENT_DIR},TASK_NAME=${TASK_NAME},WANDB_PROJECT=${WANDB_PROJECT} \
     -o /dev/null \
     -e /dev/null \

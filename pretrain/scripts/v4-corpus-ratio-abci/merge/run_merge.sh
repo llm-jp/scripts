@@ -26,4 +26,5 @@ qsub \
     -v RTYPE=rt_HG,EXPERIMENT_DIR=${EXPERIMENT_DIR},TASK_NAME=${TASK_NAME} \
     -o /dev/null \
     -e /dev/null \
+    -m n \
     ${SCRIPT_ROOT}/qsub_merge.sh

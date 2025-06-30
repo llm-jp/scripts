@@ -47,5 +47,5 @@ for iter in $(seq 1000 1000 ${LAST_ITER}); do
         ${SCRIPT_ROOT}/qsub_convert.sh
     )
     echo "Submitted iter=${iter}: job_id=${job_id}"
-    dependency=(-W depend=after:${job_id})
+    dependency=(-W depend=afterany:${job_id})
 done

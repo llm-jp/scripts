@@ -32,6 +32,16 @@ def parse_args():
         ),
     )
     p.add_argument(
+        "--source-weights",
+        type=float,
+        nargs="+",
+        default=None,
+        help=(
+            "Weights for each source model. If not provided, "
+            "all models will be treated equally (weight = 1)."
+        ),
+    )
+    p.add_argument(
         "--output-model",
         type=pathlib.Path,
         required=True,
@@ -71,8 +81,23 @@ def main():
 
     logging.info(f"Source models: {args.source_models}")
 
+    # Check weights
+    if args.source_weights is None:
+        logging.info("No source weights provided, treating all models equally.")
+        args.source_weights = [1.0] * model_count
+    else
+        if len(args.source_weights) != model_count:
+            raise ValueError(
+                f"Number of source weights ({len(args.source_weights)}) "
+                f"does not match number of source models ({model_count})."
+            )
+        if any(weight <= 0 for weight in args.source_weights):
+            raise ValueError("All source weights must be positive.");
+
+    logging.info(f"Source weights: {args.source_weights}")
+
     # Iterate through each model and accumulate the parameters
-    for model_path in args.source_models:
+    for model_path, weight in zip(args.source_models, args.source_weights):
         if not model_path.exists():
             raise FileNotFoundError(f"Model path {model_path} does not exist.")
         if not model_path.is_dir():
@@ -89,8 +114,9 @@ def main():
                 param_sums[key] += tensor
     
     # Average the parameters
+    total_weight = sum(args.source_weights)
     for key in param_sums:
-        param_sums[key] /= model_count
+        param_sums[key] /= total_weight
 
     logging.info("Merging completed. Saving the merged model...")
     args.output_model.mkdir(parents=True, exist_ok=True)

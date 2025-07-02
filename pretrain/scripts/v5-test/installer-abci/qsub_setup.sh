@@ -33,7 +33,7 @@ mkdir ${TARGET_DIR}
 mkdir ${TARGET_DIR}/src
 
 # Copy necessary scripts
-cp -r ${SCRIPT_DIR}/scripts ${TARGET_DIR}
+cp -r ${SCRIPT_DIR}/scripts/${ENV_NAME}.sh ${TARGET_DIR}/environment.sh
 
 # Set variables
 source ${TARGET_DIR}/scripts/environment.sh

@@ -1,6 +1,6 @@
 # Script to apply average merging to Hugging Face models.
 # This script can work with the pretrain Python environment.
-# 
+#
 # Usage:
 #     python merge.py \
 #         --source-models /path/to/model1 /path/to/model2 \
@@ -54,7 +54,7 @@ def parse_args():
 def iter_params(model_path: pathlib.Path) -> tuple[str, torch.Tensor]:
     """
     Iterate through the parameters of a model stored in a .safetensors file.
-    
+
     Args:
         model_path (pathlib.Path): Path to the .safetensors file.
 
@@ -75,7 +75,7 @@ def main():
     # Initialize a dictionary to hold the sum of parameters
     param_sums = {}
     model_count = len(args.source_models)
-    
+
     if model_count == 0:
         raise ValueError("No input models provided for merging.")
 
@@ -85,7 +85,7 @@ def main():
     if args.source_weights is None:
         logging.info("No source weights provided, treating all models equally.")
         args.source_weights = [1.0] * model_count
-    else
+    else:
         if len(args.source_weights) != model_count:
             raise ValueError(
                 f"Number of source weights ({len(args.source_weights)}) "
@@ -112,7 +112,7 @@ def main():
                     raise ValueError(f"Shape mismatch for key '{key}': "
                                      f"{param_sums[key].shape} vs {tensor.shape}")
                 param_sums[key] += tensor
-    
+
     # Average the parameters
     total_weight = sum(args.source_weights)
     for key in param_sums:
@@ -120,12 +120,12 @@ def main():
 
     logging.info("Merging completed. Saving the merged model...")
     args.output_model.mkdir(parents=True, exist_ok=True)
-    
+
     # Copy original files other than .safetensors
     for file in args.source_models[0].iterdir():
         if file.suffix != ".safetensors":
             shutil.copy(file, args.output_model / file.name)
-    
+
     # There should be `model.safetensors.index.json` file
     # containing the mapping of parameter names to their destination file names.
     index_file = args.output_model / "model.safetensors.index.json"
@@ -133,16 +133,16 @@ def main():
         raise FileNotFoundError(f"Index file {index_file} does not exist.")
     with index_file.open("r") as f:
         weight_map = json.load(f)["weight_map"]
-    
+
     # Check if the weight map is consistent with the parameters
     if set(weight_map.keys()) != set(param_sums.keys()):
         raise ValueError("Weight map keys do not match the parameter keys.")
-    
+
     # Make inverse mapping for saving
     output_map = {k: [] for k in set(weight_map.values())}
     for k, v in weight_map.items():
         output_map[v].append(k)
-    
+
     metadata = {"format": "pt"}
 
     # Save all parameters
@@ -151,7 +151,7 @@ def main():
         output_path = args.output_model / file_name
         logging.info(f"  Saving parameters to {output_path}")
         safetensors.torch.save_file(tensors, output_path, metadata=metadata)
-    
+
     logging.info("Merged model saved successfully.")
 
 

@@ -107,8 +107,6 @@ for jglue_script in "${JGLUE_SCRIPTS[@]}"; do
   sed -i.bak 's|yahoojapan/JGLUE/main/datasets|yahoojapan/JGLUE/v1\.1\.0/datasets|g' "$jglue_script"
 done
 
-
-
 # Preprocess dataset
 python scripts/preprocess_dataset.py \
   --dataset-name all-with-nc  \

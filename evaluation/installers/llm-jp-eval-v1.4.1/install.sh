@@ -95,6 +95,20 @@ INFERENCE_SCRIPT=offline_inference/vllm/offline_inference_vllm.py
 # Remove execution time due to its complexity in handling
 sed -i.bak 's/_{GENERATOR_TYPE}_{current_time}//' "$INFERENCE_SCRIPT"
 
+# Fix the URL for JGLUE dataset download in multiple files
+JGLUE_SCRIPTS=(
+  "src/llm_jp_eval/jaster/jcommonsenseqa.py"
+  "src/llm_jp_eval/jaster/jnli.py"
+  "src/llm_jp_eval/jaster/jsquad.py"
+  "src/llm_jp_eval/jaster/jsts.py"
+)
+
+for jglue_script in "${JGLUE_SCRIPTS[@]}"; do
+  sed -i.bak 's|yahoojapan/JGLUE/main/datasets|yahoojapan/JGLUE/v1\.1\.0/datasets|g' "$jglue_script"
+done
+
+
+
 # Preprocess dataset
 python scripts/preprocess_dataset.py \
   --dataset-name all-with-nc  \

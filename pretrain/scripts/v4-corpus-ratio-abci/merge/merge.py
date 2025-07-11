@@ -4,6 +4,8 @@
 # Usage:
 #     python merge.py \
 #         --source-models /path/to/model1 /path/to/model2 \
+#         --source-weights 1.0 2.0 \  # Optional
+#         --aggregation-method average \  # Optional,
 #         --output-model /path/to/output_model
 
 import argparse
@@ -42,6 +44,15 @@ def parse_args():
         ),
     )
     p.add_argument(
+        "--aggregation-method",
+        choices=["average", "sum"],
+        default="average",
+        help=(
+            "Method to aggregate parameters. "
+            "'average' will average the parameters, while 'sum' will sum them up."
+        ),
+    )
+    p.add_argument(
         "--output-model",
         type=pathlib.Path,
         required=True,
@@ -72,29 +83,31 @@ def iter_params(model_path: pathlib.Path) -> tuple[str, torch.Tensor]:
 def main():
     args = parse_args()
 
+    logging.info(f"Source models: {args.source_models}")
+
+    if args.source_weights is not None:
+        if len(args.source_weights) != len(args.source_models):
+            raise ValueError("Number of source weights must match number of source models.")
+    else:
+        args.source_weights = [1.0] * len(args.source_models)
+
+    logging.info(f"Source weights: {args.source_weights}")
+
+    match args.aggregation_method:
+        case "average":
+            if any(x <= 0 for x in args.source_weights):
+                raise ValueError("All source weights must be positive for --aggregation-method=average.")
+            denominator = sum(args.source_weights)
+        case "sum":
+            denominator = 1.0
+        case _:
+            raise ValueError(f"Unknown aggregation method: {args.aggregation_method}")
+
+    logging.info(f"Aggregation method: {args.aggregation_method}, denominator: {denominator}")
+
     # Initialize a dictionary to hold the sum of parameters
     param_sums = {}
     model_count = len(args.source_models)
-
-    if model_count == 0:
-        raise ValueError("No input models provided for merging.")
-
-    logging.info(f"Source models: {args.source_models}")
-
-    # Check weights
-    if args.source_weights is None:
-        logging.info("No source weights provided, treating all models equally.")
-        args.source_weights = [1.0] * model_count
-    else:
-        if len(args.source_weights) != model_count:
-            raise ValueError(
-                f"Number of source weights ({len(args.source_weights)}) "
-                f"does not match number of source models ({model_count})."
-            )
-        if any(weight <= 0 for weight in args.source_weights):
-            raise ValueError("All source weights must be positive.");
-
-    logging.info(f"Source weights: {args.source_weights}")
 
     # Iterate through each model and accumulate the parameters
     for model_path, weight in zip(args.source_models, args.source_weights):
@@ -113,10 +126,9 @@ def main():
                                      f"{param_sums[key].shape} vs {tensor.shape}")
                 param_sums[key] += tensor
 
-    # Average the parameters
-    total_weight = sum(args.source_weights)
+    # Normalize the parameters
     for key in param_sums:
-        param_sums[key] /= total_weight
+        param_sums[key] /= denominator
 
     logging.info("Merging completed. Saving the merged model...")
     args.output_model.mkdir(parents=True, exist_ok=True)

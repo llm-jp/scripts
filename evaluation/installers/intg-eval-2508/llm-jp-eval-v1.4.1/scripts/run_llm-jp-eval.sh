@@ -1,71 +1,92 @@
 #!/bin/bash
-#SBATCH --job-name=llm-jp-eval
+#SBATCH --job-name=0060_eval
 #SBATCH --partition=<FIX_ME>
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
-#SBATCH --mem=200G
+#SBATCH --mem-per-gpu=200G
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
-set -eux
+set -eux -o pipefail
 
-# Open file limit
-ulimit -n 65536 1048576
-
-ENV_DIR=environment
-source ${ENV_DIR}/scripts/environment.sh
+if [ $# -ne 2 ]; then
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR"
+    exit 1
+fi
 
 # Arguments
-MODEL=$1
-WANDB_RUN_NAME=$2
+MODEL_PATH=$1; shift
+OUTPUT_DIR=$1; shift
+TP_SIZE=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((TP_SIZE-1)))
 
-# Semi-fixed vars
-CONFIG_TEMPLATE=resources/config_base.yaml
-OFFLINE_CONFIG_TEMPLATE=resources/config_offline_inference_vllm.yaml
-TOKENIZER=$MODEL
-WANDB_ENTITY=llm-jp-eval
-WANDB_PROJECT=test
+mkdir -p ${OUTPUT_DIR}
 
-# Fixed vars
-EVAL_DIR=${ENV_DIR}/src/llm-jp-eval
-CONFIG_DIR=${EVAL_DIR}/configs
-OFFLINE_SCRIPT_PATH=${EVAL_DIR}/offline_inference/vllm/offline_inference_vllm.py
+ENV_DIR=$(pwd)/environment
+source ${ENV_DIR}/scripts/environment.sh
+
+CONFIG_DIR=$(pwd)/resources
+PROMPT_OUTPUT_DIR=${OUTPUT_DIR}/prompts
+OFFLINE_OUTPUT_DIR=${OUTPUT_DIR}/offline
+RESULT_DIR=${OUTPUT_DIR}/results
+LLM_JP_EVAL_DIR=${ENV_DIR}/src/llm-jp-eval
 DATASET_DIR=${ENV_DIR}/data/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
-OFFLINE_OUT=vllm-outputs/${WANDB_ENTITY}/${WANDB_PROJECT}
 
-# Config settings
-MODEL_NORM=$(echo "$MODEL" | sed 's/\//--/g')
-NEW_CONFIG=${CONFIG_DIR}/config.${WANDB_PROJECT}.${WANDB_RUN_NAME}.yaml
-NEW_OFFLINE_CONFIG=${OFFLINE_OUT}/${MODEL_NORM}/config_offline_inference_vllm.yaml
+LLM_JP_EVAL_OVERRIDES=(
+    model.pretrained_model_name_or_path=${MODEL_PATH}
+    tokenizer.pretrained_model_name_or_path=${MODEL_PATH}
+    dataset_dir=${DATASET_DIR}
+    prompt_dump_dir=${PROMPT_OUTPUT_DIR}
+    offline_dir=${OFFLINE_OUTPUT_DIR}
+    log_dir=${RESULT_DIR}
+)
 
-REPLACE_VARS=("MODEL" "TOKENIZER" "DATASET_DIR" "WANDB_ENTITY" "WANDB_PROJECT" "WANDB_RUN_NAME" "OFFLINE_OUT" "MODEL_NORM")
+if [ -n "${HF_HOME}" ]; then
+    LLM_JP_EVAL_OVERRIDES+=(
+        resource_dir=${HF_HOME}
+    )
+fi
 
-# Create a new config file to save the config file of each run
-cp $CONFIG_TEMPLATE $NEW_CONFIG
-mkdir -p $(dirname $NEW_OFFLINE_CONFIG)
-cp $OFFLINE_CONFIG_TEMPLATE $NEW_OFFLINE_CONFIG
-
-# Replace variables
-for VAR in "${REPLACE_VARS[@]}"; do
-  VALUE=$(eval echo \${$VAR})
-  sed -i "s|<<${VAR}>>|${VALUE}|g" $NEW_CONFIG
-  sed -i "s|<<${VAR}>>|${VALUE}|g" $NEW_OFFLINE_CONFIG
+echo "LLM_JP_EVAL_OVERRIDES:"
+for x in ${LLM_JP_EVAL_OVERRIDES[@]}; do
+    echo "  $x"
 done
 
-# Generate dump for each run to load $NEW_CONFIG settings
+OFFLINE_INFERENCE_VLLM_OVERRIDES=(
+    "offline_inference.prompt_json_path=[\"${PROMPT_OUTPUT_DIR}/*.eval-prompt.json\"]"
+    offline_inference.exact_output_dir=${OFFLINE_OUTPUT_DIR}
+    model.model=${MODEL_PATH}
+    tokenizer.pretrained_model_name_or_path=${MODEL_PATH}
+    model.tensor_parallel_size=${TP_SIZE}
+)
+echo "OFFLINE_INFERENCE_VLLM_OVERRIDES:"
+for x in ${OFFLINE_INFERENCE_VLLM_OVERRIDES[@]}; do
+    echo "  $x"
+done
+
 source ${ENV_DIR}/venv-eval/bin/activate
-python ${EVAL_DIR}/scripts/dump_prompts.py -cn $(basename $NEW_CONFIG)
+python \
+    ${LLM_JP_EVAL_DIR}/scripts/dump_prompts.py \
+    -cp ${CONFIG_DIR} \
+    -cn config_base \
+    ${LLM_JP_EVAL_OVERRIDES[@]}
 deactivate
 
-# Generate outputs in offline mode 
 source ${ENV_DIR}/venv-vllm/bin/activate
-python $OFFLINE_SCRIPT_PATH -cp $(pwd)/$(dirname $NEW_OFFLINE_CONFIG) -cn $(basename $NEW_OFFLINE_CONFIG)
+python \
+    ${LLM_JP_EVAL_DIR}/offline_inference/vllm/offline_inference_vllm.py \
+    -cp ${CONFIG_DIR} \
+    -cn config_offline_inference_vllm \
+    ${OFFLINE_INFERENCE_VLLM_OVERRIDES[@]}
 deactivate
 
-# Run llm-jp-eval to upload results
 source ${ENV_DIR}/venv-eval/bin/activate
-python ${EVAL_DIR}/scripts/evaluate_llm.py -cn $(basename $NEW_CONFIG)
+python \
+    ${LLM_JP_EVAL_DIR}/scripts/evaluate_llm.py \
+    -cp ${CONFIG_DIR} \
+    -cn config_base \
+    ${LLM_JP_EVAL_OVERRIDES[@]}
 deactivate
 
 echo "Done"

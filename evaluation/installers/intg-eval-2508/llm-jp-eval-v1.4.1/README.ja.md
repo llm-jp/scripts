@@ -9,7 +9,7 @@
     ```bash
     # original: git clone https://github.com/llm-jp/llm-jp-eval.git -b v${LLM_JP_EVAL_TAG}
     git clone https://github.com/llm-jp/jp-eval-customization.git -b v${LLM_JP_EVAL_TAG}
-  ```
+    ```
   - 階層が変わったため、共通インストーラーのパスを変更しました。  
     ```bash
     # original: INSTALLER_COMMON=$INSTALLER_DIR/../../../common/installers.sh

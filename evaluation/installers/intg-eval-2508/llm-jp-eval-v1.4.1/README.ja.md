@@ -4,17 +4,23 @@
 
 ## 変更点
 
-- `scripts/environment.sh`
-  - 取得するレポジトリを以下に変更しています。  
-  `https://github.com/llm-jp/jp-eval-customization.git`
-  - 取得するブランチを以下に変更しています。  
-  `v1.4.1-custom`
 - `install.sh`
-  - 階層が変わったため、共通インストーラーのパスを変更しました。  
-  ```bash
-  # original: INSTALLER_COMMON=$INSTALLER_DIR/../../../common/installers.sh
-  INSTALLER_COMMON=$INSTALLER_DIR/../../../../common/installers.sh
+  - 取得するレポジトリを変更しました。 
+    ```bash
+    # original: git clone https://github.com/llm-jp/llm-jp-eval.git -b v${LLM_JP_EVAL_TAG}
+    git clone https://github.com/llm-jp/jp-eval-customization.git -b v${LLM_JP_EVAL_TAG}
   ```
+  - 階層が変わったため、共通インストーラーのパスを変更しました。  
+    ```bash
+    # original: INSTALLER_COMMON=$INSTALLER_DIR/../../../common/installers.sh
+    INSTALLER_COMMON=$INSTALLER_DIR/../../../../common/installers.sh
+    ```
+- `scripts/environment.sh`
+  - 取得するブランチを変更しました。  
+    ```bash
+    # original: export LLM_JP_EVAL_TAG=v1.4.1
+    export LLM_JP_EVAL_TAG=v1.4.1-custom
+    ```
 
 以下はオリジナルのREADMEです。
 

@@ -1,4 +1,23 @@
-[English version](README.md)
+# llm-jp-eval v1.4.1(統合評価基盤カスタム) インストールおよび実行スクリプト
+
+`scripts/evaluation/installers/llm-jp-eval-v1.4.1`を統合評価基盤用のllm-jp-eval-v1.4.1をインストールするためにカスタムしました。  
+
+## 変更点
+
+- `scripts/environment.sh`
+  - 取得するレポジトリを以下に変更しています。  
+  `https://github.com/llm-jp/jp-eval-customization.git`
+  - 取得するブランチを以下に変更しています。  
+  `v1.4.1-custom`
+- `install.sh`
+  - 階層が変わったため、共通インストーラーのパスを変更しました。  
+  ```bash
+  # original: INSTALLER_COMMON=$INSTALLER_DIR/../../../common/installers.sh
+  INSTALLER_COMMON=$INSTALLER_DIR/../../../../common/installers.sh
+  ```
+
+以下はオリジナルのREADMEです。
+
 # llm-jp-eval v1.4.1 インストールおよび実行スクリプト
 
 llm-jp-eval v1.4.1で評価を行うためのスクリプトです。<br>

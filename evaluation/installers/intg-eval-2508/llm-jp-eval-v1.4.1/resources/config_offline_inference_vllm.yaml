@@ -1,24 +1,25 @@
 offline_inference:
-  prompt_json_path: ["<<OFFLINE_OUT>>/<<MODEL_NORM>>/*.eval-prompt.json"]
-  output_base_dir: <<OFFLINE_OUT>>
+  prompt_json_path: []  # must be set
+  output_base_dir: null
+  exact_output_dir: null  # must be set
 
 wandb:
-  launch: false # true for WANDB Launch. notice: if it is true, all other configurations will be overwrited by launch config
-  log: true # true for logging WANDB in evaluate_llm.py
-  entity: <<WANDB_ENTITY>>
-  project: <<WANDB_PROJECT>>
-  run_name: <<WANDB_RUN_NAME>> # default run_name is f"{model.model}_vllm_yyyyMMdd_hhmmss"
+  launch: false
+  log: false
+  entity: null
+  project: null
+  run_name: null
 
 model:
   _target_: "vllm.LLM"
-  model: <<MODEL>>
-  dtype: "bfloat16"  # ["bfloat16", "float16", "float32"]
+  model: null  # must be set
+  dtype: "bfloat16"
   gpu_memory_utilization: 0.9
   tensor_parallel_size: 1
 
 tokenizer:
   _target_: "transformers.AutoTokenizer.from_pretrained"
-  pretrained_model_name_or_path: <<TOKENIZER>>
+  pretrained_model_name_or_path: null  # must be set
   trust_remote_code: false
   use_fast: true
 

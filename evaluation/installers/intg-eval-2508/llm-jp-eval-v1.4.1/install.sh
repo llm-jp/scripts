@@ -82,7 +82,7 @@ source venv-eval/bin/activate
 python -m pip install --no-cache-dir -U pip setuptools wheel
 
 pushd src
-git clone https://github.com/llm-jp/jp-eval-customization.git -b v${LLM_JP_EVAL_TAG}
+git clone https://github.com/llm-jp/jp-eval-customization.git -b v${LLM_JP_EVAL_TAG} ./llm-jp-eval
 pushd llm-jp-eval
 if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
   git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}

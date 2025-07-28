@@ -1,5 +1,7 @@
 # 統合評価基盤インストーラ (v2508)
 
+llm-jp-evalとswallow英語評価を実行可能な統合基盤をインストールするスクリプトです。
+
 ## セットアップ
 
 ### インストール手順 (ローカル)
@@ -15,9 +17,11 @@ cd scripts/evaluation/installers/intg-eval-2508
 bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
 ```
 
-### インストール手順 (ABCI)
+### インストール手順 (on ABCI)
 
 ```bash
+INSTALL_DIR="Path/to/install_dir" # FIX_ME
+
 # インストーラーを取得
 git clone https://github.com/llm-jp/scripts.git -b feat/intg-eval-installer
 
@@ -31,7 +35,9 @@ cd $PBS_O_WORKDIR/scripts/evaluation/installers/intg-eval-2508
 bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
 ```
 
-## HF_HOMEの設定
+## 環境変数
+
+### HF_HOMEの設定
 
 > [!NOTE]
 > HF_HOMEを指定していない場合は動きません。
@@ -42,7 +48,7 @@ bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
 export HF_HOME=/groups/gcg51557/experiments/<experiment_dir>/.cache/huggingface
 ```
 
-## HF_TOKENの設定
+### HF_TOKENの設定
 
 > [!NOTE]
 > HF_TOKENを指定していない場合は動きません。
@@ -51,7 +57,9 @@ export HF_HOME=/groups/gcg51557/experiments/<experiment_dir>/.cache/huggingface
 export HF_TOKEN=<HuggingFaceのアクセストークン>
 ```
 
-## 使用方法
+## 評価実行
+
+### ジョブ形式での実行 (on ABCI)
 
 ```
 python3 $INSTALL_DIR/scripts/qsub.py \
@@ -65,7 +73,7 @@ python3 $INSTALL_DIR/scripts/qsub.py \
   [--options ""]
 ```
 
-必須引数:å
+必須引数:
 - `<model_name_or_absolute_path>` モデル名またはモデルの絶対パス(HFのモデル名を指定する場合は[モデル名を指定する場合](##モデル名を指定する場合)を参照)
 - `<output_dir_absolute_path>` 結果出力先の絶対パス
 

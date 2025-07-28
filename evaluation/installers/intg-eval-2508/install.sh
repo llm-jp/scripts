@@ -34,7 +34,17 @@ TARGET_DIR=$1
 >&2 echo INSTALLER_DIR=$INSTALLER_DIR
 >&2 echo TARGET_DIR=$TARGET_DIR
 
+<<COMMENT
+
 pushd ./llm-jp-eval-v1.4.1/
-bash install.sh $TARGET_DIR \
+bash install.sh $TARGET_DIR/llm-jp-eval-v1.4.1 \
   > ../logs/install-llm-jp-eval-v1.4.1.out \
   2> ../logs/install-llm-jp-eval-v1.4.1.err
+popd
+
+COMMENT
+
+pushd ./swallow_v202411/
+bash install.sh $TARGET_DIR/swallow_v202411 \
+  > ../logs/install-swallow_v202411.out \
+  2> ../logs/install-swallow_v202411.err

@@ -44,3 +44,7 @@ pushd ./swallow_v202411/
 bash install.sh $TARGET_DIR/swallow_v202411 \
   > ../logs/install-swallow_v202411.out \
   2> ../logs/install-swallow_v202411.err
+popd
+
+cp -r scripts/ $TARGET_DIR
+sed -i "s|/groups/gcg51557/experiments/0195_intg_eval_2507|$TARGET_DIR|g" $TARGET_DIR/scripts/qsub.py

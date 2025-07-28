@@ -59,6 +59,14 @@ export HF_TOKEN=<HuggingFaceのアクセストークン>
 
 ## 評価実行
 
+### 実行
+
+```bash
+bash $INSTALL_DIR/scripts/run_eval.sh \
+  <model_name_or_absolute_path> \
+  <output_dir>
+```
+
 ### ジョブ形式での実行 (on ABCI)
 
 ```

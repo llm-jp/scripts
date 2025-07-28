@@ -5,6 +5,8 @@ import os
 import logging
 import subprocess
 
+from pathlib import Path
+
 TEMPLATE = """#!/bin/sh
 #PBS -N {job_name}
 #PBS -P gcg51557
@@ -32,7 +34,7 @@ export NUM_GPU=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 export CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((NUM_GPU-1)))
 export NUMEXPR_MAX_THREADS=192
 
-cd {experiment_dir}
+pushd {environment_dir}
 
 {swallow_template}
 
@@ -40,25 +42,20 @@ cd {experiment_dir}
 """
 
 SWALLOW_TEMPLATE = """\
-# Cache Hellaswag dataset
-cd environment/cache_hellaswag/
-bash cache.sh > $LOG_DIR/cache_hellaswag.log 2> $LOG_DIR/cache_hellaswag.err
-cd ../../
-
 # Run swallow evaluation
-cd environment/swallow_{swallow_version}/
+pushd swallow_{swallow_version}/
 bash run-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/swallow > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
-cd ../../"""
+popd """
 
 LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval
-cd environment/llm_jp_eval_{llm_jp_eval_version}/
+pushd llm_jp_eval_{llm_jp_eval_version}/
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/llm-jp-eval > $LOG_DIR/llm-jp-eval.log 2> $LOG_DIR/llm-jp-eval.err
-cd ../../"""
+popd"""
 
 def load_args():
     parser = argparse.ArgumentParser(description="Generate qsub script for evaluation jobs.")
@@ -66,7 +63,6 @@ def load_args():
     # General configuration
     parser.add_argument("model_name_or_path", type=str, help="Model name or absolute path to the model directory.")
     parser.add_argument("output_dir", type=str, help="Output directory for results.")
-    parser.add_argument("--experiment_dir", type=str, default="/groups/gcg51557/experiments/0195_intg_eval_2507", help="Directory where the experiment is located. Default is '/groups/gcg51557/experiments/0195_intg_eval_2507'.")
 
     # Evaluator versions
     parser.add_argument("--swallow_version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
@@ -116,6 +112,8 @@ def main():
     if not hf_token:
         raise ValueError("HF_TOKEN environment variable is not set. Please set it to your Hugging Face token.")
 
+    environment_dir = Path(__file__).parent.parent
+
     qsub_script = TEMPLATE.format(
         job_name=args.job_name,
         rtype=args.rtype,
@@ -123,7 +121,7 @@ def main():
         output_dir=args.output_dir,
         hf_home=hf_home,
         hf_token=hf_token,
-        experiment_dir=args.experiment_dir,
+        environment_dir=environment_dir,
         model_name_or_path=args.model_name_or_path,
         options="\n".join(args.options),
         swallow_version=args.swallow_version,

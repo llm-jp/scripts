@@ -48,4 +48,3 @@ bash install.sh $TARGET_DIR/swallow_v202411 \
 popd
 
 cp -r scripts/ $TARGET_DIR
-sed -i "s|/groups/gcg51557/experiments/0195_intg_eval_2507|$TARGET_DIR|g" $TARGET_DIR/scripts/qsub.py

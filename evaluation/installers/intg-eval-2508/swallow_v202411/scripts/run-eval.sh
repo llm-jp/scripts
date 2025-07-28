@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=llm-jp-eval
+#SBATCH --job-name=swallow
 #SBATCH --partition=<FIX_ME>
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
@@ -8,26 +8,18 @@
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
-set -eux
-
-# Open file limit
-ulimit -n 65536 1048576
-
-#wandb configs
-WANDB_ENTITY=swallow-eval # FIX_ME
-WANDB_PROJECT=test # FIX_ME
-WANDB_RUN_NAME=$2
+set -eux -o pipefail
 
 ENV_DIR=environment
 source ${ENV_DIR}/scripts/environment.sh
 
 # Arguments
 MODEL=$1
-OUTPUT_DIR=${3:-results/${MODEL}}
-NUM_PARAMETERS_IN_BILLION=${4:--1}
+OUTPUT_DIR=${2:-results/${MODEL}}
+NUM_PARAMETERS_IN_BILLION=${3:--1}
 
 # Create OUTPUT_DIR if it does not exist
-mkdir -p $OUTPUT_DIR
+mkdir -p $OUTPUT_DIR/results
 
 # Convert OUTPUT_DIR to an absolute path
 OUTPUT_DIR=$(realpath $OUTPUT_DIR)
@@ -56,8 +48,6 @@ bash scripts/evaluate_english-vllm.sh $MODEL $GPU_MEM_PROPORTION $OUTPUT_DIR $TA
 popd
 deactivate   
 
-source ${ENV_DIR}/venv-postprocessing/bin/activate     
-python scripts/upload_to_wandb.py --entity $WANDB_ENTITY --project $WANDB_PROJECT --run $WANDB_RUN_NAME --aggregated_result ${OUTPUT_DIR}/result.json
-deactivate
+mv ${OUTPUT_DIR}/result.json ${OUTPUT_DIR}/results/result.json
 
 echo "Done"

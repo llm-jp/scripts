@@ -51,7 +51,7 @@ popd """
 
 LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval
-pushd llm_jp_eval_{llm_jp_eval_version}/
+pushd llm-jp-eval-{llm_jp_eval_version}/
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/llm-jp-eval > $LOG_DIR/llm-jp-eval.log 2> $LOG_DIR/llm-jp-eval.err

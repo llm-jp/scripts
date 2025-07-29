@@ -21,6 +21,10 @@
     # original: export LLM_JP_EVAL_TAG=v1.4.1
     export LLM_JP_EVAL_TAG=v1.4.1-custom
     ```
+- 統合評価用の評価設定を反映しました。
+  - `scripts/run_llm-jp-eval.sh`
+  - `resources/config_base.yaml`
+  - `resources/config_offline_inference_vllm.yaml`
 
 以下はオリジナルのREADMEです。
 

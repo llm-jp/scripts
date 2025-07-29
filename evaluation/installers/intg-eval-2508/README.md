@@ -7,19 +7,23 @@ llm-jp-evalとswallow英語評価を実行可能な統合基盤をインスト�
 ### インストール手順 (ローカル)
 
 ```bash
+# インストール先を指定
 INSTALL_DIR="Path/to/install_dir" # FIX_ME
 
 # インストーラーを取得
 git clone https://github.com/llm-jp/scripts.git -b feat/intg-eval-installer
 
+# ディレクトリ移動
 cd scripts/evaluation/installers/intg-eval-2508
 
+# インストール
 bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
 ```
 
 ### インストール手順 (on ABCI)
 
 ```bash
+# インストール先を指定
 INSTALL_DIR="Path/to/install_dir" # FIX_ME
 
 # インストーラーを取得
@@ -39,9 +43,11 @@ bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
 
 ### HF_HOMEの設定
 
+モデルやデータセットのキャッシュが保存される`HF_HOME`を指定する必要があります。
+
 > [!NOTE]
 > HF_HOMEを指定していない場合は動きません。
-> また、`/groups/gcg51557/experiments/<experiment_dir>`以下で指定する必要があります。
+> また、`/groups/gcg51557/experiments/<experiment_dir>`以下で指定する必要があります。(ABCI上での暫定対応)
 > `<experiment_dir>`は適宜、実験ディレクトリ名で置き換えてください。
 
 ```
@@ -49,6 +55,8 @@ export HF_HOME=/groups/gcg51557/experiments/<experiment_dir>/.cache/huggingface
 ```
 
 ### HF_TOKENの設定
+
+データセットの取得にHF_TOKENが必要な場合があります。
 
 > [!NOTE]
 > HF_TOKENを指定していない場合は動きません。

@@ -42,7 +42,7 @@ export WORKERS_PER_PROC=16
 N_PROCS=$(($(nproc) / $WORKERS_PER_PROC))
 
 export DATA_DIR=${EXPERIMENT_DIR}/dolmino-mix-1124-extracted-merged
-export OUTPUT_DIR=${EXPERIMENT_DIR}/dolmino-mix-1124-tokenized
+export OUTPUT_DIR=${EXPERIMENT_DIR}/dolmino-mix-1124-v3.1-tokenized
 mkdir -p ${OUTPUT_DIR}
 export MEGATRON_PATH
 export TOKENIZE_LOG_DIR

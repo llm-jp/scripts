@@ -43,16 +43,14 @@ ALL_PARAMS+=(
     --attention-dropout 0.0
     --hidden-dropout 0.0
     --override-opt_param-scheduler
-    # --no-load-optim
+    --no-load-optim
 )
 
 # pretrain_iters: 432,581
 # 80B: ceil( 83,527,699,000/ 8192 / 1024) == 9958
-# 80B sum: 432,581 + 9958 = 442,539
-# 50B: ceil( 55,797,411,281 / 8192 / 1024 ) == 6652
-# 50B sum: 432,581 + 6,652 = 1,866,317
+# 80B sum: 432,581 + 9,958 = 442,539
 MIDTRAIN_START=432581
-TRAIN_ITERS=$(cat ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/train_iters.txt)
+TRAIN_ITERS=$(cat ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/train_iters.txt) # 442539
 MIDTRAIN_ITERS=$((TRAIN_ITERS - MIDTRAIN_START))
 
 # Scheduler
@@ -73,14 +71,16 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 2
+    --micro-batch-size 1
+    # --global-batch-size 512
+    # --micro-batch-size 2
     --global-batch-size 1024
 )
 
 # Parallelism
 ALL_PARAMS+=(
     --tensor-model-parallel-size 1
-    --pipeline-model-parallel-size 2
+    --pipeline-model-parallel-size 1
     --context-parallel-size 1
     --sequence-parallel
     --use-distributed-optimizer

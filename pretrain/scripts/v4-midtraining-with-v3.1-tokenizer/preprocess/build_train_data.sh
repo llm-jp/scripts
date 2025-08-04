@@ -2,8 +2,8 @@
 
 set -euo pipefail
 
-ROOT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-tokenized"
-OUT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-midtrainig/tasks/v4-dolmino-mix-1124"
+ROOT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized"
+OUT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer/tasks/v4-megamath-pro-max"
 OUT_FILE="${OUT_DIR}/train_data.all.sh"
 
 mkdir -p "${OUT_DIR}"

@@ -1,4 +1,39 @@
+# Auto-generated: 2025-08-04 22:27:29
 export TRAIN_DATA_PATH=(
-    83527699000 /groups/gcg51557/experiments/0193_llmjpv4_midtraining/datasets/megamath_pro_max_tokenizer_v3.1/megamath_web_pro_max_text_document
-    # TODO: Add dolmino
+    34024238242 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0000-0009_text_document
+    34350909111 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0010-0019_text_document
+    34144149137 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0020-0029_text_document
+    34168429457 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0030-0039_text_document
+    34463761854 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0040-0049_text_document
+    34025285070 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0050-0059_text_document
+    34032832514 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0060-0069_text_document
+    33958926097 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0070-0079_text_document
+    34242839474 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0080-0089_text_document
+    34310201068 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0090-0099_text_document
+    34383227118 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0100-0109_text_document
+    34327466501 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0110-0119_text_document
+    33753035160 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0120-0129_text_document
+    34181910065 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0130-0139_text_document
+    34077214822 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0140-0149_text_document
+    34272697869 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0150-0159_text_document
+    34198552799 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0160-0169_text_document
+    34301276299 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0170-0179_text_document
+    34105355242 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0180-0189_text_document
+    34134875229 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0190-0199_text_document
+    34175053243 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0200-0209_text_document
+    34220951267 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0210-0219_text_document
+    33871464987 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0220-0229_text_document
+    33794406503 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0230-0239_text_document
+    21151196985 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0240-0246_text_document
+    19020984357 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/flan/flan-all_text_document
+    2254531 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/codesearchnet-owmfilter-all_text_document
+    36095523 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/dolmino_math_synth-all_text_document
+    1048444 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/gsm8k-all_text_document
+    4208362913 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/mathcoder2-synthmath-all_text_document
+    96121651 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/metamath-owmfilter-all_text_document
+    7585407056 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/tinyGSM-MIND-all_text_document
+    269992014 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/tulu_math-all_text_document
+    65556621655 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/pes2o/pes2o-all_text_document
+    1504642032 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/stackexchange/stackexchange-all_text_document
+    4127779989 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/wiki/wiki-all_text_document
 )

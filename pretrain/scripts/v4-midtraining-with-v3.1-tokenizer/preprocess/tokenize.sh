@@ -48,6 +48,7 @@ export MEGATRON_PATH
 export TOKENIZE_LOG_DIR
 
 # Tokenize
+# find ${DATA_DIR} -name "gsm8k-all.jsonl" -print0 | \
 find ${DATA_DIR} -name "*.jsonl" -print0 | \
   sort -z | \
   xargs -0 -P${N_PROCS} -I "{}" bash -c '

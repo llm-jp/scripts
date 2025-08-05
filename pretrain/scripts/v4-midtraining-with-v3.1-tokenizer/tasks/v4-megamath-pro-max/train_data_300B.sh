@@ -1,4 +1,4 @@
-# Auto-generated: 2025-08-04 22:27:29
+# Auto-generated: 2025-08-05 22:16:59
 export TRAIN_DATA_PATH=(
 7070236707 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0000-0009_text_document
 7138118914 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/dclm/dclm-0010-0019_text_document
@@ -28,7 +28,7 @@ export TRAIN_DATA_PATH=(
 38041968714 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/flan/flan-all_text_document
 9018124 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/codesearchnet-owmfilter-all_text_document
 144382092 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/dolmino_math_synth-all_text_document
-4193776 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/gsm8k-all_text_document
+13117496 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/gsm8k-all_text_document
 16833451652 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/mathcoder2-synthmath-all_text_document
 384486604 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/metamath-owmfilter-all_text_document
 30341628224 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/tinyGSM-MIND-all_text_document

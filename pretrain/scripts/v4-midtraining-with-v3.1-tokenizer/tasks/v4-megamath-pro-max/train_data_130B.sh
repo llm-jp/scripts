@@ -28,7 +28,7 @@ export TRAIN_DATA_PATH=(
 9510492179 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/flan/flan-all_text_document
 2254531 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/codesearchnet-owmfilter-all_text_document
 36095523 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/dolmino_math_synth-all_text_document
-1048444 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/gsm8k-all_text_document
+3279374 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/gsm8k-all_text_document
 4208362913 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/mathcoder2-synthmath-all_text_document
 96121651 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/metamath-owmfilter-all_text_document
 7585407056 /groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-mix-1124-v3.1-tokenized/math/tinyGSM-MIND-all_text_document

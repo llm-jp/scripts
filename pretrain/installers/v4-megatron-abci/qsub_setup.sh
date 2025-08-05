@@ -46,6 +46,7 @@ source ${SCRIPT_DIR}/src/install_pytorch.sh
 source ${SCRIPT_DIR}/src/install_requirements.sh
 source ${SCRIPT_DIR}/src/install_apex.sh
 source ${SCRIPT_DIR}/src/install_flash_attention.sh
+# source ${SCRIPT_DIR}/src/install_flash_attention3.sh
 source ${SCRIPT_DIR}/src/install_transformer_engine.sh
 source ${SCRIPT_DIR}/src/install_megatron_lm.sh
 source ${SCRIPT_DIR}/src/install_tokenizer.sh

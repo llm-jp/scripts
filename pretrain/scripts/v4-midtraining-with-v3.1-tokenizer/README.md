@@ -8,7 +8,7 @@ MegaMathPro-Maxを含めた実験
 
 ```bash
 export EXP_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/"
-export EXP_SCRIPT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining"
+export EXP_SCRIPT_DIR="/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer"
 cd $EXP_DIR
 
 # 1. Huggingfaceからdolmino-mix-1124をダウンロード
@@ -67,7 +67,7 @@ bash run_setup.sh /path/to/target_dir
 ## job実行
 
 ```sh
-cd /path/to/v4-midtraining
+cd /path/to/v4-midtraining-with-v3.1-tokenizer
 
 # example:
 # 1.3b-llama3-ecjk
@@ -92,7 +92,7 @@ bash midtrain/run_train.sh $(realpath tasks/v4-megamath-pro-max) 7.7b_v4_3.5t_to
 > 下のスクリプトを実行する前に、`scripts/pretrain/scripts/v4-midtraining/midtrain/params`の`--no-load-optim`を外してください。
 
 ```sh
-cd /path/to/v4-midtraining
+cd /path/to/v4-midtraining-with-v3.1-tokenizer
 
 bash convert/convert_latest.sh {TASK_DIR} {PARAM_NAME} {DATASET_SIZE}
 

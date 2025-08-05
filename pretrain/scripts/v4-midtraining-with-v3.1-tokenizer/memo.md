@@ -56,3 +56,13 @@ Tensor parallel size  : 1
 Pipeline parallel size: 1
 Data parallel size    : 512
 ```
+
+
+## GSM8Kのファイルに空行が混じっていたので、アドほっくはスクリプトを作って修正
+
+- script: `/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer/preprocess/gsm8k_tokenize.sh`
+- directory: `/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/dolmino-tmp/math/gsm8k-all_clean.jsonl`
+
+```sh
+qsub ./scripts/gsm8k_tokenize.sh
+```

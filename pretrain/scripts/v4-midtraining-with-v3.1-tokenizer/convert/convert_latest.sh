@@ -13,7 +13,7 @@ param_name=$1; shift
 dataset_size=$1; shift # 80B
 iter=$(cat ${task_dir}/${param_name}/${dataset_size}/checkpoints/latest_checkpointed_iteration.txt)
 
-script_root=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokzenir
+script_root=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer
 
 qsub \
   -v TASK_DIR=${task_dir},PARAM_NAME=${param_name},DATASET_SIZE=${dataset_size},ITER=${iter},RTYPE=rt_HF \

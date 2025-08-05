@@ -4,7 +4,7 @@ set -eu -o pipefail
 
 if [ $# -ne 4 ]; then
     >&2 echo "Usage: $0 <task-dir> <param-name> <dataset_size> <num-nodes>"
-    >&2 echo "Example: $0 v4-high-quality v3-13b 32"
+    >&2 echo "Example: $0 v4-high-quality v3-13b 50B 32"
     exit 1
 fi
 

@@ -10,6 +10,12 @@
   - `ls -al /path/to/data.bin`の値を4で割れば良い
 3. data pathの値を合計して、midtrain/paramsに学習iter値を書き込む
 4. train_iters.txtに全体の学習量を書く
+5. checkpointのシンボリックリンクを貼る
+```sh
+export TARGET_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer/tasks/v4-megamath-pro-max/7.7b_v4_3.5t_tokenizer_v3.1/80B/checkpoints/iter_0432581
+export SRC_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer/tasks/checkpoints_bak/7.7b_v4_3.5t_tokenizer_v3.1/iter_0432581
+ln -s $SRC_DIR $TARGET_DIR
+```
 
 ## Tokenizerのコピー
 

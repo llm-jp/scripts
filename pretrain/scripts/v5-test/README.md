@@ -12,8 +12,8 @@ bash run_setup.sh <install_path>
 ## 実行
 
 ```bash
-# bash train/run_train.sh <task_dir> <param_name> <num_nodes>
-bash train/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecjk 1
+# bash train/run_train.sh <task_dir> <param_name> <num_nodes> <env-dir> <attn-backend>
+bash train/run_train.sh $(realpath tasks/v4-dolmino-mix-1124) 7.7b-llama3-ecjk 1 <your_env_dir> fused
 ```
 
 ## Notes

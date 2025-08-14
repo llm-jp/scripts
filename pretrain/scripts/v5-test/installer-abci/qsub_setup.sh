@@ -31,9 +31,10 @@ echo "SCRIPT_DIR=${SCRIPT_DIR}"
 
 mkdir ${TARGET_DIR}
 mkdir ${TARGET_DIR}/src
+mkdir ${TARGET_DIR}/scripts
 
 # Copy necessary scripts
-cp -r ${SCRIPT_DIR}/scripts/${ENV_NAME}.sh ${TARGET_DIR}/environment.sh
+cp -r ${SCRIPT_DIR}/scripts/${ENV_NAME}.sh ${TARGET_DIR}/scripts/environment.sh
 
 # Set variables
 source ${TARGET_DIR}/scripts/environment.sh

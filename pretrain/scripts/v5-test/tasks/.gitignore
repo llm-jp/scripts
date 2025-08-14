@@ -4,3 +4,5 @@ checkpoints_hf/
 logs/
 checkpoints_bak/
 train_iters.txt
+nsys-profile/
+tb_data/

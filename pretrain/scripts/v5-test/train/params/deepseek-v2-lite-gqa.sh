@@ -3,7 +3,7 @@
 # 15.7B total parameters, 2.4B activated per token
 
 ENV_NAME="$(basename ${ENV_DIR})"
-RUN_NAME="deepseek-v2-lite--${ATTN_BACKEND}--${ENV_NAME}"
+RUN_NAME="deepseek-v2-lite-gqa--${ATTN_BACKEND}--${ENV_NAME}"
 
 ALL_PARAMS=()
 
@@ -27,8 +27,11 @@ ALL_PARAMS+=(
     --normalization RMSNorm
     --norm-epsilon 1e-6
     --disable-bias-linear
-    # Multi-Latent Attention (MLA) parameters
-    --multi-latent-attention
+    # Disable Multi-Latent Attention (MLA) parameters
+    # --multi-latent-attention
+    # Grouped Query Attention (GQA) parameters
+    --group-query-attention
+    --num-query-groups 8
     --kv-channels 16
     --kv-lora-rank 512
     --v-head-dim 128

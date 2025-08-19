@@ -126,7 +126,6 @@ def save_checkpoint(queue: mp.Queue, args):
     out = queue_get("output layer")
     set_w("lm_head", out["weight"])
 
-    # 5) Build HF model and save
     os.makedirs(args.save_dir, exist_ok=True)
     with suspend_nn_inits():
         print("Saving model to disk ...")
@@ -136,7 +135,7 @@ def save_checkpoint(queue: mp.Queue, args):
             print(f"Warning: load_state_dict mismatches. missing={len(missing)} unexpected={len(unexpected)}")
         model.save_pretrained(args.save_dir, safe_serialization=True)
 
-    # 6) Copy HF tokenizer files as-is
+    # Copy HF tokenizer files as-is
     if args.hf_tokenizer_path is not None and os.path.isdir(args.hf_tokenizer_path):
         for entry in os.listdir(args.hf_tokenizer_path):
             s = os.path.join(args.hf_tokenizer_path, entry)

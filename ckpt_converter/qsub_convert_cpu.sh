@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -P gcg51557
 #PBS -q R9920251000
-#PBS -N 0200_convert
+#PBS -N 0208_convert
 #PBS -l select=1
 #PBS -o /dev/null
 #PBS -e /dev/null
@@ -13,10 +13,10 @@ cd "$PBS_O_WORKDIR"
 JOBID=${PBS_JOBID%%.*}
 
 # Experiment and env
-EXP_DIR="/groups/gcg51557/experiments/0200_tokenizer_v4"
-ENV_DIR="/groups/gcg51557/experiments/0208_ckpt_converter_cpu"
+EXP_DIR=${EXP_DIR:?EXP_DIR env is required}
+ENV_DIR=${ENV_DIR:?ENV_DIR env is required, e.g. /groups/gcg51557/experiments/0208_ckpt_converter_cpu}
 MEGATRON_PATH="${ENV_DIR}/src/Megatron-LM"
-LOADER_SAVER_PATH="${ENV_DIR}/scripts/ckpt_converter"
+LOADER_SAVER_PATH=${SCRIPT_DIR:?SCRIPT_DIR env is required}
 
 # MCore torch_dist checkpoints root (contains iter_XXXXXXX subdirectories)
 CKPT_ROOT=${TASK_DIR}/checkpoints
@@ -26,7 +26,7 @@ ITER=${ITER:?ITER env is required, e.g. 100000}
 ITER_NAME=iter_$(printf %07d ${ITER})
 
 # HuggingFace tokenizer and output directory
-HF_TOKENIZER_PATH=${EXP_DIR}/src/tokenizer_hf/v4_alpha1.3a
+HF_TOKENIZER_PATH=${EXP_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2
 OUTPUT_DIR=${TASK_DIR}/checkpoints_hf/${ITER_NAME}
 
 # Save dtype: bfloat16 | float16 | float32

@@ -159,7 +159,6 @@ class MegatronCheckpointLoaderBase:
             self.queue.put("exit")
             sys.exit(1)
 
-        # 确保默认 PG 存在（你已添加）
         import torch.distributed as dist
         if dist.is_available() and not dist.is_initialized():
             import tempfile
@@ -172,7 +171,7 @@ class MegatronCheckpointLoaderBase:
                 world_size=1,
             )
 
-        # 初始化模型并行进程组（创建 TP/PP/DP/CP 等 PG）
+        # Init model parallel groups
         try:
             mpu.initialize_model_parallel(
                 tensor_model_parallel_size=self.margs.tensor_model_parallel_size,
@@ -182,7 +181,7 @@ class MegatronCheckpointLoaderBase:
                 expert_model_parallel_size=self.margs.expert_model_parallel_size,
             )
         except TypeError:
-            # 兼容旧签名
+            # compatible with old signature
             mpu.initialize_model_parallel(
                 self.margs.tensor_model_parallel_size,
                 self.margs.pipeline_model_parallel_size,
@@ -467,36 +466,30 @@ class MegatronCheckpointLoaderBase:
         raise NotImplementedError
 
     def load(self):
-        # 1) Parse args
         self.parse_megatron_args()
-        # 2) Ensure required
         self.ensure_required_arguments()
 
-        # 2.5) 兜底：先把全局 args 写入，避免后续调用 get_args() 取不到
         from megatron.training.global_vars import set_args as _set_args
         _set_args(self.margs)
 
-        # 3) Initialize Megatron env (注册全局 args、初始化并行进程组等)
         self.initialize_megatron_env()
 
-        # 4) Import model_provider（此时 get_args() 一定可用）
         model_provider = self.import_model_provider()
 
-        # 5) True vocab + 验证
+        # True vocab verification
         true_vocab_size = self.compute_true_vocab_size()
         if not self.verify_vocabs_match(true_vocab_size):
             self.queue.put("exit")
             sys.exit(1)
 
-        # 6) Build metadata
+        # Build metadata
         self.md = self.build_checkpoint_metadata(true_vocab_size)
 
-        # 7) Load model shards
+        # Load model shards
         self.all_models, self.consumed_train_samples, self.consumed_valid_samples = self.load_model_shards(
             model_provider, self.md.params_dtype
         )
 
-        # 8) Send model
         self.send_model_over_queue()
 
     def send_model_over_queue(self):

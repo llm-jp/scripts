@@ -2,33 +2,29 @@
 
 # LLM-jp v4 model converter (PBS version)
 # Usage:
-#   bash convert_latest.sh \
-#       /path/to/task \    ... TASK_DIR: path to the model to save
+#   bash convert_to_hf_cpu.sh /path/to/task 100000 /path/to/EXP_DIR /path/to/ENV_DIR
 
 set -eu -o pipefail
 
-task_dir=$1; shift
+task_dir=${1:?Usage: $0 TASK_DIR ITER EXP_DIR ENV_DIR}
+iter=${2:?Usage: $0 TASK_DIR ITER EXP_DIR ENV_DIR}
+exp_dir=${3:?Usage: $0 TASK_DIR ITER EXP_DIR ENV_DIR}
+env_dir=${4:?Usage: $0 TASK_DIR ITER EXP_DIR ENV_DIR}
 
-previous_job_id=""
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-for iter in $(seq 100000 5000 155000)
-do
-  echo "Submitting job for original iteration: ${iter}"
-  
-  # Build dependency option dynamically
-  depend_opt="${previous_job_id:+-W depend=afterany:$previous_job_id}"
-  
-  # Submit job with optional dependency
-  job_output=$(qsub \
-    -v TASK_DIR=${task_dir},ITER=${iter},RTYPE=rt_HC \
-    ${depend_opt} \
-    -m n \
-    -o /dev/null \
-    -e /dev/null \
-    convert/qsub_convert_cpu.sh)
-  
-  previous_job_id=$(echo "$job_output" | cut -d'.' -f1)
-  echo "Job submitted with ID: $previous_job_id"
-done
+# Export for local environment (and also pass via qsub -v)
+export EXP_DIR="${exp_dir}"
+export ENV_DIR="${env_dir}"
+export SCRIPT_DIR="${script_dir}"
 
-echo "All jobs submitted. Final job ID: $previous_job_id"
+echo "Submitting job for iteration: ${iter}"
+
+job_output=$(qsub \
+  -v TASK_DIR=${task_dir},ITER=${iter},EXP_DIR=${EXP_DIR},ENV_DIR=${ENV_DIR},SCRIPT_DIR=${SCRIPT_DIR},RTYPE=rt_HC \
+  -m n \
+  -k n \
+  "${script_dir}/qsub_convert_cpu.sh")
+
+job_id=$(echo "$job_output" | cut -d'.' -f1)
+echo "Job submitted with ID: $job_id"

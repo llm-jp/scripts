@@ -13,10 +13,10 @@ cd "$PBS_O_WORKDIR"
 JOBID=${PBS_JOBID%%.*}
 
 # Experiment and env
-EXP_DIR=${EXP_DIR:?EXP_DIR env is required}
-ENV_DIR=${ENV_DIR:?ENV_DIR env is required, e.g. /groups/gcg51557/experiments/0208_ckpt_converter_cpu}
-MEGATRON_PATH="${ENV_DIR}/src/Megatron-LM"
-LOADER_SAVER_PATH=${SCRIPT_DIR:?SCRIPT_DIR env is required}
+LOADER_SAVER_PATH=${SCRIPT_DIR}
+VENV_DIR=${VENV_DIR:?VENV_DIR is required, e.g. /groups/gcg51557/experiments/0208_ckpt_converter_cpu/venv}
+MEGATRON_PATH=${MEGATRON_PATH:?MEGATRON_PATH is required}
+HF_TOKENIZER_PATH=${HF_TOKENIZER_PATH:?HF_TOKENIZER_PATH is required}
 
 # MCore torch_dist checkpoints root (contains iter_XXXXXXX subdirectories)
 CKPT_ROOT=${TASK_DIR}/checkpoints
@@ -25,14 +25,12 @@ CKPT_ROOT=${TASK_DIR}/checkpoints
 ITER=${ITER:?ITER env is required, e.g. 100000}
 ITER_NAME=iter_$(printf %07d ${ITER})
 
-# HuggingFace tokenizer and output directory
-HF_TOKENIZER_PATH=${EXP_DIR}/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2
-OUTPUT_DIR=${TASK_DIR}/checkpoints_hf/${ITER_NAME}
+# Output directory
+OUTPUT_DIR=${OUTPUT_DIR:?OUTPUT_DIR is required, e.g. ${TASK_DIR}/checkpoints_hf/${ITER_NAME}}
 
 # Save dtype: bfloat16 | float16 | float32
 SAVE_DTYPE=bfloat16
 
-echo "EXP_DIR=${EXP_DIR}"
 echo "TASK_DIR=${TASK_DIR}"
 echo "ITER=${ITER}"
 echo "MEGATRON_PATH=${MEGATRON_PATH}"
@@ -41,7 +39,7 @@ echo "HF_TOKENIZER_PATH=${HF_TOKENIZER_PATH}"
 echo "OUTPUT_DIR=${OUTPUT_DIR}"
 echo "LOADER_SAVER_PATH=${LOADER_SAVER_PATH}"
 
-source ${ENV_DIR}/venv/bin/activate
+source ${VENV_DIR}/bin/activate
 
 # Force CPU
 export CUDA_VISIBLE_DEVICES=""

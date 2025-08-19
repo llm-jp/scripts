@@ -119,12 +119,12 @@ def main():
 
         for key, tensor in iter_params(model_path):
             if key not in param_sums:
-                param_sums[key] = tensor
+                param_sums[key] = tensor * weight
             else:
                 if param_sums[key].shape != tensor.shape:
                     raise ValueError(f"Shape mismatch for key '{key}': "
                                      f"{param_sums[key].shape} vs {tensor.shape}")
-                param_sums[key] += tensor
+                param_sums[key] += tensor * weight
 
     # Normalize the parameters
     for key in param_sums:

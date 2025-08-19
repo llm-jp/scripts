@@ -5,7 +5,7 @@
 
 ### Prerequisites
 - A working environment directory (`ENV_DIR`) that contains:
-  - Python virtualenv at `ENV_DIR/venv` with CPU-only PyTorch installed.
+  - Python virtualenv at `ENV_DIR/venv` with CPU-only PyTorch installed (requirements.txt).
   - Megatron-LM checked out at `ENV_DIR/src/Megatron-LM` (the script calls `tools/checkpoint/convert.py`).
 - An experiment directory (`EXP_DIR`) that provides the HF tokenizer at:
   - `EXP_DIR/src/llm-jp-tokenizer/hf/ver3.0/llm-jp-tokenizer-100k.ver3.0b2` (modify the qsub_convert_cpu.sh file to use other tokenizers)
@@ -27,6 +27,3 @@ bash scripts/ckpt_converter/convert_to_hf_cpu.sh \
 - `ENV_DIR`: Environment dir with `venv` (CPU torch) and `src/Megatron-LM`.
 
 The script queues a single PBS job, passing these values to `qsub_convert_cpu.sh`.
-
-### Output
-Converted files are written to:

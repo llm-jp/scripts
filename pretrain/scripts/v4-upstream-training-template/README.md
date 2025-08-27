@@ -62,7 +62,7 @@ CLIからは以下の引数を指定する
 - `<TASK_NAME>`: タスクディレクトリ名 (e.g. `task_name`)
 - `<WANDB_PROJECT>`: WandB に記録するプロジェクト名 (e.g. `0123_experiment`)
 - `<NUM_NODES>`: 使用するノード数 (e.g. `32`)
-- `<WALLTIME`: ジョブの制限時間 (e.g., `720:00:00`)
+- `<WALLTIME>`: ジョブの制限時間 (e.g., `720:00:00`)
 
 ### Training Configuration
 

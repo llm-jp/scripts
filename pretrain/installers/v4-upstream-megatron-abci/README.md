@@ -5,7 +5,7 @@
 ABCI 3.0上で以下のコマンドを実行し、`<env_install_path>`に環境を構築できる
 
 ```bash
-cd pretrain/installers/v5-megatron-abci/
+cd pretrain/installers/v4-upstream-megatron-abci/
 bash run_setup.sh <env_install_path>
 ```
 

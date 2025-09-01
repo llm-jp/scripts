@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -P gcg51557
 #PBS -q R9920251000
-#PBS -N 0193_midtrain-megamath
+#PBS -N 0193
 #PBS -l select=16
 #PBS -l walltime=240:00:00
 #PBS -m n

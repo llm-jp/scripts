@@ -71,7 +71,7 @@ ALL_PARAMS+=(
 # 180B sum: 432,581 + 33,933 = 466,514
 # 380B: ceil((433,153,308,934+83,527,699,000)/8192/1024) == 61,594
 # 380B sum: 432,581 + 61,594 = 494,175
-MIDTRAIN_START=432581
+MIDTRAIN_START=439481
 TRAIN_ITERS=$(cat ${TASK_DIR}/${PARAM_NAME}/${DATASET_SIZE}/train_iters.txt) # 442539
 MIDTRAIN_ITERS=$((TRAIN_ITERS - MIDTRAIN_START))
 
@@ -79,8 +79,8 @@ MIDTRAIN_ITERS=$((TRAIN_ITERS - MIDTRAIN_START))
 # Scheduler
 ALL_PARAMS+=(
     --lr 3e-5   # Start LR
-    --min-lr 3e-5  # End LR
-    # --min-lr 0  # End LR
+    # --min-lr 3e-5  # End LR
+    --min-lr 0  # End LR
     # --lr-warmup-iters ${MIDTRAIN_START} # No warmup
     --lr-warmup-iters 0 # No warmup
     # --lr-decay-iters ${TRAIN_ITERS}

@@ -17,6 +17,13 @@ export SRC_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scr
 ln -s $SRC_DIR $TARGET_DIR
 ```
 
+50Bシンポリックリンク:
+```sh
+export SRC_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer/tasks/v4-megamath-pro-max/7.7b_v4_3.5t_tokenizer_v3.1/300B/checkpoints/iter_0474260
+export TARGET_DIR=/groups/gcg51557/experiments/0156_olmo2-midtrain-reproduction/scripts/pretrain/scripts/v4-midtraining-with-v3.1-tokenizer/tasks/v4-megamath-pro-max/7.7b_v4_3.5t_tokenizer_v3.1_curriculum/380B/checkpoints/iter_0474260
+ln -s $SRC_DIR $TARGET_DIR
+```
+
 ## Tokenizerのコピー
 
 - `/groups/gcg51557/experiments/0138_corpus_v4_pretrain/src/llm-jp-tokenizer/hf/ver3.1`
@@ -72,3 +79,50 @@ Data parallel size    : 512
 ```sh
 qsub ./scripts/gsm8k_tokenize.sh
 ```
+
+
+## 学習率設定
+
+stable (成功)
+--no-load-optim必要
+```sh
+# Scheduler
+# Scheduler
+ALL_PARAMS+=(
+    --lr 3e-5   # Start LR
+    --min-lr 3e-5  # End LR
+    # --min-lr 0  # End LR
+    # --lr-warmup-iters ${MIDTRAIN_START} # No warmup
+    --lr-warmup-iters 0 # No warmup
+    # --lr-decay-iters ${TRAIN_ITERS}
+    --lr-decay-iters ${MIDTRAIN_ITERS}
+    --lr-decay-style linear
+    --train-iters ${TRAIN_ITERS}
+    --eval-interval 999999999
+    --eval-iters 0
+)
+```
+
+linear decay (まだ試していない)
+--no-load-optim必要
+```sh
+# Scheduler
+# Scheduler
+ALL_PARAMS+=(
+    --lr 3e-5   # Start LR
+    # --min-lr 3e-5  # End LR
+    --min-lr 0  # End LR
+    # --lr-warmup-iters ${MIDTRAIN_START} # No warmup
+    --lr-warmup-iters 0 # No warmup
+    # --lr-decay-iters ${TRAIN_ITERS}
+    --lr-decay-iters ${MIDTRAIN_ITERS}
+    --lr-decay-style linear
+    --train-iters ${TRAIN_ITERS}
+    --eval-interval 999999999
+    --eval-iters 0
+)
+```
+
+999356.pbs1            0193_midtrain-m* ach17725rd               0 Q R9920251000 # 50B
+999357.pbs1            0193_midtrain-m* ach17725rd               0 Q R9920251000 # 100B
+999358.pbs1            0193_midtrain-m* ach17725rd               0 Q R9920251000 # 300B

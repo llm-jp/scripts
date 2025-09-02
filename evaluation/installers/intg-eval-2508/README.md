@@ -81,6 +81,7 @@ bash $INSTALL_DIR/scripts/run_eval.sh \
 python3 $INSTALL_DIR/scripts/qsub.py \
   <model_name_or_absolute_path> \
   <output_dir_absolute_path> \
+  [--experiment_dir /groups/gcg51557/experiments/0182_intg_eval_2507] \
   [--swallow_version v202411] \
   [--llm_jp_eval_version v1.4.1] \
   [--job_name 0182_intg_eval] \
@@ -90,10 +91,11 @@ python3 $INSTALL_DIR/scripts/qsub.py \
 ```
 
 必須引数:
-- `<model_name_or_absolute_path>` モデル名またはモデルの絶対パス
+- `<model_name_or_absolute_path>` モデル名またはモデルの絶対パス(HFのモデル名を指定する場合は[モデル名を指定する場合](##モデル名を指定する場合)を参照)
 - `<output_dir_absolute_path>` 結果出力先の絶対パス
 
 オプション引数:
+- `--experiment_dir` 評価環境がインストールされた実験ディレクトリのパス (デフォルト: `/groups/gcg51557/experiments/0182_intg_eval_2507`)
 - `--swallow_version` swallowバージョン（デフォルト: `v202411`）現状は`v202411`のみに対応。
 - `--llm_jp_eval_version` llm-jp-evalバージョン（デフォルト: `v1.4.1`）現状は`v1.4.1`のみに対応。
 - `--job_name` ジョブ名（デフォルト: `0182_intg_eval`）

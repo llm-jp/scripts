@@ -91,7 +91,7 @@ python3 $INSTALL_DIR/scripts/qsub.py \
 ```
 
 必須引数:
-- `<model_name_or_absolute_path>` モデル名またはモデルの絶対パス(HFのモデル名を指定する場合は[モデル名を指定する場合](##モデル名を指定する場合)を参照)
+- `<model_name_or_absolute_path>` モデル名またはモデルの絶対パス
 - `<output_dir_absolute_path>` 結果出力先の絶対パス
 
 オプション引数:

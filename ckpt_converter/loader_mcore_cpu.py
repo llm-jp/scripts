@@ -41,7 +41,9 @@ def _read_metadata_cpu(tracker_filename):
         max_iter = iteration
     return max_iter, release
 
+
 ckpt.read_metadata = _read_metadata_cpu
+
 
 def add_arguments(parser):
     group = parser.add_argument_group(title='Megatron loader (CPU)')
@@ -59,6 +61,7 @@ def add_arguments(parser):
     group.add_argument('--loader-transformer-impl', default='transformer_engine',
                        choices=['local', 'transformer_engine'],
                        help='Which Transformer implementation to use.')
+
 
 class MegatronCheckpointLoaderBase:
     def __init__(self, args, queue, build_tokenizer=False):
@@ -159,17 +162,21 @@ class MegatronCheckpointLoaderBase:
             self.queue.put("exit")
             sys.exit(1)
 
-        import torch.distributed as dist
+        # Init torch.distributed once
         if dist.is_available() and not dist.is_initialized():
-            import tempfile
-            tmp = tempfile.NamedTemporaryFile(delete=False)
-            tmp.close()
-            dist.init_process_group(
-                backend='gloo',
-                init_method=f'file://{tmp.name}',
-                rank=0,
-                world_size=1,
-            )
+            # Prefer env:// when under torchrun; fallback to file:// (single-rank)
+            if "RANK" in os.environ and "WORLD_SIZE" in os.environ:
+                dist.init_process_group(backend='gloo', init_method='env://')
+            else:
+                import tempfile
+                tmp = tempfile.NamedTemporaryFile(delete=False)
+                tmp.close()
+                dist.init_process_group(
+                    backend='gloo',
+                    init_method=f'file://{tmp.name}',
+                    rank=0,
+                    world_size=1,
+                )
 
         # Init model parallel groups
         try:
@@ -248,7 +255,14 @@ class MegatronCheckpointLoaderBase:
 
         def get_models_for_pipeline_stage(count, dtype):
             local_models_for_stage = [[] for _ in range(vp_size)]
-            for tp_rank in range(count):
+
+            # Only load TP shard under multi-process; otherwise iterate all
+            if dist.is_initialized() and dist.get_world_size() > 1 and mpu.get_tensor_model_parallel_world_size() > 1:
+                tp_ranks = [mpu.get_tensor_model_parallel_rank()]
+            else:
+                tp_ranks = range(count)
+
+            for tp_rank in tp_ranks:
                 mpu.set_tensor_model_parallel_rank(tp_rank)
                 model_list = []
                 for i in range(vp_size):
@@ -294,10 +308,30 @@ class MegatronCheckpointLoaderBase:
         msg["name"] = name
         self.queue.put(msg)
 
+    def _tp_gather_cat_rank0(self, t: torch.Tensor, dim: int):
+        from megatron.core import mpu
+        if not (dist.is_initialized() and mpu.get_tensor_model_parallel_world_size() > 1):
+            return t
+        group = mpu.get_tensor_model_parallel_group()
+        ws = mpu.get_tensor_model_parallel_world_size()
+        parts = [torch.empty_like(t) for _ in range(ws)]
+        dist.all_gather(parts, t, group=group)
+        if mpu.get_tensor_model_parallel_rank() == 0:
+            return torch.cat(parts, dim=dim)
+        else:
+            return None
+
     def send_llm_over_queue(self, schema):
+        from megatron.core import mpu
+
         tp_size = self.margs.tensor_model_parallel_size
         pp_size = self.margs.pipeline_model_parallel_size
         vp_size = self.margs.virtual_pipeline_model_parallel_size or 1
+
+        # Only main TP rank sends to saver; other ranks only participate in communication
+        is_main_tp = (not dist.is_initialized()) or \
+                     (mpu.get_tensor_model_parallel_world_size() == 1) or \
+                     (mpu.get_tensor_model_parallel_rank() == 0)
 
         first_pipeline_models = self.all_models[0][0]
 
@@ -306,11 +340,15 @@ class MegatronCheckpointLoaderBase:
         message = {
             "word embeddings": torch.cat([e["word"] for e in embeddings], dim=0)
         }
+        # Gather full embeddings across TP
+        message["word embeddings"] = self._tp_gather_cat_rank0(message["word embeddings"], dim=0)
+
         if self.md.position_embedding_type == 'learned_absolute':
             message["position embeddings"] = embeddings[0]["pos"]
         else:
             assert embeddings[0]["pos"] is None
-        self.queue_put("embeddings", message)
+        if is_main_tp:
+            self.queue_put("embeddings", message)
 
         total_layer_num = 0
         for vp_rank in range(vp_size):
@@ -335,6 +373,7 @@ class MegatronCheckpointLoaderBase:
                     mlp_l0_weight, mlp_l0_bias = [], []
                     mlp_l1_weight = []
 
+                    # collect local TP-shard tensors (on this rank)
                     for model_tp in models:
                         layer_p = schema.get_layer(model_tp, layer_idx)
                         qkv_weight.append(layer_p["self_attn_qkv_weight"])
@@ -346,8 +385,9 @@ class MegatronCheckpointLoaderBase:
                         if self.md.linear_bias:
                             mlp_l0_bias.append(layer_p["mlp_fc1_bias"])
 
+                    # Build message with local concat
                     if self.md.swiglu:
-                        for i in range(tp_size):
+                        for i in range(len(mlp_l0_weight)):
                             mlp_l0_weight[i] = torch.chunk(mlp_l0_weight[i], 2, dim=0)
                         message["mlp l0 weight W"] = torch.cat([w[0] for w in mlp_l0_weight], dim=0)
                         message["mlp l0 weight V"] = torch.cat([w[1] for w in mlp_l0_weight], dim=0)
@@ -362,23 +402,53 @@ class MegatronCheckpointLoaderBase:
                         message["qkv bias"] = torch.cat(qkv_bias, dim=0)
                     if self.md.linear_bias:
                         if self.md.swiglu:
-                            for i in range(tp_size):
+                            for i in range(len(mlp_l0_bias)):
                                 mlp_l0_bias[i] = torch.chunk(mlp_l0_bias[i], 2, dim=0)
                             message["mlp l0 bias W"] = torch.cat([b[0] for b in mlp_l0_bias], dim=0)
                             message["mlp l0 bias V"] = torch.cat([b[1] for b in mlp_l0_bias], dim=0)
                         else:
                             message["mlp l0 bias"] = torch.cat(mlp_l0_bias, dim=0)
 
-                    self.queue_put(f"transformer layer {total_layer_num}", message)
+                    # Now gather to full tensors across TP
+                    qkv_w  = self._tp_gather_cat_rank0(message["qkv weight"],  dim=0)
+                    dense  = self._tp_gather_cat_rank0(message["dense weight"], dim=1)
+                    mlp_l1 = self._tp_gather_cat_rank0(message["mlp l1 weight"], dim=1)
+                    if self.md.qkv_bias:
+                        qkv_b = self._tp_gather_cat_rank0(message["qkv bias"], dim=0)
+                    if self.md.swiglu:
+                        mlp0W = self._tp_gather_cat_rank0(message["mlp l0 weight W"], dim=0)
+                        mlp0V = self._tp_gather_cat_rank0(message["mlp l0 weight V"], dim=0)
+                        if self.md.linear_bias:
+                            mlp0bW = self._tp_gather_cat_rank0(message["mlp l0 bias W"], dim=0)
+                            mlp0bV = self._tp_gather_cat_rank0(message["mlp l0 bias V"], dim=0)
+                    else:
+                        mlp0 = self._tp_gather_cat_rank0(message["mlp l0 weight"], dim=0)
+                        if self.md.linear_bias:
+                            mlp0b = self._tp_gather_cat_rank0(message["mlp l0 bias"], dim=0)
+
+                    if is_main_tp:
+                        message["qkv weight"]   = qkv_w
+                        message["dense weight"] = dense
+                        message["mlp l1 weight"]= mlp_l1
+                        if self.md.qkv_bias: message["qkv bias"] = qkv_b
+                        if self.md.swiglu:
+                            message["mlp l0 weight W"] = mlp0W
+                            message["mlp l0 weight V"] = mlp0V
+                            if self.md.linear_bias:
+                                message["mlp l0 bias W"] = mlp0bW
+                                message["mlp l0 bias V"] = mlp0bV
+                        else:
+                            message["mlp l0 weight"] = mlp0
+                            if self.md.linear_bias: message["mlp l0 bias"] = mlp0b
+
+                        self.queue_put(f"transformer layer {total_layer_num}", message)
                     total_layer_num += 1
 
         # Final norm
         models = self.all_models[0][0]
         final_norm = schema.get("final_norm", models[0])
-        message = {"weight": final_norm["weight"]}
-        if self.md.norm_has_bias:
-            message["bias"] = final_norm["bias"]
-        self.queue_put("final norm", message)
+        if is_main_tp:
+            self.queue_put("final norm", {"weight": final_norm["weight"], **({"bias": final_norm["bias"]} if self.md.norm_has_bias else {})})
 
         # Output layer
         if self.md.output_layer:
@@ -386,23 +456,10 @@ class MegatronCheckpointLoaderBase:
             message = {
                 "weight": torch.cat([layer["weight"] for layer in output_layers], dim=0),
             }
-            self.queue_put("output layer", message)
-
-        # BERT-specific
-        if self.md.model_type == 'BERT':
-            pooler = schema.get("pooler", models[0])
-            message = {"weight": pooler["weight"], "bias": pooler["bias"]}
-            self.queue_put("pooler", message)
-
-            lm_head = schema.get("lm_head", models[0])
-            message = {
-                "dense weight": lm_head["dense_weight"],
-                "dense bias": lm_head["dense_bias"],
-                "norm weight": lm_head["norm_weight"],
-            }
-            if self.md.norm_has_bias:
-                message["norm bias"] = lm_head["norm_bias"]
-            self.queue_put("lm head", message)
+            w_all = self._tp_gather_cat_rank0(message["weight"], dim=0)
+            if is_main_tp:
+                message["weight"] = w_all
+                self.queue_put("output layer", message)
 
     def build_checkpoint_metadata(self, true_vocab_size):
         norm_has_bias = True
@@ -460,6 +517,7 @@ class MegatronCheckpointLoaderBase:
             '--no-gradient-accumulation-fusion',
             '--no-gradient-reduce-div-fusion',
             '--tp-comm-bootstrap-backend', 'gloo',
+            '--finetune',
         ]
 
     def import_model_provider(self):
@@ -493,7 +551,28 @@ class MegatronCheckpointLoaderBase:
         self.send_model_over_queue()
 
     def send_model_over_queue(self):
-        raise NotImplementedError
+        from megatron.core import mpu
+        is_main_tp = (not dist.is_initialized()) or (mpu.get_tensor_model_parallel_world_size() == 1) or (mpu.get_tensor_model_parallel_rank() == 0)
+
+        self.send_metadata_over_queue()
+        schema = get_model_schema(
+            self.md.model_type,
+            self.margs.transformer_impl,
+            self.margs.num_experts,
+            self.margs.expert_model_parallel_size,
+        )
+        self.send_llm_over_queue(schema)
+
+        if is_main_tp:
+            self.queue.put("done")
+        else:
+            self.queue.put("exit")
+
+    def send_metadata_over_queue(self):
+        self.md.consumed_train_samples = self.consumed_train_samples
+        self.md.consumed_valid_samples = self.consumed_valid_samples
+        self.queue.put(self.md)
+
 
 class MegatronCheckpointLoaderLLM(MegatronCheckpointLoaderBase):
     def build_sys_argv(self):
@@ -513,6 +592,9 @@ class MegatronCheckpointLoaderLLM(MegatronCheckpointLoaderBase):
             raise Exception(f"Unrecognized model type: {self.args.model_type}")
 
     def send_model_over_queue(self):
+        from megatron.core import mpu
+        is_main_tp = (not dist.is_initialized()) or (mpu.get_tensor_model_parallel_world_size() == 1) or (mpu.get_tensor_model_parallel_rank() == 0)
+
         self.send_metadata_over_queue()
         schema = get_model_schema(
             self.md.model_type,
@@ -521,12 +603,17 @@ class MegatronCheckpointLoaderLLM(MegatronCheckpointLoaderBase):
             self.margs.expert_model_parallel_size,
         )
         self.send_llm_over_queue(schema)
-        self.queue.put("done")
+
+        if is_main_tp:
+            self.queue.put("done")
+        else:
+            self.queue.put("exit")
 
     def send_metadata_over_queue(self):
         self.md.consumed_train_samples = self.consumed_train_samples
         self.md.consumed_valid_samples = self.consumed_valid_samples
         self.queue.put(self.md)
+
 
 def load_checkpoint(queue, args):
     loader = MegatronCheckpointLoaderLLM(args, queue)

@@ -10,18 +10,6 @@
 - Input checkpoints located at:
   - `TASK_DIR/checkpoints/iter_XXXXXXX` (7-digit zero-padded).
 
-How to install anappropriate venv (using uv):
-
-```shell
-mkdir cpuenv
-cd cpuenv
-uv python pin 3.13
-uv init
-uv venv
-uv pip install "torch==2.8.0+cpu" -i https://download.pytorch.org/whl/cpu
-uv pip install -r /path/to/ckpt_converter/requirements.txt
-```
-
 ### Usage
 ```bash
 bash scripts/ckpt_converter/convert_to_hf_cpu.sh \

@@ -46,7 +46,11 @@ SWALLOW_TEMPLATE = """\
 pushd swallow_{swallow_version}/
 bash run-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/swallow > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
+    $OUTPUT_DIR/swallow \\
+    {gpu_memory_utilization} \\
+    {tensor_parallel_size} \\
+    {data_parallel_size} \\
+    > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
 popd """
 
 LLM_JP_EVAL_TEMPLATE = """\
@@ -75,6 +79,11 @@ def load_args():
     parser.add_argument("--select", type=int, default=1, help="Number of gpus (rt_HG) or nodes (rt_HF) to use for the job.")
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
 
+    # Resource configuration
+    parser.add_argument("--gpu_memory_utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
+    parser.add_argument("--tensor_parallel_size", type=int, default=1, help="Number of tensor parallel groups.")
+    parser.add_argument("--data_parallel_size", type=int, default=1, help="Number of data parallel groups.")
+
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -98,7 +107,12 @@ def main():
 
     swallow_template = ""
     if args.swallow_version:
-        swallow_template = SWALLOW_TEMPLATE.format(swallow_version=args.swallow_version)
+        swallow_template = SWALLOW_TEMPLATE.format(
+            swallow_version=args.swallow_version,
+            gpu_memory_utilization=args.gpu_memory_utilization,
+            tensor_parallel_size=args.tensor_parallel_size,
+            data_parallel_size=args.data_parallel_size,
+        )
     llm_jp_eval_template = ""
     if args.llm_jp_eval_version:
         llm_jp_eval_template = LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=args.llm_jp_eval_version)
@@ -129,7 +143,7 @@ def main():
         swallow_version=args.swallow_version,
         llm_jp_eval_version=args.llm_jp_eval_version,
         swallow_template=swallow_template,
-        llm_jp_eval_template=llm_jp_eval_template
+        llm_jp_eval_template=llm_jp_eval_template,
     )
 
     os.makedirs(os.path.join(args.output_dir, "logs"), exist_ok=True)

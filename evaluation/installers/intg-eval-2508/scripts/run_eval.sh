@@ -28,7 +28,11 @@ cd $SCRIPT_DIR/../
 pushd swallow_v202411/
 bash run-eval.sh \
     $MODEL_NAME_OR_PATH \
-    $OUTPUT_DIR/swallow > $OUTPUT_DIR/logs/swallow_eval.log 2> $OUTPUT_DIR/logs/swallow_eval.err
+    $OUTPUT_DIR/swallow \
+    0.9 \
+    1 \
+    1 \
+    > $OUTPUT_DIR/logs/swallow_eval.log 2> $OUTPUT_DIR/logs/swallow_eval.err
 popd 
 
 # Run llm-jp-eval

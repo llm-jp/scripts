@@ -14,7 +14,7 @@ num_nodes=$1; shift
 env_dir=$1; shift
 attn_backend=$1; shift
 
-script_root=/home/ach17726fj/experiments/0176_megatron_upstream_merge/scripts/pretrain/scripts/v5-test
+script_root=/home/ach17726fj/experiments/0176_megatron_upstream_merge/scripts/pretrain/scripts/v4-upstream-megatron-config-validation
 
 qsub -l select=${num_nodes} \
   -v TASK_DIR=${task_dir},PARAM_NAME=${param_name},RTYPE=rt_HF,ENV_DIR=${env_dir},ATTN_BACKEND=${attn_backend} \

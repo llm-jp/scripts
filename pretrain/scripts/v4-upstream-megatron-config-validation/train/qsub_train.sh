@@ -2,7 +2,7 @@
 #PBS -P gcg51557
 #PBS -q R9920251000
 #PBS -N 0176_merge_megatron_upstream
-#PBS -l walltime=100:00:00
+#PBS -l walltime=3:00:00
 #PBS -m n
 
 cd $PBS_O_WORKDIR
@@ -16,7 +16,7 @@ exec > $LOGFILE 2> $ERRFILE
 set -eu -o pipefail
 
 EXPERIMENT_DIR=/home/ach17726fj/experiments/0176_megatron_upstream_merge/
-SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v5-test/train
+SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v4-upstream-megatron-config-validation/train
 # Takes $ENV_DIR from the environment variable
 # ENV_DIR=${EXPERIMENT_DIR}/environments
 # ENV_DIR=${EXPERIMENT_DIR}/environment2
@@ -50,6 +50,13 @@ source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh
 echo "ALL_PARAMS: ${ALL_PARAMS[@]}"
 
 # export NVTE_FUSED_ATTN=0
+# To reduce memory flagmentation and avoid OOM
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+# To ensure overlap DP communication
+# https://docs.nvidia.com/nemo-framework/user-guide/latest/performance/performance-guide.html#communication-overlaps-and-tuning
+# export NVTE_FWD_LAYERNORM_SM_MARGIN=16
+# export NVTE_BWD_LAYERNORM_SM_MARGIN=16
 
 mpirun \
   --display-allocation \

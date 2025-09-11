@@ -2,7 +2,7 @@
 #PBS -P gcg51557
 #PBS -q R9920251000
 #PBS -N 0176_merge_megatron_upstream
-#PBS -l walltime=24:00:00
+#PBS -l walltime=1:30:00
 #PBS -m n
 
 cd $PBS_O_WORKDIR
@@ -16,7 +16,7 @@ exec > $LOGFILE 2> $ERRFILE
 set -eu -o pipefail
 
 EXPERIMENT_DIR=/home/ach17726fj/experiments/0176_megatron_upstream_merge/
-SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v5-test/train
+SCRIPT_DIR=${EXPERIMENT_DIR}/scripts/pretrain/scripts/v4-upstream-megatron-config-validation/train
 # Takes $ENV_DIR from the environment variable
 # ENV_DIR=${EXPERIMENT_DIR}/environments
 # ENV_DIR=${EXPERIMENT_DIR}/environment2
@@ -50,8 +50,8 @@ source ${SCRIPT_DIR}/params/${PARAM_NAME}.sh
 mkdir -p ${TASK_DIR}/tb_data/
 ALL_PARAMS+=(
   --profile
-  --profile-step-start=53
-  --profile-step-end=54
+  --profile-step-start=98
+  --profile-step-end=99
   --timing-log-level=2
 )
 echo "ALL_PARAMS: ${ALL_PARAMS[@]}"

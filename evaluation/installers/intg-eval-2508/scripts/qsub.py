@@ -143,7 +143,7 @@ def main():
         swallow_version=args.swallow_version,
         llm_jp_eval_version=args.llm_jp_eval_version,
         swallow_template=swallow_template,
-        llm_jp_eval_template=llm_jp_eval_template,
+        llm_jp_eval_template=llm_jp_eval_template
     )
 
     os.makedirs(os.path.join(args.output_dir, "logs"), exist_ok=True)

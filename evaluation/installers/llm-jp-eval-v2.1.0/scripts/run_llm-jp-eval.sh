@@ -1,71 +1,115 @@
 #!/bin/bash
-#SBATCH --job-name=llm-jp-eval
+#SBATCH --job-name=0060_eval
 #SBATCH --partition=<FIX_ME>
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --gpus=1
-#SBATCH --mem=200G
+#SBATCH --mem-per-gpu=200G
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
-set -eux
+set -eux -o pipefail
 
-# Open file limit
-ulimit -n 65536 1048576
-
-ENV_DIR=environment
-source ${ENV_DIR}/scripts/environment.sh
+if [ $# -ne 2 ]; then
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR"
+    exit 1
+fi
 
 # Arguments
-MODEL=$1
-WANDB_RUN_NAME=$2
+MODEL_PATH=$1; shift
+OUTPUT_DIR=$(realpath $1); shift
+TP_SIZE=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((TP_SIZE-1)))
 
-# Semi-fixed vars
-CONFIG_TEMPLATE=resources/config_base.yaml
-OFFLINE_CONFIG_TEMPLATE=resources/config_offline_inference_vllm.yaml
-TOKENIZER=$MODEL
-WANDB_ENTITY=llm-jp-eval
-WANDB_PROJECT=test
+# TODO: Must specify an empty directory
+mkdir -p ${OUTPUT_DIR}
 
-# Fixed vars
-EVAL_DIR=${ENV_DIR}/src/llm-jp-eval
-CONFIG_DIR=${EVAL_DIR}/configs
-OFFLINE_SCRIPT_PATH=${EVAL_DIR}/offline_inference/vllm/offline_inference_vllm.py
-DATASET_DIR=${ENV_DIR}/data/llm-jp-eval/${LLM_JP_EVAL_TAG}/evaluation/dev
-OFFLINE_OUT=vllm-outputs/${WANDB_ENTITY}/${WANDB_PROJECT}
+ENV_DIR=$(pwd)/environment
+source ${ENV_DIR}/scripts/environment.sh
 
-# Config settings
-MODEL_NORM=$(echo "$MODEL" | sed 's/\//--/g')
-NEW_CONFIG=${CONFIG_DIR}/config.${WANDB_PROJECT}.${WANDB_RUN_NAME}.yaml
-NEW_OFFLINE_CONFIG=${OFFLINE_OUT}/${MODEL_NORM}/config_offline_inference_vllm.yaml
+CONFIG_DIR=$(pwd)/resources
+PROMPT_OUTPUT_DIR=${OUTPUT_DIR}/prompts
+OFFLINE_OUTPUT_DIR=${OUTPUT_DIR}/offline
+RESULT_DIR=${OUTPUT_DIR}/results
+LLM_JP_EVAL_DIR=${ENV_DIR}/src/llm-jp-eval
+DATASET_DIR=${ENV_DIR}/data/llm-jp-eval
 
-REPLACE_VARS=("MODEL" "TOKENIZER" "DATASET_DIR" "WANDB_ENTITY" "WANDB_PROJECT" "WANDB_RUN_NAME" "OFFLINE_OUT" "MODEL_NORM")
+DUMP_OPTS=(
+    --config=${CONFIG_DIR}/config_base.yaml
+    --output_dir=${DATASET_DIR}
+    --eval_dataset_config_path=${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml
+    --inference_input_dir=${PROMPT_OUTPUT_DIR}
+)
 
-# Create a new config file to save the config file of each run
-cp $CONFIG_TEMPLATE $NEW_CONFIG
-mkdir -p $(dirname $NEW_OFFLINE_CONFIG)
-cp $OFFLINE_CONFIG_TEMPLATE $NEW_OFFLINE_CONFIG
+source ${LLM_JP_EVAL_DIR}/.venv/bin/activate
+python \
+    ${LLM_JP_EVAL_DIR}/scripts/evaluate_llm.py \
+    dump \
+    ${DUMP_OPTS[@]}
+deactivate
 
-# Replace variables
-for VAR in "${REPLACE_VARS[@]}"; do
-  VALUE=$(eval echo \${$VAR})
-  sed -i "s|<<${VAR}>>|${VALUE}|g" $NEW_CONFIG
-  sed -i "s|<<${VAR}>>|${VALUE}|g" $NEW_OFFLINE_CONFIG
+INFERENCE_OPTS=(
+    --config=${CONFIG_DIR}/inference_config.yaml
+    --output_base_dir=${OFFLINE_OUTPUT_DIR}
+    --model.model=${MODEL_PATH}
+    --model.tensor_parallel_size=${TP_SIZE}
+    --tokenizer.pretrained_model_name_or_path=${MODEL_PATH}
+    # TODO: Specify the exact prompt_json_path for safety
+    --prompt_json_path=${PROMPT_OUTPUT_DIR}_*/*.eval-prompt.json
+)
+
+source ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/.venv/bin/activate
+python \
+    ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/inference.py \
+    inference \
+    ${INFERENCE_OPTS[@]}
+deactivate
+
+SANDBOX_DIR=$(mktemp -d)
+trap 'rm -rf "${SANDBOX_DIR}"' EXIT
+
+singularity run --bind ${SANDBOX_DIR}:/var/sandbox,./conf:/conf docker://langgenius/dify-sandbox &
+SINGULARITY_PID=$!
+
+cleanup_singularity() {
+    if ps -p $SINGULARITY_PID > /dev/null; then
+        kill -9 $SINGULARITY_PID 2>/dev/null
+    fi
+}
+
+trap cleanup_singularity EXIT
+
+until curl -s http://localhost:8194/health | grep -q "ok"; do
+    echo "Waiting for dify-sandbox to be ready..."
+    sleep 3
 done
 
-# Generate dump for each run to load $NEW_CONFIG settings
-source ${ENV_DIR}/venv-eval/bin/activate
-python ${EVAL_DIR}/scripts/dump_prompts.py -cn $(basename $NEW_CONFIG)
+# TODO: Specify the exact inference_result_dir for safety
+INFERENCE_RESULT_DIR=$(find "${OFFLINE_OUTPUT_DIR}" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+EVAL_OPTS=(
+    --config=${CONFIG_DIR}/config_base.yaml
+    # NOTE: OUTPUT_DIRに出力したいが、一部のデータセットはなぜかeval時にdumpを実行する。
+    #  その時、データセットの **読み込み先** として `output_dir` が参照されるため、
+    #  `output_dir` にはデータセットの保存先 (DATASET_DIR) を指定しなければならない。
+    #  それによりevalの結果 (`result.json`) もDATASET_DIRに出力されるので、
+    #  eval結果を最後にOUTPUT_DIRに移動する必要がある。
+    --output_dir=${DATASET_DIR}
+    --eval_dataset_config_path=${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml
+    --inference_result_dir=${INFERENCE_RESULT_DIR}
+)
+
+source ${LLM_JP_EVAL_DIR}/.venv/bin/activate
+python \
+    ${LLM_JP_EVAL_DIR}/scripts/evaluate_llm.py \
+    eval \
+    ${EVAL_OPTS[@]}
 deactivate
 
-# Generate outputs in offline mode 
-source ${ENV_DIR}/venv-vllm/bin/activate
-python $OFFLINE_SCRIPT_PATH -cp $(pwd)/$(dirname $NEW_OFFLINE_CONFIG) -cn $(basename $NEW_OFFLINE_CONFIG)
-deactivate
+# Move results to OUTPUT_DIR
+cp -r ${DATASET_DIR}/results ${OUTPUT_DIR}/
+rm -r ${DATASET_DIR}/results
 
-# Run llm-jp-eval to upload results
-source ${ENV_DIR}/venv-eval/bin/activate
-python ${EVAL_DIR}/scripts/evaluate_llm.py -cn $(basename $NEW_CONFIG)
-deactivate
+# Update result JSON structure
+python3 ${ENV_DIR}/scripts/update_result_json.py ${RESULT_DIR}/result.json
 
 echo "Done"

@@ -34,7 +34,7 @@ export NUM_GPU=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 export CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((NUM_GPU-1)))
 export NUMEXPR_MAX_THREADS=192
 
-pushd {environment_dir}
+pushd {experiment_dir}/environment
 
 {swallow_template}
 
@@ -46,7 +46,11 @@ SWALLOW_TEMPLATE = """\
 pushd swallow_{swallow_version}/
 bash run-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/swallow > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
+    $OUTPUT_DIR/swallow \\
+    {gpu_memory_utilization} \\
+    {tensor_parallel_size} \\
+    {data_parallel_size} \\
+    > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
 popd """
 
 LLM_JP_EVAL_TEMPLATE = """\
@@ -63,6 +67,7 @@ def load_args():
     # General configuration
     parser.add_argument("model_name_or_path", type=str, help="Model name or absolute path to the model directory.")
     parser.add_argument("output_dir", type=str, help="Output directory for results.")
+    parser.add_argument("--experiment_dir", type=str, default="/groups/gcg51557/experiments/0182_intg_eval_2507", help="Directory where the evaluation environment is located. Default is '/groups/gcg51557/experiments/0182_intg_eval_2507'.")
 
     # Evaluator versions
     parser.add_argument("--swallow_version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
@@ -74,6 +79,11 @@ def load_args():
     parser.add_argument("--select", type=int, default=1, help="Number of gpus (rt_HG) or nodes (rt_HF) to use for the job.")
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
 
+    # Resource configuration
+    parser.add_argument("--gpu_memory_utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
+    parser.add_argument("--tensor_parallel_size", type=int, default=1, help="Number of tensor parallel groups.")
+    parser.add_argument("--data_parallel_size", type=int, default=1, help="Number of data parallel groups.")
+
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -83,6 +93,9 @@ def load_args():
 def check_args(args):
     if not os.path.isabs(args.output_dir):
         raise ValueError(f"Output directory '{args.output_dir}' must be an absolute path.")
+
+    if args.rtype == "rt_HG" and args.select != 1:
+        raise ValueError(f"Invalid selection '{args.select}' for resource type '{args.rtype}'. Only 1 GPU can be selected.")
 
 
 def main():
@@ -94,7 +107,12 @@ def main():
 
     swallow_template = ""
     if args.swallow_version:
-        swallow_template = SWALLOW_TEMPLATE.format(swallow_version=args.swallow_version)
+        swallow_template = SWALLOW_TEMPLATE.format(
+            swallow_version=args.swallow_version,
+            gpu_memory_utilization=args.gpu_memory_utilization,
+            tensor_parallel_size=args.tensor_parallel_size,
+            data_parallel_size=args.data_parallel_size,
+        )
     llm_jp_eval_template = ""
     if args.llm_jp_eval_version:
         llm_jp_eval_template = LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=args.llm_jp_eval_version)
@@ -112,8 +130,6 @@ def main():
     if not hf_token:
         raise ValueError("HF_TOKEN environment variable is not set. Please set it to your Hugging Face token.")
 
-    environment_dir = Path(__file__).parent.parent
-
     qsub_script = TEMPLATE.format(
         job_name=args.job_name,
         rtype=args.rtype,
@@ -121,7 +137,7 @@ def main():
         output_dir=args.output_dir,
         hf_home=hf_home,
         hf_token=hf_token,
-        environment_dir=environment_dir,
+        experiment_dir=args.experiment_dir,
         model_name_or_path=args.model_name_or_path,
         options="\n".join(args.options),
         swallow_version=args.swallow_version,

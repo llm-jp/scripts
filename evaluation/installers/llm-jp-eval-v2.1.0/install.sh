@@ -7,10 +7,10 @@
 #
 # Usage:
 # On a cluster with SLURM:
-#   Run `sbatch --paratition {FIX_ME} install.sh TARGET_DIR`
+#   Run `sbatch --partition {FIX_ME} install.sh TARGET_DIR`
 # On a cluster without SLURM:
 #   Run `bash install.sh TARGET_DIR > logs/install-eval.out 2> logs/install-eval.err`
-# - TARGET_DIR: Instalation directory
+# - TARGET_DIR: Installation directory
 #
 #SBATCH --job-name=install-llm-jp-eval
 #SBATCH --partition={FIX_ME}
@@ -47,14 +47,14 @@ ENV_DIR=${TARGET_DIR}/environment
 mkdir -p $ENV_DIR
 pushd $ENV_DIR
 
-# Copy enviroment scripts
+# Copy environment scripts
 cp ${INSTALLER_DIR}/install.sh .
 mkdir -p scripts
 cp ${INSTALLER_DIR}/scripts/environment.sh scripts/
 source scripts/environment.sh
 
 cp ${INSTALLER_DIR}/scripts/update_result_json.py scripts/
-cp ${INSTALLER_DIR}/conf .
+cp -r ${INSTALLER_DIR}/conf .
 
 # Record current environment variables
 set > installer_envvar.log

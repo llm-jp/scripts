@@ -4,8 +4,6 @@
 Script for evaluation using llm-jp-eval v2.1.0 <br>
 This includes scripts for environment setup and evaluation execution.
 
-Note: In this version, Docker is not supported, so the Code Generation task (mbpp) will be skipped.
-
 ## Usage
 
 ### Build

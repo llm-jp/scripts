@@ -65,10 +65,18 @@ python \
     ${INFERENCE_OPTS[@]}
 deactivate
 
+CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/llm-jp-eval"
+mkdir -p $CACHE_DIR
 SANDBOX_DIR=$(mktemp -d)
+SANDBOX_DIR=$CACHE_DIR/dify-sandbox
+LOG_DIR=$CACHE_DIR/dify-sandbox-logs
+
+# The sandbox directory needs to be cleaned up to run dify-sandbox
+rm -rf $SANDBOX_DIR
+mkdir -p $SANDBOX_DIR $LOG_DIR
 trap 'rm -rf "${SANDBOX_DIR}"' EXIT
 
-singularity run --bind ${SANDBOX_DIR}:/var/sandbox,./conf:/conf docker://langgenius/dify-sandbox &
+singularity run --bind $SANDBOX_DIR:/var/sandbox,$LOG_DIR:/logs --pwd / docker://langgenius/dify-sandbox &
 SINGULARITY_PID=$!
 
 cleanup_singularity() {

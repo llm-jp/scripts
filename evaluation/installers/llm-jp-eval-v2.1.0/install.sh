@@ -40,7 +40,7 @@ pushd $TARGET_DIR
 # Copy basic scripts for llm-jp-eval
 cp ${INSTALLER_DIR}/scripts/run_llm-jp-eval.sh .
 mkdir -p resources
-cp ${INSTALLER_DIR}/resources/config_*.yaml resources/
+cp ${INSTALLER_DIR}/resources/*.yaml resources/
 mkdir -p logs
 
 ENV_DIR=${TARGET_DIR}/environment

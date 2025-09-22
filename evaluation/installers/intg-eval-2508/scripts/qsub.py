@@ -51,7 +51,8 @@ bash run-eval.sh \\
     {tensor_parallel_size} \\
     {data_parallel_size} \\
     > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
-popd """
+popd
+"""
 
 LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval
@@ -59,7 +60,8 @@ pushd llm-jp-eval-{llm_jp_eval_version}/
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/llm-jp-eval > $LOG_DIR/llm-jp-eval.log 2> $LOG_DIR/llm-jp-eval.err
-popd"""
+popd
+"""
 
 def load_args():
     parser = argparse.ArgumentParser(description="Generate qsub script for evaluation jobs.")
@@ -67,11 +69,11 @@ def load_args():
     # General configuration
     parser.add_argument("model_name_or_path", type=str, help="Model name or absolute path to the model directory.")
     parser.add_argument("output_dir", type=str, help="Output directory for results.")
-    parser.add_argument("--experiment_dir", type=str, default="/groups/gcg51557/experiments/0182_intg_eval_2507", help="Directory where the evaluation environment is located. Default is '/groups/gcg51557/experiments/0182_intg_eval_2507'.")
+    parser.add_argument("--experiment_dir", type=str, default="/groups/gcg51557/experiments/0230_intg_eval_2509", help="Directory where the evaluation environment is located. Default is '/groups/gcg51557/experiments/0230_intg_eval_2509'.")
 
     # Evaluator versions
     parser.add_argument("--swallow_version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
-    parser.add_argument("--llm_jp_eval_version", type=str, default="v1.4.1", choices=["v1.4.1", ""], help="Version of the llm-jp-eval environment. If not specified, no llm-jp-eval will be run.")
+    parser.add_argument("--llm_jp_eval_version", type=str, default="v1.4.1", choices=["v1.4.1", "v2.1.0"], help="Version of the llm-jp-eval environment. If not specified, no llm-jp-eval will be run.")
 
     # Job configuration
     parser.add_argument("--job_name", type=str, default="0195_intg_eval", help="Name of the job.")

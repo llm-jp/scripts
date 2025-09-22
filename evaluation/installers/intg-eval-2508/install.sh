@@ -41,6 +41,12 @@ bash install.sh $TARGET_DIR/llm-jp-eval-v1.4.1 \
   2> ../logs/install-llm-jp-eval-v1.4.1.err
 popd
 
+pushd ../llm-jp-eval-v2.1.0/
+bash install.sh $TARGET_DIR/llm-jp-eval-v2.1.0 \
+  > ../intg-eval-2508/logs/install-llm-jp-eval-v2.1.0.out \
+  2> ../intg-eval-2508/logs/install-llm-jp-eval-v2.1.0.err
+popd
+
 pushd ./swallow_v202411/
 bash install.sh $TARGET_DIR/swallow_v202411 \
   > ../logs/install-swallow_v202411.out \

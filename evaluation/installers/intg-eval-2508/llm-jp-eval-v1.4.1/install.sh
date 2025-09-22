@@ -42,17 +42,17 @@ pushd $TARGET_DIR
 
 # Copy basic scripts for llm-jp-eval
 cp ${INSTALLER_DIR}/scripts/run_llm-jp-eval.sh .
-mkdir resources
+mkdir -p resources
 cp ${INSTALLER_DIR}/resources/config_*.yaml resources/
-mkdir logs
+mkdir -p logs
 
 ENV_DIR=${TARGET_DIR}/environment
-mkdir $ENV_DIR
+mkdir -p $ENV_DIR
 pushd $ENV_DIR
 
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/{install.sh,requirements*.txt} .
-mkdir scripts
+mkdir -p scripts
 cp ${INSTALLER_DIR}/scripts/environment.sh scripts/
 source scripts/environment.sh
 
@@ -60,11 +60,13 @@ source scripts/environment.sh
 set > installer_envvar.log
 
 # src is used to store all resources for from-scratch builds
-mkdir src
+mkdir -p src
 pushd src
 
-# Install Python (function in $INSTALLER_COMMON)
-install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+## Install Python (function in $INSTALLER_COMMON)
+if [[ ! -d "${ENV_DIR}/python" ]]; then
+  install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+fi
 popd # $ENV_DIR
 
 # Prepare venv
@@ -82,7 +84,9 @@ source venv-eval/bin/activate
 python -m pip install --no-cache-dir -U pip setuptools wheel
 
 pushd src
-git clone https://github.com/llm-jp/jp-eval-customization.git -b v${LLM_JP_EVAL_TAG} ./llm-jp-eval
+if [[ ! -d llm-jp-eval ]]; then
+  git clone https://github.com/llm-jp/jp-eval-customization.git -b v${LLM_JP_EVAL_TAG} ./llm-jp-eval
+fi
 pushd llm-jp-eval
 if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
   git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}

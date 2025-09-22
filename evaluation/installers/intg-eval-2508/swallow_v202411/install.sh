@@ -57,10 +57,12 @@ mkdir -p src
 # Retrieve swallow repository
 SWALLOW_REPO_URL=https://github.com/llm-jp/swallow-eval-customization.git
 # TODO: switch to experimental branch for development
-git clone $SWALLOW_REPO_URL src/swallow-evaluation -b v202411
+if [[ ! -d src/swallow-evaluation ]]; then
+  git clone $SWALLOW_REPO_URL src/swallow-evaluation -b v202411
+fi
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/install.sh .
-mkdir scripts
+mkdir -p scripts
 cp ${INSTALLER_DIR}/scripts/environment.sh scripts/
 source scripts/environment.sh
 
@@ -70,7 +72,9 @@ set > installer_envvar.log
 
 # Install Python (function in $INSTALLER_COMMON)
 pushd src
-install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+if [[ ! -d "${ENV_DIR}/python" ]]; then
+  install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+fi
 popd # $ENV_DIR
 
 # Prepare venv for swallow harness_en and bigcode

@@ -73,6 +73,7 @@ def load_args():
 
     # Evaluator versions
     parser.add_argument("--swallow_version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
+    parser.add_argument("--disable_swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
     parser.add_argument("--llm_jp_eval_version", type=str, default="v1.4.1", choices=["v1.4.1", "v2.1.0"], help="Version of the llm-jp-eval environment. If not specified, no llm-jp-eval will be run.")
 
     # Job configuration
@@ -108,7 +109,7 @@ def main():
     check_args(args)
 
     swallow_template = ""
-    if args.swallow_version:
+    if args.swallow_version and not args.disable_swallow:
         swallow_template = SWALLOW_TEMPLATE.format(
             swallow_version=args.swallow_version,
             gpu_memory_utilization=args.gpu_memory_utilization,

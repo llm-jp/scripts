@@ -55,11 +55,12 @@ popd
 """
 
 LLM_JP_EVAL_TEMPLATE = """\
-# Run llm-jp-eval
+# Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
+mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/llm-jp-eval > $LOG_DIR/llm-jp-eval.log 2> $LOG_DIR/llm-jp-eval.err
+    $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
 popd
 """
 
@@ -74,7 +75,8 @@ def load_args():
     # Evaluator versions
     parser.add_argument("--swallow_version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
     parser.add_argument("--disable_swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
-    parser.add_argument("--llm_jp_eval_version", type=str, default="v1.4.1", choices=["v1.4.1", "v2.1.0"], help="Version of the llm-jp-eval environment. If not specified, no llm-jp-eval will be run.")
+    parser.add_argument("--llm_jp_eval_versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0"], help="Versions of the llm-jp-eval environment to run.")
+    parser.add_argument("--disable_llm_jp_eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")
 
     # Job configuration
     parser.add_argument("--job_name", type=str, default="0195_intg_eval", help="Name of the job.")
@@ -117,8 +119,11 @@ def main():
             data_parallel_size=args.data_parallel_size,
         )
     llm_jp_eval_template = ""
-    if args.llm_jp_eval_version:
-        llm_jp_eval_template = LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=args.llm_jp_eval_version)
+    if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
+        llm_jp_eval_template = "\n".join(
+            LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=version)
+            for version in args.llm_jp_eval_versions
+        )
 
     hf_home = os.environ.get("HF_HOME")
 
@@ -144,7 +149,7 @@ def main():
         model_name_or_path=args.model_name_or_path,
         options="\n".join(args.options),
         swallow_version=args.swallow_version,
-        llm_jp_eval_version=args.llm_jp_eval_version,
+        llm_jp_eval_versions=args.llm_jp_eval_versions,
         swallow_template=swallow_template,
         llm_jp_eval_template=llm_jp_eval_template
     )

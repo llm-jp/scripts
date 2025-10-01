@@ -72,6 +72,11 @@ LOG_DIR=$TEMP_DIR/dify-sandbox-logs
 mkdir -p $SANDBOX_DIR $LOG_DIR
 trap 'rm -rf "${TEMP_DIR}"' EXIT
 
+# Set an open port. Dify-sandbox internally uses this environment variable.
+export SANDBOX_PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("", 0)); print(s.getsockname()[1]); s.close()')
+# Used by llm-jp-eval
+export CODE_EXECUTION_ENDPOINT="http://localhost:$SANDBOX_PORT"
+
 singularity run --bind $SANDBOX_DIR:/var/sandbox,$LOG_DIR:/logs --pwd / docker://langgenius/dify-sandbox &
 SINGULARITY_PID=$!
 
@@ -83,7 +88,7 @@ cleanup_singularity() {
 
 trap cleanup_singularity EXIT
 
-until curl -s http://localhost:8194/health | grep -q "ok"; do
+until curl -s http://localhost:$SANDBOX_PORT/health | grep -q "ok"; do
     echo "Waiting for dify-sandbox to be ready..."
     sleep 3
 done

@@ -4,8 +4,7 @@ import json
 import os
 import logging
 import subprocess
-
-from pathlib import Path
+import warnings
 
 TEMPLATE = """#!/bin/sh
 #PBS -N {job_name}
@@ -34,7 +33,7 @@ export NUM_GPU=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 export CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((NUM_GPU-1)))
 export NUMEXPR_MAX_THREADS=192
 
-pushd {experiment_dir}/environment
+cd {experiment_dir}
 
 {swallow_template}
 
@@ -42,27 +41,38 @@ pushd {experiment_dir}/environment
 """
 
 SWALLOW_TEMPLATE = """\
+# Cache Hellaswag dataset
+cd environment/cache_hellaswag/
+bash cache.sh > $LOG_DIR/cache_hellaswag.log 2> $LOG_DIR/cache_hellaswag.err
+cd ../../
+
 # Run swallow evaluation
-pushd swallow_{swallow_version}/
+cd environment/swallow_{swallow_version}/
 bash run-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/swallow \\
-    {gpu_memory_utilization} \\
-    {tensor_parallel_size} \\
-    {data_parallel_size} \\
-    > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
-popd
-"""
+    $OUTPUT_DIR/swallow > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
+cd ../../"""
 
 LLM_JP_EVAL_TEMPLATE = """\
-# Run llm-jp-eval {llm_jp_eval_version}
-pushd llm-jp-eval-{llm_jp_eval_version}/
-mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
+# Run llm-jp-eval
+cd {llm_jp_eval_workdir}
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
-popd
-"""
+    $OUTPUT_DIR/{llm_jp_eval_output_subdir} > $LOG_DIR/llm-jp-eval.log 2> $LOG_DIR/llm-jp-eval.err
+cd ../../"""
+
+LLM_JP_EVAL_WORKDIR_BY_VERSION = {
+    "v1.4.1": "environment/llm_jp_eval_v1.4.1/",
+    "v2.1.0": "environment/llm-jp-eval-v2.1.0/",
+}
+
+LLM_JP_EVAL_OUTPUT_SUBDIR_BY_VERSION = {
+    "v1.4.1": "llm-jp-eval",
+    "v2.1.0": "llm-jp-eval_v2.1.0",
+}
+
+LLM_JP_EVAL_V2_EXPERIMENT_DIR = "/groups/gcg51557/experiments/0230_intg_eval_2509"
+
 
 def load_args():
     parser = argparse.ArgumentParser(description="Generate qsub script for evaluation jobs.")
@@ -70,25 +80,18 @@ def load_args():
     # General configuration
     parser.add_argument("model_name_or_path", type=str, help="Model name or absolute path to the model directory.")
     parser.add_argument("output_dir", type=str, help="Output directory for results.")
-    parser.add_argument("--experiment_dir", type=str, default="/groups/gcg51557/experiments/0230_intg_eval_2509", help="Directory where the evaluation environment is located. Default is '/groups/gcg51557/experiments/0230_intg_eval_2509'.")
-
+    parser.add_argument("--experiment_dir", type=str, default="/groups/gcg51557/experiments/0182_intg_eval_2507", help="Directory where the experiment is located. Default is '/groups/gcg51557/experiments/0182_intg_eval_2507'.")
+    
     # Evaluator versions
     parser.add_argument("--swallow_version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
-    parser.add_argument("--disable_swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
-    parser.add_argument("--llm_jp_eval_versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0"], help="Versions of the llm-jp-eval environment to run.")
-    parser.add_argument("--disable_llm_jp_eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")
+    parser.add_argument("--llm_jp_eval_version", type=str, default="v1.4.1", choices=["v1.4.1", "v2.1.0", ""], help="Version of the llm-jp-eval environment. If not specified, no llm-jp-eval will be run.")
 
     # Job configuration
-    parser.add_argument("--job_name", type=str, default="0195_intg_eval", help="Name of the job.")
+    parser.add_argument("--job_name", type=str, default="0182_intg_eval", help="Name of the job.")
     parser.add_argument("--rtype", type=str, default="rt_HG", choices=["rt_HG", "rt_HF"], help="Resource type for the job.")
     parser.add_argument("--select", type=int, default=1, help="Number of gpus (rt_HG) or nodes (rt_HF) to use for the job.")
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
     parser.add_argument("--dry_run", action="store_true", help="Print the generated qsub script and exit without submitting.")
-
-    # Resource configuration
-    parser.add_argument("--gpu_memory_utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
-    parser.add_argument("--tensor_parallel_size", type=int, default=1, help="Number of tensor parallel groups.")
-    parser.add_argument("--data_parallel_size", type=int, default=1, help="Number of data parallel groups.")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -103,7 +106,6 @@ def check_args(args):
     if args.rtype == "rt_HG" and args.select != 1:
         raise ValueError(f"Invalid selection '{args.select}' for resource type '{args.rtype}'. Only 1 GPU can be selected.")
 
-
 def main():
     args = load_args()
 
@@ -112,18 +114,30 @@ def main():
     check_args(args)
 
     swallow_template = ""
-    if args.swallow_version and not args.disable_swallow:
-        swallow_template = SWALLOW_TEMPLATE.format(
-            swallow_version=args.swallow_version,
-            gpu_memory_utilization=args.gpu_memory_utilization,
-            tensor_parallel_size=args.tensor_parallel_size,
-            data_parallel_size=args.data_parallel_size,
-        )
+    if args.swallow_version:
+        swallow_template = SWALLOW_TEMPLATE.format(swallow_version=args.swallow_version)
     llm_jp_eval_template = ""
-    if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
-        llm_jp_eval_template = "\n".join(
-            LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=version)
-            for version in args.llm_jp_eval_versions
+    if args.llm_jp_eval_version:
+        if args.llm_jp_eval_version == "v2.1.0" and args.experiment_dir != LLM_JP_EVAL_V2_EXPERIMENT_DIR:
+            warnings.warn(
+                (
+                    f"llm-jp-eval v2.1.0 requires '--experiment_dir {LLM_JP_EVAL_V2_EXPERIMENT_DIR}'. "
+                    f"Overriding '{args.experiment_dir}' to the required path."
+                ),
+                RuntimeWarning,
+            )
+            args.experiment_dir = LLM_JP_EVAL_V2_EXPERIMENT_DIR
+
+        llm_jp_eval_workdir = LLM_JP_EVAL_WORKDIR_BY_VERSION.get(args.llm_jp_eval_version)
+        if llm_jp_eval_workdir is None:
+            raise ValueError(f"Unsupported llm-jp-eval version '{args.llm_jp_eval_version}'.")
+
+        llm_jp_eval_output_subdir = LLM_JP_EVAL_OUTPUT_SUBDIR_BY_VERSION.get(
+            args.llm_jp_eval_version, f"llm-jp-eval_{args.llm_jp_eval_version}"
+        )
+        llm_jp_eval_template = LLM_JP_EVAL_TEMPLATE.format(
+            llm_jp_eval_workdir=llm_jp_eval_workdir,
+            llm_jp_eval_output_subdir=llm_jp_eval_output_subdir,
         )
 
     hf_home = os.environ.get("HF_HOME")
@@ -150,7 +164,7 @@ def main():
         model_name_or_path=args.model_name_or_path,
         options="\n".join(args.options),
         swallow_version=args.swallow_version,
-        llm_jp_eval_versions=args.llm_jp_eval_versions,
+        llm_jp_eval_version=args.llm_jp_eval_version,
         swallow_template=swallow_template,
         llm_jp_eval_template=llm_jp_eval_template
     )

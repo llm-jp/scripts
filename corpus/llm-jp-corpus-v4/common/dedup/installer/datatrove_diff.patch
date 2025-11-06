@@ -1,21 +1,8 @@
-diff --git a/src/datatrove/pipeline/dedup/minhash.py b/src/datatrove/pipeline/dedup/minhash.py
-index f644389..3f1b50b 100644
---- a/src/datatrove/pipeline/dedup/minhash.py
-+++ b/src/datatrove/pipeline/dedup/minhash.py
-@@ -256,6 +254,8 @@ class MinhashDedupSignature(PipelineStep):
-                                     doc_idx,
-                                 )
-                             )
-+                    else:
-+                        logger.warning(f"No singles {doc.text=} on {rank=}")
-                 for file in buckets:
-                     file.close()
- 
 diff --git a/src/datatrove/utils/text.py b/src/datatrove/utils/text.py
-index 7ab7d3d..d0c9cb6 100644
+index 7ab7d3d..233940b 100644
 --- a/src/datatrove/utils/text.py
 +++ b/src/datatrove/utils/text.py
-@@ -259,6 +257,8 @@ def simplify_text(text: str, config=DEF_TEXT_NORM_CONFIG) -> str:
+@@ -259,6 +259,8 @@ def simplify_text(text: str, config=DEF_TEXT_NORM_CONFIG) -> str:
  
  # from https://tedboy.github.io/nlps/_modules/nltk/util.html#ngrams
  def ngrams(sequence: Iterable, n: int):

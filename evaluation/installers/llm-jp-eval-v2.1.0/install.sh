@@ -47,6 +47,8 @@ ENV_DIR=${TARGET_DIR}/environment
 mkdir -p $ENV_DIR
 pushd $ENV_DIR
 
+export UV_PYTHON_INSTALL_DIR="${ENV_DIR}/python"
+
 # Copy environment scripts
 cp ${INSTALLER_DIR}/install.sh .
 mkdir -p scripts

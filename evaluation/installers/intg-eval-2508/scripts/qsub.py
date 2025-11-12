@@ -70,25 +70,25 @@ def load_args():
     # General configuration
     parser.add_argument("model_name_or_path", type=str, help="Model name or absolute path to the model directory.")
     parser.add_argument("output_dir", type=str, help="Output directory for results.")
-    parser.add_argument("--experiment_dir", type=str, default="/groups/gcg51557/experiments/0230_intg_eval_2509", help="Directory where the evaluation environment is located. Default is '/groups/gcg51557/experiments/0230_intg_eval_2509'.")
+    parser.add_argument("--experiment-dir", type=str, default="/groups/gcg51557/experiments/0230_intg_eval_2509", help="Directory where the evaluation environment is located. Default is '/groups/gcg51557/experiments/0230_intg_eval_2509'.")
 
     # Evaluator versions
-    parser.add_argument("--swallow_version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
-    parser.add_argument("--disable_swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
-    parser.add_argument("--llm_jp_eval_versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0"], help="Versions of the llm-jp-eval environment to run.")
-    parser.add_argument("--disable_llm_jp_eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")
+    parser.add_argument("--swallow-version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
+    parser.add_argument("--disable-swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
+    parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0"], help="Versions of the llm-jp-eval environment to run.")
+    parser.add_argument("--disable-llm-jp-eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")
 
     # Job configuration
-    parser.add_argument("--job_name", type=str, default="0195_intg_eval", help="Name of the job.")
+    parser.add_argument("--job-name", type=str, default="0195_intg_eval", help="Name of the job.")
     parser.add_argument("--rtype", type=str, default="rt_HG", choices=["rt_HG", "rt_HF"], help="Resource type for the job.")
     parser.add_argument("--select", type=int, default=1, help="Number of gpus (rt_HG) or nodes (rt_HF) to use for the job.")
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
-    parser.add_argument("--dry_run", action="store_true", help="Print the generated qsub script and exit without submitting.")
+    parser.add_argument("--dry-run", action="store_true", help="Print the generated qsub script and exit without submitting.")
 
     # Resource configuration
-    parser.add_argument("--gpu_memory_utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
-    parser.add_argument("--tensor_parallel_size", type=int, default=1, help="Number of tensor parallel groups.")
-    parser.add_argument("--data_parallel_size", type=int, default=1, help="Number of data parallel groups.")
+    parser.add_argument("--gpu-memory-utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
+    parser.add_argument("--tensor-parallel-size", type=int, default=1, help="Number of tensor parallel groups.")
+    parser.add_argument("--data-parallel-size", type=int, default=1, help="Number of data parallel groups.")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

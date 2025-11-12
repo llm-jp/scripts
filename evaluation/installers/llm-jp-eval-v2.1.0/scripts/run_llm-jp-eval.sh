@@ -59,10 +59,15 @@ INFERENCE_OPTS=(
 )
 
 source ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/.venv/bin/activate
+RUN_NAME=$(python \
+    ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/inference.py \
+    get_run_name \
+    ${INFERENCE_OPTS[@]} | tail -n1)
 python \
     ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/inference.py \
     inference \
     ${INFERENCE_OPTS[@]}
+
 deactivate
 
 TEMP_DIR=$(mktemp -d)
@@ -115,8 +120,9 @@ python \
 deactivate
 
 # Move results to OUTPUT_DIR
-cp -r ${DATASET_DIR}/results ${OUTPUT_DIR}/
-rm -r ${DATASET_DIR}/results
+mkdir ${OUTPUT_DIR}/results
+cp ${DATASET_DIR}/results/result_${RUN_NAME}.json ${OUTPUT_DIR}/results/result.json
+rm ${DATASET_DIR}/results/result_${RUN_NAME}.json
 
 # Update result JSON structure
 python3 ${ENV_DIR}/scripts/update_result_json.py ${RESULT_DIR}/result.json

@@ -2,6 +2,6 @@ include_non_commercial: true
 max_num_samples: 100
 exporters:
   local:
-    filename_format: 'result.json'
+    filename_format: 'result_{run_name}.json'
     export_output_table: true
     output_top_n: 5

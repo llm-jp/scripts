@@ -75,8 +75,7 @@ python/bin/python3 -m venv venv-eval venv-vllm
 # Install vllm
 source venv-vllm/bin/activate
 pip install --no-cache-dir -U pip setuptools wheel
-# This implicitly installs vllm-flash-attn with their recommended version
-pip install --no-cache-dir -r requirements-vllm.txt
+pip install --no-cache-dir --no-deps -r requirements-vllm.txt
 deactivate
 
 # Install llm-jp-eval

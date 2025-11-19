@@ -70,6 +70,7 @@ python \
     ${LLM_JP_EVAL_DIR}/scripts/dump_prompts.py \
     -cp ${CONFIG_DIR} \
     -cn config_base \
+    hydra.run.dir=${PROMPT_OUTPUT_DIR}/dump_prompts \
     ${LLM_JP_EVAL_OVERRIDES[@]}
 deactivate
 
@@ -78,6 +79,7 @@ python \
     ${LLM_JP_EVAL_DIR}/offline_inference/vllm/offline_inference_vllm.py \
     -cp ${CONFIG_DIR} \
     -cn config_offline_inference_vllm \
+    hydra.run.dir=${OFFLINE_OUTPUT_DIR}/offline_inference_vllm \
     ${OFFLINE_INFERENCE_VLLM_OVERRIDES[@]}
 deactivate
 
@@ -86,6 +88,7 @@ python \
     ${LLM_JP_EVAL_DIR}/scripts/evaluate_llm.py \
     -cp ${CONFIG_DIR} \
     -cn config_base \
+    hydra.run.dir=${RESULT_DIR}/evaluate_llm \
     ${LLM_JP_EVAL_OVERRIDES[@]}
 deactivate
 

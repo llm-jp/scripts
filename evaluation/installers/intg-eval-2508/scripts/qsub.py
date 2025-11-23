@@ -1,4 +1,23 @@
 #!/usr/bin/env python3
+"""Generate and submit a PBS qsub script for running swallow and llm-jp-eval.
+
+Typical usage:
+    python3 qsub.py <model_name_or_path> <output_dir>
+
+Defaults:
+    With no optional flags, runs swallow v202411 and both llm-jp-eval versions
+    (v1.4.1 and v2.1.0). Use --disable-swallow and/or --disable-llm-jp-eval to
+    skip each evaluation; use --llm-jp-eval-versions to select specific versions.
+
+Environment variables:
+    HF_HOME must point to a path under /groups/gcg51557/experiments.
+    HF_TOKEN must be set for Hugging Face access.
+
+Outputs:
+    Swallow evaluation artifacts are written under <output_dir>/swallow (logs in <output_dir>/logs/).
+    For each llm-jp-eval version, writes the final evaluation result to
+    <output_dir>/llm-jp-eval/<version>/results/result.json (one file per version).
+"""
 import argparse
 import json
 import os

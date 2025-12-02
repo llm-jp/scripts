@@ -1,6 +1,7 @@
 accelerate==1.10.1
 cmake==4.1.0
 einops==0.8.1
+ms-swift==3.8.1
 ninja==1.13.0
 numpy==1.26.3
 packaging==25.0

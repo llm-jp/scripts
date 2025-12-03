@@ -119,6 +119,9 @@ def check_args(args):
     if not os.path.isabs(args.output_dir):
         raise ValueError(f"Output directory '{args.output_dir}' must be an absolute path.")
 
+    if Path(args.output_dir).exists():
+        raise ValueError(f"Output directory '{args.output_dir}' already exists. Please specify a new path.")
+
     if args.rtype == "rt_HG" and args.select != 1:
         raise ValueError(f"Invalid selection '{args.select}' for resource type '{args.rtype}'. Only 1 GPU can be selected.")
 

@@ -80,9 +80,22 @@ ALL_PARAMS+=(
 )
 
 # Add Checkpointing params
+BASE_CHECKPOINT_DIR=${TASK_DIR}/base_checkpoints
 TASK_CHECKPOINT_DIR=${TASK_DIR}/checkpoints
+
+if [ -e ${TASK_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
+    echo "Resume from the last checkpoint in this task"
+    LOAD_DIR=${TASK_CHECKPOINT_DIR}
+elif [ -e ${BASE_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
+    echo "Start from the base checkpoint"
+    LOAD_DIR=${BASE_CHECKPOINT_DIR}
+else
+    echo "Start from scratch"
+    LOAD_DIR=${TASK_CHECKPOINT_DIR}
+fi
+
 ALL_PARAMS+=(
-    --load ${TASK_CHECKPOINT_DIR}
+    --load ${LOAD_DIR}
     --save ${TASK_CHECKPOINT_DIR}
     --save-interval 1000
 )

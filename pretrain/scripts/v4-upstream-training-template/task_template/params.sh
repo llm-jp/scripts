@@ -47,9 +47,9 @@ ALL_PARAMS+=(
 
 # Scheduler
 ALL_PARAMS+=(
-    --train-iters ${TRAIN_ITERS}
+    --train-iters 100000
     --lr-warmup-iters 2000
-    --lr-decay-iters ${TRAIN_ITERS}
+    --lr-decay-iters 100000
     --lr-decay-style cosine
     --eval-interval 999999999
     --eval-iters 0

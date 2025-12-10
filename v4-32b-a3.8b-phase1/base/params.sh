@@ -114,9 +114,6 @@ ALL_PARAMS+=(
     --no-masked-softmax-fusion
     --use-flash-attn
 
-    # NOTE(odashi): For adjusting throughput
-    #--recompute-activations
-    #--recompute-granularity selective
     --overlap-grad-reduce
     --overlap-param-gather
 

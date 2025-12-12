@@ -1,4 +1,5 @@
 datatrove[io,processing,cli]==0.4.0 # will be re-installed, but install to resolve dependency
+orjson
+paramiko # required to run processes on local multi node
 spacy[ja] # required when running minhash (datatrove)
 sudachipy==0.5.4 # required when running minhash (datatrove)
-paramiko # required to run processes on local multi node

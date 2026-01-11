@@ -119,16 +119,10 @@ ALL_PARAMS+=(
 
     --attention-softmax-in-fp32
     --transformer-impl transformer_engine
-
     --attention-backend flash
     --accumulate-allreduce-grads-in-fp32
-    --async-save
-    --ckpt-format torch_dist
     --cross-entropy-fusion-impl native
     --cross-entropy-loss-fusion
-    --log-interval 1
-    --log-throughput
-    --moe-per-layer-logging
 )
 
 # NOTE(odashi):

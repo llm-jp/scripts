@@ -74,6 +74,7 @@ source ${TASK_DIR}/params.sh
 ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
+    --moe-per-layer-logging
     --wandb-entity llm-jp
     --wandb-project ${WANDB_PROJECT}
     --wandb-exp-name ${EXPERIMENT_NAME}
@@ -98,6 +99,8 @@ ALL_PARAMS+=(
     --load ${LOAD_DIR}
     --save ${TASK_CHECKPOINT_DIR}
     --save-interval 1000
+    --async-save
+    --ckpt-format torch_dist
 )
 
 # For logging

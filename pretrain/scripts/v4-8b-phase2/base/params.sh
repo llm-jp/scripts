@@ -1,17 +1,15 @@
-# LLM-jp v4 model 32B-A3.8B
+# LLM-jp v4 model 8B
 
 ALL_PARAMS=()
 
 # Model hyperparameters
 ALL_PARAMS+=(
     --num-layers 32
-    --hidden-size 2560
-    --moe-ffn-hidden-size 960
-    --ffn-hidden-size 960
-    --num-attention-heads 40
+    --hidden-size 4096
+    --ffn-hidden-size 14336
+    --num-attention-heads 32
     --group-query-attention
-    --num-query-groups 4
-    --kv-channels 128
+    --num-query-groups 8
 
     # NOTE(odashi): We set 4096 (not 8192) for context length to award more training steps
     --seq-length 4096
@@ -24,7 +22,6 @@ ALL_PARAMS+=(
     --normalization RMSNorm
     --norm-epsilon 1e-6
     --disable-bias-linear
-    --qk-layernorm
 )
 
 # Tokenizer
@@ -36,40 +33,25 @@ ALL_PARAMS+=(
 # Optimizer hyperparameters
 ALL_PARAMS+=(
     --optimizer adam
-    --lr 4e-4
-    --min-lr 4e-5
+    --lr 3e-4
+    --min-lr 3e-5
     --adam-beta1 0.9
     --adam-beta2 0.95
     --adam-eps 1e-8
     --clip-grad 1.0
     --weight-decay 0.1
-    --init-method-std 0.006
+    --init-method-std 0.02
     --attention-dropout 0.0
     --hidden-dropout 0.0
-)
-
-# MoE
-ALL_PARAMS+=(
-    --manual-gc
-    --manual-gc-interval 10
-    --moe-aux-loss-coeff 1e-2
-    --moe-grouped-gemm
-    --moe-permute-fusion
-    --moe-router-dtype fp32
-    --moe-router-load-balancing-type aux_loss
-    --moe-router-topk 8
-    --moe-token-dispatcher-type alltoall
-    --moe-z-loss-coeff 1e-3
-    --num-experts 128
 )
 
 # Scheduler
 # At least 10_526_120 steps required to train all tokens.
 # ( == ceil[22_074_871_647_659 / 512 / 4096] )
 ALL_PARAMS+=(
-    --train-iters 12000000
+    --train-iters 1000000
     --lr-warmup-iters 2000
-    --lr-decay-iters 12000000
+    --lr-decay-iters 1000000
     --lr-decay-style WSD
 
     # NOTE(odashi): We run stable training: don't apply decay until the last step.
@@ -82,17 +64,16 @@ ALL_PARAMS+=(
 
 # Batch sizes
 ALL_PARAMS+=(
-    --micro-batch-size 2
-    --global-batch-size 1024
+    --micro-batch-size 1
+    --global-batch-size 2048
 )
 
 # Parallelism
 ALL_PARAMS+=(
-    --context-parallel-size 1
-    --expert-model-parallel-size 4
-    --pipeline-model-parallel-size 1
-    --sequence-parallel
     --tensor-model-parallel-size 1
+    --pipeline-model-parallel-size 1
+    --context-parallel-size 1
+    --sequence-parallel
     --use-distributed-optimizer
     --distributed-backend nccl
     # NOTE(odashi): Increasing timeout is required to prepare 15.6T dataset.
@@ -114,22 +95,21 @@ ALL_PARAMS+=(
     --no-masked-softmax-fusion
     --use-flash-attn
 
+    # NOTE(odashi): For adjusting throughput
+    #--recompute-activations
+    #--recompute-granularity selective
     --overlap-grad-reduce
     --overlap-param-gather
 
     --attention-softmax-in-fp32
     --transformer-impl transformer_engine
-    --attention-backend flash
-    --accumulate-allreduce-grads-in-fp32
-    --cross-entropy-fusion-impl native
-    --cross-entropy-loss-fusion
+
+    # NOTE(sosuke): According to my experiments, fused attention backend is the fastest in available options (including flash_attn_3).
+    # ref: https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/attention/attention.html
+    --attention-backend fused
 )
 
 # NOTE(odashi):
 # https://docs.nvidia.com/nemo-framework/user-guide/latest/performance/performance-guide.html#communication-overlaps-and-tuning
-# (Taishi) MoEの実験で試していないので不明
-# export NVTE_FWD_LAYERNORM_SM_MARGIN=16
-# export NVTE_BWD_LAYERNORM_SM_MARGIN=16
-
-# (Taishi) メモリ
-export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
+export NVTE_FWD_LAYERNORM_SM_MARGIN=16
+export NVTE_BWD_LAYERNORM_SM_MARGIN=16

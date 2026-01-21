@@ -29,7 +29,7 @@ from pathlib import Path
 TEMPLATE = """#!/bin/sh
 #PBS -N {job_name}
 #PBS -P gcg51557
-#PBS -q R9920251000
+#PBS -q {pbs_queue}
 #PBS -v RTYPE={rtype}
 #PBS -l select={select}
 #PBS -l walltime=24:00:00
@@ -100,9 +100,10 @@ def load_args():
     # Job configuration
     parser.add_argument("--job-name", type=str, default="0195_intg_eval", help="Name of the job.")
     parser.add_argument("--rtype", type=str, default="rt_HG", choices=["rt_HG", "rt_HF"], help="Resource type for the job.")
-    parser.add_argument("--select", type=int, default=1, help="Number of gpus (rt_HG) or nodes (rt_HF) to use for the job.")
+    parser.add_argument("--select", type=int, default=1, help="Number of nodes (rt_HF) to use for the job.")
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
     parser.add_argument("--dry-run", action="store_true", help="Print the generated qsub script and exit without submitting.")
+    parser.add_argument("--pbs-queue", type=str, default="R9920251000", choices=["rt_HG", "rt_HF", "R9920251000"], help="PBS queue name (default: 'R9920251000').")
 
     # Resource configuration
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
@@ -174,7 +175,8 @@ def main():
         swallow_version=args.swallow_version,
         llm_jp_eval_versions=args.llm_jp_eval_versions,
         swallow_template=swallow_template,
-        llm_jp_eval_template=llm_jp_eval_template
+        llm_jp_eval_template=llm_jp_eval_template,
+        pbs_queue=args.pbs_queue,
     )
 
     if args.dry_run:

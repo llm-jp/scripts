@@ -41,11 +41,6 @@ cd {experiment_dir}
 """
 
 SWALLOW_TEMPLATE = """\
-# Cache Hellaswag dataset
-cd environment/cache_hellaswag/
-bash cache.sh > $LOG_DIR/cache_hellaswag.log 2> $LOG_DIR/cache_hellaswag.err
-cd ../../
-
 # Run swallow evaluation
 cd environment/swallow_{swallow_version}/
 bash run-eval.sh \\
@@ -72,6 +67,8 @@ LLM_JP_EVAL_OUTPUT_SUBDIR_BY_VERSION = {
 }
 
 LLM_JP_EVAL_V2_EXPERIMENT_DIR = "/groups/gcg51557/experiments/0230_intg_eval_2509"
+LLM_JP_EVAL_V141_ALT_WORKDIR_EXPERIMENT_DIR = "/groups/gcg51557/experiments/0230_intg_eval_2509"
+LLM_JP_EVAL_V141_ALT_WORKDIR = "environment/llm-jp-eval-v1.4.1/"
 
 
 def load_args():
@@ -132,6 +129,11 @@ def main():
             args.experiment_dir = LLM_JP_EVAL_V2_EXPERIMENT_DIR
 
         llm_jp_eval_workdir = LLM_JP_EVAL_WORKDIR_BY_VERSION.get(args.llm_jp_eval_version)
+        if (
+            args.llm_jp_eval_version == "v1.4.1"
+            and os.path.samefile(args.experiment_dir, LLM_JP_EVAL_V141_ALT_WORKDIR_EXPERIMENT_DIR)
+        ):
+            llm_jp_eval_workdir = LLM_JP_EVAL_V141_ALT_WORKDIR
         if llm_jp_eval_workdir is None:
             raise ValueError(f"Unsupported llm-jp-eval version '{args.llm_jp_eval_version}'.")
 

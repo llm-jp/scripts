@@ -13,17 +13,18 @@ set -eux -o pipefail
 ENV_DIR=environment
 source ${ENV_DIR}/scripts/environment.sh
 
-if [[ $# -ne 5 ]]; then
-    >&2 echo "Usage: $0 MODEL OUTPUT_DIR GPU_MEMORY_UTILIZATION TENSOR_PARALLEL_SIZE DATA_PARALLEL_SIZE"
+if [[ $# -lt 2 || $# -gt 5 ]]; then
+    >&2 echo "Usage: $0 MODEL OUTPUT_DIR [GPU_MEMORY_UTILIZATION] [TENSOR_PARALLEL_SIZE] [DATA_PARALLEL_SIZE]"
+    >&2 echo "Defaults: GPU_MEMORY_UTILIZATION=0.9, TENSOR_PARALLEL_SIZE=1, DATA_PARALLEL_SIZE=1"
     exit 1
 fi
 
 # Arguments
 MODEL=$1
 OUTPUT_DIR=$2
-GPU_MEMORY_UTILIZATION=$3
-TENSOR_PARALLEL_SIZE=$4
-DATA_PARALLEL_SIZE=$5
+GPU_MEMORY_UTILIZATION=${3:-0.9}
+TENSOR_PARALLEL_SIZE=${4:-1}
+DATA_PARALLEL_SIZE=${5:-1}
 
 
 # Create OUTPUT_DIR if it does not exist

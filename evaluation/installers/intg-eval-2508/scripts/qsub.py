@@ -28,7 +28,7 @@ from pathlib import Path
 
 TEMPLATE = """#!/bin/sh
 #PBS -N {job_name}
-#PBS -P gcg51557
+#PBS -P {pbs_group}
 #PBS -q {pbs_queue}
 #PBS -v RTYPE={rtype}
 #PBS -l select={select}
@@ -104,6 +104,7 @@ def load_args():
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
     parser.add_argument("--dry-run", action="store_true", help="Print the generated qsub script and exit without submitting.")
     parser.add_argument("--pbs-queue", type=str, default="R9920251000", choices=["rt_HG", "rt_HF", "R9920251000"], help="PBS queue name (default: 'R9920251000').")
+    parser.add_argument("--pbs-group", type=str, default="gcg51557", help="ABCI project group name for PBS '-P'.")
 
     # Resource configuration
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
@@ -172,6 +173,7 @@ def main():
         experiment_dir=args.experiment_dir,
         model_name_or_path=args.model_name_or_path,
         options="\n".join(args.options),
+        pbs_group=args.pbs_group,
         swallow_version=args.swallow_version,
         llm_jp_eval_versions=args.llm_jp_eval_versions,
         swallow_template=swallow_template,

@@ -79,7 +79,8 @@ pushd llm-jp-eval-{llm_jp_eval_version}/
 mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
+    $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} \\
+    {max_num_samples} > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
 popd
 """
 
@@ -110,6 +111,7 @@ def load_args():
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
     parser.add_argument("--tensor-parallel-size", type=int, default=1, help="Number of tensor parallel groups.")
     parser.add_argument("--data-parallel-size", type=int, default=1, help="Number of data parallel groups.")
+    parser.add_argument("--llm-jp-eval-max-num-samples", type=int, default=100, help="Maximum number of samples per dataset for llm-jp-eval.")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -146,7 +148,7 @@ def main():
     llm_jp_eval_template = ""
     if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
         llm_jp_eval_template = "\n".join(
-            LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=version)
+            LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=version, max_num_samples=args.llm_jp_eval_max_num_samples)
             for version in args.llm_jp_eval_versions
         )
 

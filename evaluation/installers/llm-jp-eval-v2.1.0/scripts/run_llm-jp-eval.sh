@@ -10,14 +10,15 @@
 
 set -eux -o pipefail
 
-if [ $# -ne 2 ]; then
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR"
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [MAX_NUM_SAMPLES]"
     exit 1
 fi
 
 # Arguments
 MODEL_PATH=$1; shift
 OUTPUT_DIR=$(realpath $1); shift
+MAX_NUM_SAMPLES=${1:-100}
 TP_SIZE=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((TP_SIZE-1)))
 
@@ -39,6 +40,7 @@ DUMP_OPTS=(
     --output_dir=${DATASET_DIR}
     --eval_dataset_config_path=${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml
     --inference_input_dir=${PROMPT_OUTPUT_DIR}
+    --max_num_samples=${MAX_NUM_SAMPLES}
 )
 
 source ${LLM_JP_EVAL_DIR}/.venv/bin/activate

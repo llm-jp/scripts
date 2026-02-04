@@ -10,14 +10,15 @@
 
 set -eux -o pipefail
 
-if [ $# -ne 2 ]; then
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR"
+if [ $# -lt 2 ] || [ $# -gt 3 ]; then
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [MAX_NUM_SAMPLES]"
     exit 1
 fi
 
 # Arguments
 MODEL_PATH=$1; shift
 OUTPUT_DIR=$1; shift
+MAX_NUM_SAMPLES=${1:-100}
 TP_SIZE=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((TP_SIZE-1)))
 
@@ -40,6 +41,7 @@ LLM_JP_EVAL_OVERRIDES=(
     prompt_dump_dir=${PROMPT_OUTPUT_DIR}
     offline_dir=${OFFLINE_OUTPUT_DIR}
     log_dir=${RESULT_DIR}
+    metainfo.max_num_samples=${MAX_NUM_SAMPLES}
 )
 
 if [ -n "${HF_HOME}" ]; then

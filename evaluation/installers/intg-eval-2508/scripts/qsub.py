@@ -111,7 +111,7 @@ def load_args():
     parser.add_argument("--gpu-memory-utilization", type=float, default=0.9, help="The ratio (between 0 and 1) of GPU memory to reserve for the model weights, activations, and KV cache.")
     parser.add_argument("--tensor-parallel-size", type=int, default=1, help="Number of tensor parallel groups.")
     parser.add_argument("--data-parallel-size", type=int, default=1, help="Number of data parallel groups.")
-    parser.add_argument("--llm-jp-eval-max-num-samples", type=int, default=100, help="Maximum number of samples per dataset for llm-jp-eval.")
+    parser.add_argument("--llm-jp-eval-max-num-samples", type=int, default=100, help="Maximum number of samples per dataset for llm-jp-eval. Set '-1' to use all samples.")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

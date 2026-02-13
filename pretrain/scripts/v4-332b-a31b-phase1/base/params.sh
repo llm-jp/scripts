@@ -1,4 +1,4 @@
-# LLM-jp v4 model 32B-A3.8B
+# LLM-jp v4 model 332B-A31B
 
 ALL_PARAMS=()
 
@@ -90,9 +90,14 @@ ALL_PARAMS+=(
 ALL_PARAMS+=(
     --context-parallel-size 1
     --expert-model-parallel-size 8
-    --pipeline-model-parallel-size 1
+    --expert-tensor-parallel-size 1
+    --pipeline-model-parallel-size 4
+    --num-layers-per-virtual-pipeline-stage 2
     --sequence-parallel
-    --tensor-model-parallel-size 1
+    --tensor-model-parallel-size 2
+    # NOTE(taishi): 学習が進みload balanceが収束すれば以下のrecomputeは不要になるはず
+    --recompute-granularity selective
+    --recompute-modules moe_act layernorm
     --use-distributed-optimizer
     --distributed-backend nccl
     # NOTE(odashi): Increasing timeout is required to prepare 15.6T dataset.

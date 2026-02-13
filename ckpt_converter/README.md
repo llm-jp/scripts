@@ -30,7 +30,8 @@ bash scripts/ckpt_converter/convert_to_hf_cpu.sh \
   /path/to/VENV_DIR \
   /path/to/MEGATRON_PATH \
   /path/to/HF_TOKENIZER_PATH \
-  /path/to/OUTPUT_DIR
+  /path/to/OUTPUT_DIR \
+  MODEL_PARALLEL_SIZE
 ```
 
 - `TASK_DIR`: Root of training run; must contain `checkpoints/iter_XXXXXXX`.
@@ -39,5 +40,6 @@ bash scripts/ckpt_converter/convert_to_hf_cpu.sh \
 - `MEGATRON_PATH`: Megatron-LM root directory (must contain `tools/checkpoint/convert.py`).
 - `HF_TOKENIZER_PATH`: Path to the Hugging Face tokenizer directory.
 - `OUTPUT_DIR`: Destination directory for converted HF checkpoints.
+- `MODEL_PARALLEL_SIZE`: Only support tensor parallel at this point.
 
 The script queues a single PBS job, passing these values to `qsub_convert_cpu.sh`.

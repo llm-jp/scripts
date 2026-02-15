@@ -51,7 +51,7 @@ ALL_PARAMS+=(
 # MoE
 ALL_PARAMS+=(
     --manual-gc
-    --manual-gc-interval 10
+    --manual-gc-interval 100
     --moe-aux-loss-coeff 1e-2
     --moe-grouped-gemm
     --moe-permute-fusion
@@ -95,9 +95,12 @@ ALL_PARAMS+=(
     --num-layers-per-virtual-pipeline-stage 2
     --sequence-parallel
     --tensor-model-parallel-size 2
-    # NOTE(taishi): 学習が進みload balanceが収束すれば以下のrecomputeは不要になるはず
+
+    # NOTE(taishi): 学習が進みload balanceが収束すれば以下のrecomputeは不要になる
+    # NOTE(taishi): 少なくとも2000iter時点では外せる
     --recompute-granularity selective
     --recompute-modules moe_act layernorm
+
     --use-distributed-optimizer
     --distributed-backend nccl
     # NOTE(odashi): Increasing timeout is required to prepare 15.6T dataset.

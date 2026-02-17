@@ -49,5 +49,6 @@ source ${SCRIPT_DIR}/src/install_flash_attention_3.sh
 source ${SCRIPT_DIR}/src/install_transformer_engine.sh
 source ${SCRIPT_DIR}/src/install_megatron_lm.sh
 source ${SCRIPT_DIR}/src/install_tokenizer.sh
+source ${SCRIPT_DIR}/src/install_deepep.sh
 
 echo "Done all installations"

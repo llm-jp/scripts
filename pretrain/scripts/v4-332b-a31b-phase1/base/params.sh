@@ -58,7 +58,8 @@ ALL_PARAMS+=(
     --moe-router-dtype fp32
     --moe-router-load-balancing-type aux_loss
     --moe-router-topk 8
-    --moe-token-dispatcher-type alltoall
+    --moe-enable-deepep
+    --moe-token-dispatcher-type flex
     --moe-z-loss-coeff 1e-3
     --num-experts 128
 )

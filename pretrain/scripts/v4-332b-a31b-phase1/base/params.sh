@@ -92,7 +92,8 @@ ALL_PARAMS+=(
     --expert-model-parallel-size 8
     --expert-tensor-parallel-size 1
     --pipeline-model-parallel-size 4
-    --num-layers-per-virtual-pipeline-stage 2
+    # NOTE(taishi): mmapとの併用で2だと学習できないため4にしている
+    --num-layers-per-virtual-pipeline-stage 4
     --sequence-parallel
     --tensor-model-parallel-size 2
 
@@ -113,6 +114,9 @@ ALL_PARAMS+=(
     --data-path ${TRAIN_DATA_PATH[@]}
     --data-cache-path ${TASK_DIR}/cache
     --split 1,0,0
+
+    # NOTE(taishi): つけないとVPPと併用して学習できない
+    --no-mmap-bin-files
 )
 
 # Other implementation-related parameters

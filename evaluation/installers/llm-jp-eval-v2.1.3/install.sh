@@ -90,10 +90,15 @@ popd  # inference-modules/vllm
 popd  # llm-jp-eval-inference
 
 # Preprocess dataset
+# --version-name は実のところデータセットの出力先のディレクトリの名称としてだけ使われる。
+# この値は `llm_jp_eval.__version__` に一致させなければならない。dumpやeval時にこの値から
+# データセットを読みに行くので、不一致があるとエラーになる。
+# llm-jp-evalのパッケージとしてのバージョンはもう >2.0.0 であるが、`__version__` が依然として
+# 2.0.0 であるため、やむを得ず 2.0.0 を指定している。
 uv run python scripts/preprocess_dataset.py \
   --dataset-name all \
   --output-dir ${ENV_DIR}/data/llm-jp-eval \
-  --version-name $LLM_JP_EVAL_TAG
+  --version-name 2.0.0
 
 popd  # llm-jp-eval
 popd  # src

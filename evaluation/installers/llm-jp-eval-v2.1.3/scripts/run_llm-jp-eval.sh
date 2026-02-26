@@ -11,7 +11,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER] [--tokenize_kwargs JSON]"
     exit 1
 }
 
@@ -24,11 +24,13 @@ OUTPUT_DIR=$(realpath $1); shift
 MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
 REASONING_PARSER=""
+TOKENIZE_KWARGS=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --apply_chat_template) APPLY_CHAT_TEMPLATE=true; shift ;;
         --reasoning_parser) REASONING_PARSER=$2; shift 2 ;;
+        --tokenize_kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -78,16 +80,19 @@ fi
 if [ -n "${REASONING_PARSER}" ]; then
     INFERENCE_OPTS+=(--model.reasoning_parser ${REASONING_PARSER})
 fi
+if [ -n "${TOKENIZE_KWARGS}" ]; then
+    INFERENCE_OPTS+=(--tokenize_kwargs "${TOKENIZE_KWARGS}")
+fi
 
 source ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/.venv/bin/activate
 RUN_NAME=$(python \
     ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/inference.py \
     get_run_name \
-    ${INFERENCE_OPTS[@]} | tail -n1)
+    "${INFERENCE_OPTS[@]}" | tail -n1)
 python \
     ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/inference.py \
     inference \
-    ${INFERENCE_OPTS[@]}
+    "${INFERENCE_OPTS[@]}"
 
 deactivate
 

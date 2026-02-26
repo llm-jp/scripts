@@ -88,7 +88,7 @@ LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
 mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
-LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser})
+LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args})
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} \\
@@ -127,6 +127,7 @@ def load_args():
     parser.add_argument("--llm-jp-eval-max-num-samples", type=int, default=100, help="Maximum number of samples per dataset for llm-jp-eval. Set '-1' to use all samples.")
     parser.add_argument("--apply-chat-template", action="store_true", help="Apply chat template when running inference.")
     parser.add_argument("--reasoning-parser", type=str, default=None, help="Reasoning parser to extract final response (e.g. 'openai_gptoss').")
+    parser.add_argument("--chat-template-args", type=str, nargs="*", default=None, metavar="KEY=VALUE", help="Extra keyword arguments for chat template application (e.g. 'reasoning_effort=low'). Requires --apply-chat-template.")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -164,6 +165,12 @@ def main():
     if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
         apply_chat_template_flag = " --apply_chat_template" if args.apply_chat_template else ""
         reasoning_parser_flag = f" --reasoning_parser {args.reasoning_parser}" if args.reasoning_parser else ""
+        chat_template_args_flag = ""
+        if args.chat_template_args:
+            # Default value hardcoded in llm-jp-eval-inference's BaseInferenceConfig.tokenize_kwargs
+            d = {"add_special_tokens": True}
+            d.update(dict(arg.split("=", 1) for arg in args.chat_template_args))
+            chat_template_args_flag = f" --tokenize_kwargs '{json.dumps(d, ensure_ascii=False, separators=(',', ':'))}'"
         chunks = []
         for version in args.llm_jp_eval_versions:
             if version == "v2.1.3":
@@ -172,6 +179,7 @@ def main():
                     max_num_samples=args.llm_jp_eval_max_num_samples,
                     apply_chat_template=apply_chat_template_flag,
                     reasoning_parser=reasoning_parser_flag,
+                    chat_template_args=chat_template_args_flag,
                 )
             else:
                 chunk = LLM_JP_EVAL_TEMPLATE_LEGACY.format(

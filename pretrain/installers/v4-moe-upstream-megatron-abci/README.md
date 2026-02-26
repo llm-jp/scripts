@@ -1,11 +1,11 @@
-# Megatron-LM Installer for LLM-jp v5 on ABCI
+# Megatron-LM Installer for LLM-jp v4 MoE on ABCI
 
 ## Usage
 
 ABCI 3.0上で以下のコマンドを実行し、`<env_install_path>`に環境を構築できる
 
 ```bash
-cd pretrain/installers/v4-upstream-megatron-abci/
+cd pretrain/installers/v4-moe-upstream-megatron-abci/
 bash run_setup.sh <env_install_path>
 ```
 

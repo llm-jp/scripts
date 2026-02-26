@@ -5,6 +5,8 @@
 # * TASK_NAME: Name of the task
 # * WANDB_PROJECT: W&B project name
 
+set -eu -o pipefail
+
 cd ${PBS_O_WORKDIR}
 
 TASK_DIR=${EXPERIMENT_DIR}/tasks/${TASK_NAME}
@@ -14,8 +16,6 @@ mkdir -p ${TASK_DIR}/logs
 LOGFILE=${TASK_DIR}/logs/pretrain-${JOB_ID}.out
 ERRFILE=${TASK_DIR}/logs/pretrain-${JOB_ID}.err
 exec > ${LOGFILE} 2> ${ERRFILE}
-
-set -eu -o pipefail
 
 ENV_DIR=${EXPERIMENT_DIR}/env
 SCRIPT_DIR=${EXPERIMENT_DIR}/scripts
@@ -55,42 +55,58 @@ echo "hostname: ${MASTER_ADDR}"
 NUM_NODES=$(wc -l < ${PBS_NODEFILE})
 NUM_GPUS_PER_NODE=8
 NUM_GPUS=$((${NUM_NODES} * ${NUM_GPUS_PER_NODE}))
-echo "nnodes: ${NUM_NODES}; ngpus: ${NUM_GPUS}"
 echo NUM_NODES=${NUM_NODES}
 echo NUM_GPUS_PER_NODE=${NUM_GPUS_PER_NODE}
 echo NUM_GPUS=${NUM_GPUS}
 
+# For logging
+echo "PBS_NODEFILE:"
 cat ${PBS_NODEFILE}
 
-# Training steps
-TRAIN_ITERS=$(cat ${TASK_DIR}/train_iters.txt)
-
-# Training data: TRAIN_DATA_PATH
+# Load training data: TRAIN_DATA_PATH
 source ${TASK_DIR}/train_data.sh
 
-# Synthesize all model params: ALL_PARAMS
-# Requires TRAIN_ITERS and TRAIN_DATA_PATH
+# Load model params: ALL_PARAMS
+# Requires TRAIN_DATA_PATH
 source ${TASK_DIR}/params.sh
 
 # Add logging params
 ALL_PARAMS+=(
     --log-interval 1
     --log-throughput
+    --moe-per-layer-logging
     --wandb-entity llm-jp
     --wandb-project ${WANDB_PROJECT}
     --wandb-exp-name ${EXPERIMENT_NAME}
 )
 
 # Add Checkpointing params
+BASE_CHECKPOINT_DIR=${TASK_DIR}/base_checkpoints
 TASK_CHECKPOINT_DIR=${TASK_DIR}/checkpoints
+
+if [ -e ${TASK_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
+    echo "Resume from the last checkpoint in this task"
+    LOAD_DIR=${TASK_CHECKPOINT_DIR}
+elif [ -e ${BASE_CHECKPOINT_DIR}/latest_checkpointed_iteration.txt ]; then
+    echo "Start from the base checkpoint"
+    LOAD_DIR=${BASE_CHECKPOINT_DIR}
+else
+    echo "Start from scratch"
+    LOAD_DIR=${TASK_CHECKPOINT_DIR}
+fi
+
 ALL_PARAMS+=(
-    --load ${TASK_CHECKPOINT_DIR}
+    --load ${LOAD_DIR}
     --save ${TASK_CHECKPOINT_DIR}
     --save-interval 1000
+    --async-save
+    --ckpt-format torch_dist
 )
 
+# For logging
 echo "ALL_PARAMS: ${ALL_PARAMS[@]}"
 
+echo "Start training..."
 mpirun \
     --display-allocation \
     --report-bindings \
@@ -102,3 +118,5 @@ mpirun \
     python \
         ${ENV_DIR}/src/Megatron-LM/pretrain_gpt.py \
         ${ALL_PARAMS[@]}
+
+echo "Training completed successfully."

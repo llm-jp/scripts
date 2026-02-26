@@ -1,13 +1,13 @@
-# Pretraining hyperparameters compatible with Llama 3 8B.
+# LLM-jp v4 model 32B
 
 ALL_PARAMS=()
 
 # Model hyperparameters
 ALL_PARAMS+=(
-    --num-layers 32
-    --hidden-size 4096
-    --ffn-hidden-size 14336
-    --num-attention-heads 32
+    --num-layers 64
+    --hidden-size 5120
+    --ffn-hidden-size 27648
+    --num-attention-heads 40
     --group-query-attention
     --num-query-groups 8
 
@@ -20,21 +20,21 @@ ALL_PARAMS+=(
     --untie-embeddings-and-output-weights
     --swiglu
     --normalization RMSNorm
-    --norm-epsilon 1e-5
+    --norm-epsilon 1e-6
     --disable-bias-linear
 )
 
 # Tokenizer
 ALL_PARAMS+=(
     --tokenizer-type Llama2Tokenizer
-    --tokenizer-model ${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model
+    --tokenizer-model ${ENV_DIR}/src/llm-jp-tokenizer-v4/v4_alpha_1.0.model
 )
 
 # Optimizer hyperparameters
 ALL_PARAMS+=(
     --optimizer adam
-    --lr 3e-4
-    --min-lr 3e-5
+    --lr 2e-4
+    --min-lr 2e-5
     --adam-beta1 0.9
     --adam-beta2 0.95
     --adam-eps 1e-8
@@ -46,11 +46,18 @@ ALL_PARAMS+=(
 )
 
 # Scheduler
+# At least 10_526_120 steps required to train all tokens.
+# ( == ceil[22_074_871_647_659 / 512 / 4096] )
 ALL_PARAMS+=(
-    --train-iters 100000
+    --train-iters 12000000
     --lr-warmup-iters 2000
-    --lr-decay-iters 100000
-    --lr-decay-style cosine
+    --lr-decay-iters 12000000
+    --lr-decay-style WSD
+
+    # NOTE(odashi): We run stable training: don't apply decay until the last step.
+    --lr-wsd-decay-style linear
+    --lr-wsd-decay-iters 1
+
     --eval-interval 999999999
     --eval-iters 0
 )
@@ -58,12 +65,12 @@ ALL_PARAMS+=(
 # Batch sizes
 ALL_PARAMS+=(
     --micro-batch-size 2
-    --global-batch-size 1024
+    --global-batch-size 512
 )
 
 # Parallelism
 ALL_PARAMS+=(
-    --tensor-model-parallel-size 1
+    --tensor-model-parallel-size 4
     --pipeline-model-parallel-size 1
     --context-parallel-size 1
     --sequence-parallel
@@ -91,8 +98,8 @@ ALL_PARAMS+=(
     # NOTE(odashi): For adjusting throughput
     #--recompute-activations
     #--recompute-granularity selective
-    #--overlap-grad-reduce
-    #--overlap-param-gather
+    --overlap-grad-reduce
+    --overlap-param-gather
 
     --attention-softmax-in-fp32
     --transformer-impl transformer_engine
@@ -100,4 +107,19 @@ ALL_PARAMS+=(
     # NOTE(sosuke): According to my experiments, fused attention backend is the fastest in available options (including flash_attn_3).
     # ref: https://docs.nvidia.com/deeplearning/transformer-engine/user-guide/examples/attention/attention.html
     --attention-backend fused
+)
+
+# NOTE(odashi):
+# https://docs.nvidia.com/nemo-framework/user-guide/latest/performance/performance-guide.html#communication-overlaps-and-tuning
+export NVTE_FWD_LAYERNORM_SM_MARGIN=16
+export NVTE_BWD_LAYERNORM_SM_MARGIN=16
+
+# Overrides for scheduler decay
+ALL_PARAMS+=(
+    --override-opt_param-scheduler
+    --min-lr 0
+    --train-iters 1000000
+    --lr-decay-iters 1000000
+    --lr-wsd-decay-style minus_sqrt
+    --lr-wsd-decay-iters 100000
 )

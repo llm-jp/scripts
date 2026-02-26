@@ -73,7 +73,7 @@ bash run-eval.sh \\
 popd
 """
 
-LLM_JP_EVAL_TEMPLATE = """\
+LLM_JP_EVAL_TEMPLATE_LEGACY = """\
 # Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
 mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
@@ -83,6 +83,19 @@ bash run_llm-jp-eval.sh \\
     {max_num_samples} > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
 popd
 """
+
+LLM_JP_EVAL_TEMPLATE = """\
+# Run llm-jp-eval {llm_jp_eval_version}
+pushd llm-jp-eval-{llm_jp_eval_version}/
+mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
+LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser})
+bash run_llm-jp-eval.sh \\
+    $MODEL_NAME_OR_PATH \\
+    $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} \\
+    "${{LLM_JP_EVAL_OPTS[@]}}" > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
+popd
+"""
+
 
 def load_args():
     parser = argparse.ArgumentParser(description="Generate qsub script for evaluation jobs.")
@@ -95,7 +108,7 @@ def load_args():
     # Evaluator versions
     parser.add_argument("--swallow-version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
     parser.add_argument("--disable-swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
-    parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0"], help="Versions of the llm-jp-eval environment to run.")
+    parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0", "v2.1.3"], help="Versions of the llm-jp-eval environment to run.")
     parser.add_argument("--disable-llm-jp-eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")
 
     # Job configuration
@@ -112,6 +125,8 @@ def load_args():
     parser.add_argument("--tensor-parallel-size", type=int, default=1, help="Number of tensor parallel groups.")
     parser.add_argument("--data-parallel-size", type=int, default=1, help="Number of data parallel groups.")
     parser.add_argument("--llm-jp-eval-max-num-samples", type=int, default=100, help="Maximum number of samples per dataset for llm-jp-eval. Set '-1' to use all samples.")
+    parser.add_argument("--apply-chat-template", action="store_true", help="Apply chat template when running inference.")
+    parser.add_argument("--reasoning-parser", type=str, default=None, help="Reasoning parser to extract final response (e.g. 'openai_gptoss').")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -147,10 +162,24 @@ def main():
         )
     llm_jp_eval_template = ""
     if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
-        llm_jp_eval_template = "\n".join(
-            LLM_JP_EVAL_TEMPLATE.format(llm_jp_eval_version=version, max_num_samples=args.llm_jp_eval_max_num_samples)
-            for version in args.llm_jp_eval_versions
-        )
+        apply_chat_template_flag = " --apply_chat_template" if args.apply_chat_template else ""
+        reasoning_parser_flag = f" --reasoning_parser {args.reasoning_parser}" if args.reasoning_parser else ""
+        chunks = []
+        for version in args.llm_jp_eval_versions:
+            if version == "v2.1.3":
+                chunk = LLM_JP_EVAL_TEMPLATE.format(
+                    llm_jp_eval_version=version,
+                    max_num_samples=args.llm_jp_eval_max_num_samples,
+                    apply_chat_template=apply_chat_template_flag,
+                    reasoning_parser=reasoning_parser_flag,
+                )
+            else:
+                chunk = LLM_JP_EVAL_TEMPLATE_LEGACY.format(
+                    llm_jp_eval_version=version,
+                    max_num_samples=args.llm_jp_eval_max_num_samples,
+                )
+            chunks.append(chunk)
+        llm_jp_eval_template = "\n".join(chunks)
 
     hf_home = os.environ.get("HF_HOME")
 

@@ -10,15 +10,28 @@
 
 set -eux -o pipefail
 
-if [ $# -lt 2 ] || [ $# -gt 3 ]; then
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [MAX_NUM_SAMPLES]"
+usage() {
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER]"
     exit 1
-fi
+}
 
-# Arguments
+# Positional arguments
+if [ $# -lt 2 ]; then usage; fi
 MODEL_PATH=$1; shift
 OUTPUT_DIR=$(realpath $1); shift
-MAX_NUM_SAMPLES=${1:-100}
+
+# Optional arguments
+MAX_NUM_SAMPLES=100
+APPLY_CHAT_TEMPLATE=false
+REASONING_PARSER=""
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
+        --apply_chat_template) APPLY_CHAT_TEMPLATE=true; shift ;;
+        --reasoning_parser) REASONING_PARSER=$2; shift 2 ;;
+        *) >&2 echo "Unknown option: $1"; usage ;;
+    esac
+done
 TP_SIZE=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((TP_SIZE-1)))
 
@@ -59,6 +72,12 @@ INFERENCE_OPTS=(
     # TODO: Specify the exact prompt_json_path for safety
     --prompt_json_path=${PROMPT_OUTPUT_DIR}_*/*.eval-prompt.json
 )
+if [ "${APPLY_CHAT_TEMPLATE}" = true ]; then
+    INFERENCE_OPTS+=(--apply_chat_template)
+fi
+if [ -n "${REASONING_PARSER}" ]; then
+    INFERENCE_OPTS+=(--model.reasoning_parser ${REASONING_PARSER})
+fi
 
 source ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/.venv/bin/activate
 RUN_NAME=$(python \

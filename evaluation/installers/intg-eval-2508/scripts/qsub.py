@@ -76,10 +76,10 @@ popd
 LLM_JP_EVAL_TEMPLATE_LEGACY = """\
 # Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
-mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
+mkdir -p $OUTPUT_DIR/{llm_jp_eval_output_subdir}
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} \\
+    $OUTPUT_DIR/{llm_jp_eval_output_subdir} \\
     {max_num_samples} > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
 popd
 """
@@ -87,14 +87,21 @@ popd
 LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
-mkdir -p $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version}
+mkdir -p $OUTPUT_DIR/{llm_jp_eval_output_subdir}
 LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args})
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
-    $OUTPUT_DIR/llm-jp-eval/{llm_jp_eval_version} \\
+    $OUTPUT_DIR/{llm_jp_eval_output_subdir} \\
     "${{LLM_JP_EVAL_OPTS[@]}}" > $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.log 2> $LOG_DIR/llm-jp-eval-{llm_jp_eval_version}.err
 popd
 """
+
+# The same output subdirectory structure as qsub_nonbreaking.py
+LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
+    "v1.4.1": "llm-jp-eval",
+    "v2.1.0": "llm-jp-eval_v2.1.0",
+    "v2.1.3": "llm-jp-eval_v2.1.3",
+}
 
 
 def load_args():
@@ -117,6 +124,7 @@ def load_args():
     parser.add_argument("--select", type=int, default=1, help="Number of nodes (rt_HF) to use for the job.")
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
     parser.add_argument("--dry-run", action="store_true", help="Print the generated qsub script and exit without submitting.")
+    parser.add_argument("--legacy-output", action="store_true", help="Use the legacy output directory structure from /groups/gcg51557/evaluation/qsub.py (e.g. llm-jp-eval/ for v1.4.1, llm-jp-eval_v2.1.0/ for v2.1.0) instead of the default layout under llm-jp-eval/<version>/.")
     parser.add_argument("--pbs-queue", type=str, default="R9920251000", choices=["rt_HG", "rt_HF", "R9920251000"], help="PBS queue name (default: 'R9920251000').")
     parser.add_argument("--pbs-group", type=str, default="gcg51557", help="ABCI project group name for PBS '-P'.")
 
@@ -173,9 +181,16 @@ def main():
             chat_template_args_flag = f" --tokenize_kwargs '{json.dumps(d, ensure_ascii=False, separators=(',', ':'))}'"
         chunks = []
         for version in args.llm_jp_eval_versions:
+            if args.legacy_output:
+                llm_jp_eval_output_subdir = LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING.get(
+                    version, f"llm-jp-eval_{version}"
+                )
+            else:
+                llm_jp_eval_output_subdir = f"llm-jp-eval/{version}"
             if version == "v2.1.3":
                 chunk = LLM_JP_EVAL_TEMPLATE.format(
                     llm_jp_eval_version=version,
+                    llm_jp_eval_output_subdir=llm_jp_eval_output_subdir,
                     max_num_samples=args.llm_jp_eval_max_num_samples,
                     apply_chat_template=apply_chat_template_flag,
                     reasoning_parser=reasoning_parser_flag,
@@ -184,6 +199,7 @@ def main():
             else:
                 chunk = LLM_JP_EVAL_TEMPLATE_LEGACY.format(
                     llm_jp_eval_version=version,
+                    llm_jp_eval_output_subdir=llm_jp_eval_output_subdir,
                     max_num_samples=args.llm_jp_eval_max_num_samples,
                 )
             chunks.append(chunk)

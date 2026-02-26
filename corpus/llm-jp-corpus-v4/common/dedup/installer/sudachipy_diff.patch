@@ -1,0 +1,17 @@
+diff --git a/sudachipy/__init__.py b/sudachipy/__init__.py
+index 0b3e8a2..3bafbc0 100644
+--- a/sudachipy/__init__.py
++++ b/sudachipy/__init__.py
+@@ -16,9 +16,8 @@ from . import utf8inputtextbuilder
+ from . import tokenizer
+ from . import config
+
+-from pkg_resources import get_distribution, DistributionNotFound
++import importlib.metadata
+ try:
+-    __version__ = get_distribution(__name__).version
+-except DistributionNotFound:
+-    # package is not installed
++    __version__ = importlib.metadata.version(__name__)
++except importlib.metadata.PackageNotFoundError:
+     pass

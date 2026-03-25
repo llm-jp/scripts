@@ -108,7 +108,7 @@ export SANDBOX_PORT=$(python3 -c 'import socket; s=socket.socket(); s.bind(("", 
 # Used by llm-jp-eval
 export CODE_EXECUTION_ENDPOINT="http://localhost:$SANDBOX_PORT"
 
-singularity run --bind $SANDBOX_DIR:/var/sandbox,$LOG_DIR:/logs --pwd / docker://langgenius/dify-sandbox &
+singularity run --bind $SANDBOX_DIR:/var/sandbox,$LOG_DIR:/logs --pwd / docker://langgenius/dify-sandbox@sha256:7ce01bc519069365f22dc0916155608aeff997eeeeda279b784120412c1e71aa &
 SINGULARITY_PID=$!
 
 cleanup_singularity() {

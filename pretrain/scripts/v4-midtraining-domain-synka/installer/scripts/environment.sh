@@ -43,3 +43,15 @@ module load hpcx/${PRETRAIN_HPCX_VERSION}
 
 # CUDA_HOME is set by module load cuda/12.6 to /home/apps/cuda/12.6
 export LD_LIBRARY_PATH=${NCCL_HOME}/lib:${LD_LIBRARY_PATH:-}
+
+# Resolve the installed environment root both during setup and later runtime
+# jobs. During setup TARGET_DIR is set; runtime jobs typically source the copied
+# script from ${ENV_DIR}/scripts/environment.sh without TARGET_DIR.
+ENV_ROOT=${TARGET_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
+
+# Transformer Engine requires cuDNN 9 at runtime. On SYNKA we provide it from
+# the pip-installed nvidia-cudnn-cu12 package inside the venv.
+if [ -d "${ENV_ROOT}/venv/lib/python3.10/site-packages/nvidia/cudnn/lib" ]; then
+    CUDNN_BASE=${ENV_ROOT}/venv/lib/python3.10/site-packages/nvidia/cudnn
+    export LD_LIBRARY_PATH=${CUDNN_BASE}/lib:${LD_LIBRARY_PATH}
+fi

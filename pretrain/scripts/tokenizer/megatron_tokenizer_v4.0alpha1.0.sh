@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Tokenization script using llm-jp-tokenizer v3.0b1 for Megatron-LM
+# Tokenization script using llm-jp-tokenizer v4.0alpha1.0 for Megatron-LM
 #
-# Usage: sbatch (or bash) megatron_tokenizer_v3.0b1.sh
+# Usage: sbatch (or bash) megatron_tokenizer_v4.0alpha1.0.sh
 #
 # Prerequisites:
 # * Set the paths for ENV_DIR and DATA_ROOT to appropriate locations before executing.
@@ -21,7 +21,7 @@ ENV_DIR="environment"
 # Set dataset path
 DATA_ROOT="/path/to/dataset"
 SOURCE_DIR="${DATA_ROOT}/raw"
-OUTPUT_ROOT="${DATA_ROOT}/tokenized/v3.0b1"
+OUTPUT_ROOT="${DATA_ROOT}/tokenized/v4.0alpha1.0"
 OUTPUT_DIR="${OUTPUT_ROOT}/data"
 OUTPUT_INFO="${OUTPUT_ROOT}/token_info.csv"
 
@@ -36,7 +36,7 @@ fi
 cd $TOKENIZER_DIRNAME
 
 # Tokenize settings
-MODEL_PATH="${ENV_DIR}/src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model"
+MODEL_PATH="${ENV_DIR}/src/llm-jp-tokenizer/models/ver4.0_alpha1.0/llm-jp-tokenizer_ver4.0_alpha1.0.model"
 TOKENIZER_TYPE="Llama2Tokenizer"
 WORKERS=64
 

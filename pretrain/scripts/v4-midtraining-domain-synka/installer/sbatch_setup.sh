@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=0309
+#SBATCH --job-name=FIXME
 #SBATCH --partition=llmjp-pj
 #SBATCH --account=llmjp-pj
 #SBATCH --nodes=1

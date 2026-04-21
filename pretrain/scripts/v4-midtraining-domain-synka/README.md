@@ -2,12 +2,10 @@
 
 SYNKA 上で Megatron-LM を利用した LLM-jp v4 用の学習スクリプトのテンプレート
 
-## Usage
-
 以下では、SYNKA 上での環境構築と学習の実行方法を説明する。
 `$EXP_DIR` は、事前に作成した実験ディレクトリを指すものとする (e.g. `/data/llmjp-pj/experiments/9999_template`)。
 
-### Environment Setup
+## Environment Setup
 
 まず、`$EXP_DIR` 内に `llm-jp/scripts` リポジトリをクローンする
 
@@ -26,9 +24,9 @@ sbatch sbatch_setup.sh $EXP_DIR/env
 実行するとジョブスケジューラにジョブが投入される。
 投入されたジョブが完了すると、`$EXP_DIR/env` に環境が構築される。
 
-### Run Training
+## Run Training
 
-#### 1. タスクディレクトリの作成
+### 1. タスクディレクトリの作成
 
 まず、 `task_template/` ディレクトリを `$EXP_DIR/tasks/$TASK_NAME` にコピーする。
 `$TASK_NAME` は、任意の実験のタスク名を指定する。
@@ -42,7 +40,7 @@ cp -r pretrain/scripts/v4-midtraining-domain-synka/task_template $EXP_DIR/tasks/
 タスクディレクトリは学習の設定を定義する。
 詳しい設定方法は "Training Configuration" セクションを参照。
 
-#### 2. 学習の実行
+### 2. 学習の実行
 
 次に、以下のコマンドで学習を実行する。
 
@@ -60,7 +58,49 @@ CLIからは以下の引数を指定する
 - `<TASK_NAME>`: タスクディレクトリ名 (e.g. `task_name`)
 - `<WANDB_PROJECT>`: WandB に記録するプロジェクト名 (e.g. `0123_experiment`)
 
-### Training Configuration
+## Checkpoint Conversion
+
+`converter/` 以下には Hugging Face 形式と Megatron Core 形式を相互変換するスクリプトが含まれる。
+
+### Hugging Face to Megatron Core
+
+Hugging Face 形式のモデルを Megatron Core 形式へ変換するには、以下を実行する。
+
+```bash
+cd $EXP_DIR/scripts
+sbatch pretrain/scripts/v4-midtraining-domain-synka/converter/sbatch_hf_to_mcore.sh <ENV_DIR> <HF_FORMAT_DIR> <MCORE_FORMAT_DIR> <TARGET_TP_SIZE> <TARGET_PP_SIZE>
+# Example:
+sbatch pretrain/scripts/v4-midtraining-domain-synka/converter/sbatch_hf_to_mcore.sh /data/llmjp-pj/experiments/0340_v4_domain_common/env /path/to/hf_ckpt /path/to/mcore_ckpt 1 1
+```
+
+CLIからは以下の引数を指定する。
+
+- `<ENV_DIR>`: 環境ディレクトリのパス (e.g. `$EXP_DIR/env`)
+- `<HF_FORMAT_DIR>`: 変換元の Hugging Face 形式チェックポイントのディレクトリ
+- `<MCORE_FORMAT_DIR>`: 変換先の Megatron Core 形式チェックポイントのディレクトリ
+- `<TARGET_TP_SIZE>`: 変換後の tensor parallel size
+- `<TARGET_PP_SIZE>`: 変換後の pipeline parallel size
+
+### Megatron Core to Hugging Face
+
+学習済みの Megatron Core 形式チェックポイントを Hugging Face 形式へ変換するには、以下を実行する。
+
+```bash
+cd $EXP_DIR/scripts
+sbatch pretrain/scripts/v4-midtraining-domain-synka/converter/sbatch_mcore_to_hf.sh <EXPERIMENT_DIR> <TASK_NAME> <ITER> <TOKENIZER_DIR>
+# Example:
+sbatch pretrain/scripts/v4-midtraining-domain-synka/converter/sbatch_mcore_to_hf.sh /data/llmjp-pj/experiments/0340_v4_domain_common v4-8b-mid-phase3 1000 /path/to/tokenizer
+```
+
+CLIからは以下の引数を指定する。
+
+- `<NUM_NODES>`: 変換元 checkpoint の並列数に合わせて使用するノード数
+- `<EXPERIMENT_DIR>`: 実験ディレクトリのパス (e.g. `/path/to/0123_experiment`)
+- `<TASK_NAME>`: タスクディレクトリ名
+- `<ITER>`: 変換対象の iteration 番号 (e.g. `1000`)
+- `<TOKENIZER_DIR>`: Hugging Face 形式出力にコピーする tokenizer ファイル群のディレクトリ
+
+## Training Configuration
 
 タスクディレクトリ内には以下のようなファイルが含まれる。
 

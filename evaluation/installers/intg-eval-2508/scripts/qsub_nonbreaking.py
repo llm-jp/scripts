@@ -89,7 +89,7 @@ def load_args():
     parser.add_argument("--select", type=int, default=1, help="Number of nodes (rt_HF) to use for the job.")
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
     parser.add_argument("--dry-run", action="store_true", help="Print the generated qsub script and exit without submitting.")
-    parser.add_argument("--pbs-queue", type=str, default="R9920251000", choices=["rt_HG", "rt_HF", "R9920251000"], help="PBS queue name (default: 'R9920251000').")
+    parser.add_argument("--pbs-queue", type=str, default="R9920261000", choices=["rt_HG", "rt_HF", "R9920261000"], help="PBS queue name (default: 'R9920261000').")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

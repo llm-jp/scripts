@@ -125,7 +125,7 @@ def load_args():
     parser.add_argument("--options", type=str, default=[], nargs="*", help="Additional options for the qsub script.")
     parser.add_argument("--dry-run", action="store_true", help="Print the generated qsub script and exit without submitting.")
     parser.add_argument("--legacy-output", action="store_true", help="Use the legacy output directory structure from /groups/gcg51557/evaluation/qsub.py (e.g. llm-jp-eval/ for v1.4.1, llm-jp-eval_v2.1.0/ for v2.1.0) instead of the default layout under llm-jp-eval/<version>/.")
-    parser.add_argument("--pbs-queue", type=str, default="R9920251000", choices=["rt_HG", "rt_HF", "R9920251000"], help="PBS queue name (default: 'R9920251000').")
+    parser.add_argument("--pbs-queue", type=str, default="R9920261000", choices=["rt_HG", "rt_HF", "R9920261000"], help="PBS queue name (default: 'R9920261000').")
     parser.add_argument("--pbs-group", type=str, default="gcg51557", help="ABCI project group name for PBS '-P'.")
 
     # Resource configuration

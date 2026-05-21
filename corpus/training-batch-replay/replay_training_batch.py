@@ -2,6 +2,7 @@
 
 import argparse
 import ast
+import concurrent.futures
 import gzip
 import inspect
 import json
@@ -10,6 +11,8 @@ import shlex
 import subprocess
 import sys
 import threading
+import time
+from collections import deque
 from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -61,6 +64,9 @@ SCRIPT_DEFAULTS = {
     "progress": True,
     "progress_interval": 5.0,
     "include_text": False,
+    "reader_workers": 8,
+    "compress_workers": 4,
+    "compress_chunk_records": 256,
 }
 
 
@@ -170,6 +176,31 @@ def parse_args() -> argparse.Namespace:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="Include detokenized text in each output record. Disabled by default.",
+    )
+    parser.add_argument(
+        "--reader-workers",
+        type=int,
+        default=None,
+        help=(
+            "Number of reader threads used to fetch dataset records and build "
+            "output payloads. Defaults to 8."
+        ),
+    )
+    parser.add_argument(
+        "--compress-workers",
+        type=int,
+        default=None,
+        help=(
+            "Number of worker threads used to JSON-serialize and gzip-compress "
+            "JSONL chunks. Values greater than 1 write concatenated gzip members. "
+            "Defaults to 4."
+        ),
+    )
+    parser.add_argument(
+        "--compress-chunk-records",
+        type=int,
+        default=None,
+        help="Number of records per gzip member when --compress-workers is greater than 1.",
     )
     args = parser.parse_args()
     apply_config_and_defaults(args, parser)
@@ -585,6 +616,36 @@ def build_sample_record(
     return record
 
 
+def build_sample_record_from_index(
+    args: argparse.Namespace,
+    dataset: Any,
+    tokenizer: Any,
+    dataset_paths: list[str],
+    iteration: int,
+    dataset_index: int,
+) -> dict[str, Any]:
+    item = dataset[dataset_index]
+    return build_sample_record(
+        args,
+        dataset,
+        dataset_index,
+        iteration,
+        item,
+        tokenizer,
+        dataset_paths,
+    )
+
+
+def iter_iteration_dataset_indices(args: argparse.Namespace, dataset_length: int):
+    for iteration in get_iteration_range(args):
+        for dataset_index in get_global_batch_dataset_indices(
+            args,
+            dataset_length,
+            iteration,
+        ):
+            yield iteration, dataset_index
+
+
 def iter_global_batch_records(
     args: argparse.Namespace,
     dataset: Any,
@@ -592,40 +653,78 @@ def iter_global_batch_records(
     dataset_paths: list[str],
     iteration: int,
 ):
-    dataset_indices = get_global_batch_dataset_indices(
-        args,
-        len(dataset),
-        iteration,
-    )
+    dataset_indices = get_global_batch_dataset_indices(args, len(dataset), iteration)
     for dataset_index in dataset_indices:
-        item = dataset[dataset_index]
-        yield build_sample_record(
-            args,
-            dataset,
-            dataset_index,
-            iteration,
-            item,
-            tokenizer,
-            dataset_paths,
+        yield build_sample_record_from_index(
+            args, dataset, tokenizer, dataset_paths, iteration, dataset_index
         )
+
+
+def iter_output_payloads_parallel(
+    args: argparse.Namespace,
+    dataset: Any,
+    tokenizer: Any,
+    dataset_paths: list[str],
+):
+    reader_workers = max(1, args.reader_workers)
+    if reader_workers == 1:
+        for iteration in get_iteration_range(args):
+            yield from iter_global_batch_records(
+                args,
+                dataset,
+                tokenizer,
+                dataset_paths,
+                iteration,
+            )
+        return
+
+    work_items = iter(iter_iteration_dataset_indices(args, len(dataset)))
+    max_pending = reader_workers * 2
+    pending: deque[concurrent.futures.Future[dict[str, Any]]] = deque()
+
+    def submit_next(executor: concurrent.futures.ThreadPoolExecutor) -> bool:
+        try:
+            iteration, dataset_index = next(work_items)
+        except StopIteration:
+            return False
+        pending.append(
+            executor.submit(
+                build_sample_record_from_index,
+                args,
+                dataset,
+                tokenizer,
+                dataset_paths,
+                iteration,
+                dataset_index,
+            )
+        )
+        return True
+
+    with concurrent.futures.ThreadPoolExecutor(
+        max_workers=reader_workers,
+        thread_name_prefix="replay-reader",
+    ) as executor:
+        for _ in range(max_pending):
+            if not submit_next(executor):
+                break
+
+        while pending:
+            future = pending.popleft()
+            yield future.result()
+            submit_next(executor)
 
 
 def iter_output_payloads(args: argparse.Namespace):
     dataset, tokenizer = build_train_dataset(args)
     dataset_paths = get_dataset_paths_from_data_path(args.data_path)
-    for iteration in get_iteration_range(args):
-        yield from iter_global_batch_records(
-            args,
-            dataset,
-            tokenizer,
-            dataset_paths,
-            iteration,
-        )
+    yield from iter_output_payloads_parallel(args, dataset, tokenizer, dataset_paths)
 
 
 class ProgressReporter:
     def __init__(self, total: int | None, interval_seconds: float, enabled: bool) -> None:
         self.enabled = enabled
+        self.interval_seconds = interval_seconds
+        self.last_postfix_at = 0.0
         self.bar = None
         if self.enabled:
             try:
@@ -642,13 +741,104 @@ class ProgressReporter:
                 file=sys.stderr,
             )
 
-    def update(self, increment: int = 1) -> None:
+    def update(self, increment: int = 1, stats: "PerformanceStats | None" = None) -> None:
         if self.bar is not None:
+            if stats is not None:
+                now = time.monotonic()
+                if now - self.last_postfix_at >= self.interval_seconds:
+                    self.bar.set_postfix_str(stats.format_for_progress(), refresh=False)
+                    self.last_postfix_at = now
             self.bar.update(increment)
 
     def finish(self) -> None:
         if self.bar is not None:
             self.bar.close()
+
+
+class PerformanceStats:
+    def __init__(self, queue_max_size: int | None = None) -> None:
+        self.lock = threading.Lock()
+        self.queue_size: int | None = None
+        self.queue_max_size = queue_max_size
+        self.reader_count = 0
+        self.reader_seconds = 0.0
+        self.put_wait_count = 0
+        self.put_wait_seconds = 0.0
+        self.get_wait_count = 0
+        self.get_wait_seconds = 0.0
+        self.json_count = 0
+        self.json_seconds = 0.0
+        self.gzip_count = 0
+        self.gzip_seconds = 0.0
+        self.write_count = 0
+        self.write_seconds = 0.0
+
+    def set_queue_size(self, value: int | None) -> None:
+        with self.lock:
+            self.queue_size = value
+
+    def add_reader(self, seconds: float) -> None:
+        with self.lock:
+            self.reader_count += 1
+            self.reader_seconds += seconds
+
+    def add_put_wait(self, seconds: float) -> None:
+        with self.lock:
+            self.put_wait_count += 1
+            self.put_wait_seconds += seconds
+
+    def add_get_wait(self, seconds: float) -> None:
+        with self.lock:
+            self.get_wait_count += 1
+            self.get_wait_seconds += seconds
+
+    def add_json(self, seconds: float, count: int = 1) -> None:
+        with self.lock:
+            self.json_count += count
+            self.json_seconds += seconds
+
+    def add_gzip(self, seconds: float, count: int = 1) -> None:
+        with self.lock:
+            self.gzip_count += count
+            self.gzip_seconds += seconds
+
+    def add_write(self, seconds: float, count: int = 1) -> None:
+        with self.lock:
+            self.write_count += count
+            self.write_seconds += seconds
+
+    @staticmethod
+    def _average_ms(total_seconds: float, count: int) -> float:
+        if count == 0:
+            return 0.0
+        return 1000.0 * total_seconds / count
+
+    def format_for_progress(self) -> str:
+        with self.lock:
+            queue_size = self.queue_size
+            queue_max_size = self.queue_max_size
+            reader_ms = self._average_ms(self.reader_seconds, self.reader_count)
+            put_wait_ms = self._average_ms(self.put_wait_seconds, self.put_wait_count)
+            get_wait_ms = self._average_ms(self.get_wait_seconds, self.get_wait_count)
+            json_ms = self._average_ms(self.json_seconds, self.json_count)
+            gzip_ms = self._average_ms(self.gzip_seconds, self.gzip_count)
+            write_ms = self._average_ms(self.write_seconds, self.write_count)
+
+        if queue_size is None:
+            queue_text = "q=-"
+        elif queue_max_size:
+            queue_text = f"q={queue_size}/{queue_max_size}"
+        else:
+            queue_text = f"q={queue_size}"
+        return (
+            f"{queue_text} "
+            f"read={reader_ms:.1f}ms "
+            f"put={put_wait_ms:.1f}ms "
+            f"get={get_wait_ms:.1f}ms "
+            f"json={json_ms:.1f}ms "
+            f"gzip={gzip_ms:.1f}ms "
+            f"write={write_ms:.1f}ms"
+        )
 
 
 def get_expected_output_records(args: argparse.Namespace) -> int:
@@ -670,18 +860,33 @@ def write_output_serial(
     output_path: str,
     gzip_compresslevel: int,
     progress: ProgressReporter,
+    stats: PerformanceStats,
 ) -> None:
     resolved = resolve_output_path(output_path)
+    payload_iter = iter(payloads)
     with gzip.open(
         resolved,
         "wt",
         encoding="utf-8",
         compresslevel=gzip_compresslevel,
     ) as writer:
-        for payload in payloads:
-            writer.write(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
+        while True:
+            read_started_at = time.perf_counter()
+            try:
+                payload = next(payload_iter)
+            except StopIteration:
+                break
+            stats.add_reader(time.perf_counter() - read_started_at)
+
+            json_started_at = time.perf_counter()
+            line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+            stats.add_json(time.perf_counter() - json_started_at)
+
+            write_started_at = time.perf_counter()
+            writer.write(line)
             writer.write("\n")
-            progress.update()
+            stats.add_write(time.perf_counter() - write_started_at)
+            progress.update(stats=stats)
     progress.finish()
 
 
@@ -691,6 +896,7 @@ def write_output_pipelined(
     gzip_compresslevel: int,
     output_queue_size: int,
     progress: ProgressReporter,
+    stats: PerformanceStats,
 ) -> None:
     resolved = resolve_output_path(output_path)
     sentinel = object()
@@ -707,19 +913,26 @@ def write_output_pipelined(
                 compresslevel=gzip_compresslevel,
             ) as writer:
                 while True:
+                    get_started_at = time.perf_counter()
                     payload = output_queue.get()
+                    stats.add_get_wait(time.perf_counter() - get_started_at)
+                    stats.set_queue_size(output_queue.qsize())
                     try:
                         if payload is sentinel:
                             return
-                        writer.write(
-                            json.dumps(
-                                payload,
-                                ensure_ascii=False,
-                                separators=(",", ":"),
-                            )
+                        json_started_at = time.perf_counter()
+                        line = json.dumps(
+                            payload,
+                            ensure_ascii=False,
+                            separators=(",", ":"),
                         )
+                        stats.add_json(time.perf_counter() - json_started_at)
+
+                        write_started_at = time.perf_counter()
+                        writer.write(line)
                         writer.write("\n")
-                        progress.update()
+                        stats.add_write(time.perf_counter() - write_started_at)
+                        progress.update(stats=stats)
                     finally:
                         output_queue.task_done()
         except BaseException as exc:
@@ -734,16 +947,28 @@ def write_output_pipelined(
     writer_thread.start()
 
     try:
-        for payload in payloads:
+        payload_iter = iter(payloads)
+        while True:
             if writer_failed.is_set():
                 raise writer_errors[0]
+            read_started_at = time.perf_counter()
+            try:
+                payload = next(payload_iter)
+            except StopIteration:
+                break
+            stats.add_reader(time.perf_counter() - read_started_at)
             while True:
                 if writer_failed.is_set():
                     raise writer_errors[0]
                 try:
+                    put_started_at = time.perf_counter()
                     output_queue.put(payload, timeout=0.1)
+                    stats.add_put_wait(time.perf_counter() - put_started_at)
+                    stats.set_queue_size(output_queue.qsize())
                     break
                 except queue.Full:
+                    stats.add_put_wait(time.perf_counter() - put_started_at)
+                    stats.set_queue_size(output_queue.qsize())
                     continue
     finally:
         while True:
@@ -760,15 +985,123 @@ def write_output_pipelined(
     progress.finish()
 
 
+def encode_jsonl_gzip_member(
+    payloads: list[dict[str, Any]],
+    gzip_compresslevel: int,
+) -> tuple[bytes, int, float, float]:
+    json_started_at = time.perf_counter()
+    jsonl = bytearray()
+    for payload in payloads:
+        jsonl.extend(
+            json.dumps(payload, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        )
+        jsonl.append(10)
+    json_seconds = time.perf_counter() - json_started_at
+
+    gzip_started_at = time.perf_counter()
+    compressed = gzip.compress(bytes(jsonl), compresslevel=gzip_compresslevel)
+    gzip_seconds = time.perf_counter() - gzip_started_at
+    return compressed, len(payloads), json_seconds, gzip_seconds
+
+
+def iter_payload_chunks(
+    payloads: Any,
+    compress_chunk_records: int,
+    stats: PerformanceStats,
+):
+    payload_iter = iter(payloads)
+    while True:
+        chunk = []
+        while len(chunk) < compress_chunk_records:
+            read_started_at = time.perf_counter()
+            try:
+                payload = next(payload_iter)
+            except StopIteration:
+                if chunk:
+                    yield chunk
+                return
+            stats.add_reader(time.perf_counter() - read_started_at)
+            chunk.append(payload)
+        yield chunk
+
+
+def write_output_parallel_compressed(
+    payloads: Any,
+    output_path: str,
+    gzip_compresslevel: int,
+    compress_workers: int,
+    compress_chunk_records: int,
+    progress: ProgressReporter,
+    stats: PerformanceStats,
+) -> None:
+    resolved = resolve_output_path(output_path)
+    max_pending_chunks = max(1, compress_workers * 2)
+    pending: deque[concurrent.futures.Future[tuple[bytes, int, float, float]]] = deque()
+    chunks = iter(iter_payload_chunks(payloads, compress_chunk_records, stats))
+
+    def submit_next(executor: concurrent.futures.ThreadPoolExecutor) -> bool:
+        try:
+            chunk = next(chunks)
+        except StopIteration:
+            return False
+        pending.append(
+            executor.submit(encode_jsonl_gzip_member, chunk, gzip_compresslevel)
+        )
+        stats.set_queue_size(len(pending))
+        return True
+
+    with resolved.open("wb") as writer:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=compress_workers,
+            thread_name_prefix="replay-compressor",
+        ) as executor:
+            for _ in range(max_pending_chunks):
+                if not submit_next(executor):
+                    break
+
+            while pending:
+                future = pending.popleft()
+                compressed, record_count, json_seconds, gzip_seconds = future.result()
+                stats.add_json(json_seconds, record_count)
+                stats.add_gzip(gzip_seconds, record_count)
+
+                write_started_at = time.perf_counter()
+                writer.write(compressed)
+                stats.add_write(time.perf_counter() - write_started_at, record_count)
+                progress.update(record_count, stats=stats)
+                submit_next(executor)
+
+    progress.finish()
+
+
 def write_output(
     payloads: Any,
     output_path: str,
     gzip_compresslevel: int,
     output_queue_size: int,
+    compress_workers: int,
+    compress_chunk_records: int,
     progress: ProgressReporter,
 ) -> None:
+    compress_workers = max(1, compress_workers)
+    compress_chunk_records = max(1, compress_chunk_records)
+    stats = PerformanceStats(queue_max_size=None)
+    if compress_workers > 1:
+        stats.queue_max_size = compress_workers * 2
+        write_output_parallel_compressed(
+            payloads,
+            output_path,
+            gzip_compresslevel,
+            compress_workers,
+            compress_chunk_records,
+            progress,
+            stats,
+        )
+        return
+
+    stats.queue_max_size = output_queue_size if output_queue_size > 0 else None
     if output_queue_size <= 0:
-        write_output_serial(payloads, output_path, gzip_compresslevel, progress)
+        write_output_serial(payloads, output_path, gzip_compresslevel, progress, stats)
         return
     write_output_pipelined(
         payloads,
@@ -776,6 +1109,7 @@ def write_output(
         gzip_compresslevel,
         output_queue_size,
         progress,
+        stats,
     )
 
 
@@ -792,6 +1126,8 @@ def main() -> None:
         args.output,
         args.gzip_compresslevel,
         args.output_queue_size,
+        args.compress_workers,
+        args.compress_chunk_records,
         progress,
     )
 

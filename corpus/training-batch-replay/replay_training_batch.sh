@@ -43,9 +43,12 @@ DATA_CACHE_PATH=${DATA_CACHE_PATH:-}
 OUTPUT=${OUTPUT:-outputs/global-batches.jsonl.gz}
 OUTPUT_QUEUE_SIZE=${OUTPUT_QUEUE_SIZE:-256}
 GZIP_COMPRESSLEVEL=${GZIP_COMPRESSLEVEL:-9}
+COMPRESS_WORKERS=${COMPRESS_WORKERS:-4}
+COMPRESS_CHUNK_RECORDS=${COMPRESS_CHUNK_RECORDS:-256}
 PROGRESS=${PROGRESS:-1}
 PROGRESS_INTERVAL=${PROGRESS_INTERVAL:-5}
 INCLUDE_TEXT=${INCLUDE_TEXT:-0}
+READER_WORKERS=${READER_WORKERS:-8}
 MEGATRON_PATH=${MEGATRON_PATH:-src/Megatron-LM}
 
 mkdir -p "$(dirname "${OUTPUT}")"
@@ -128,9 +131,12 @@ python "${SCRIPT_DIR}/replay_training_batch.py" \
   --output "${OUTPUT}" \
   --output-queue-size "${OUTPUT_QUEUE_SIZE}" \
   --gzip-compresslevel "${GZIP_COMPRESSLEVEL}" \
+  --compress-workers "${COMPRESS_WORKERS}" \
+  --compress-chunk-records "${COMPRESS_CHUNK_RECORDS}" \
   "${PROGRESS_ARGS[@]}" \
   --progress-interval "${PROGRESS_INTERVAL}" \
   "${TEXT_ARGS[@]}" \
+  --reader-workers "${READER_WORKERS}" \
   "${EXTRA_REPLAY_ARGS[@]}"
 
 echo "Wrote replayed batch to ${OUTPUT}"

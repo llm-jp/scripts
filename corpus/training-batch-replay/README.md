@@ -53,11 +53,20 @@ Useful variables:
   settings. `DATA_PATH` is passed directly to Megatron-LM's `--data-path`.
 - `OUTPUT_QUEUE_SIZE`: records buffered between dataset reading and JSONL gzip
   writing. Defaults to `256`; use `0` to disable pipelined writing.
+- `READER_WORKERS`: reader threads used to fetch dataset records and build
+  output payloads. Defaults to `8`; output order is preserved.
 - `GZIP_COMPRESSLEVEL`: gzip compression level. Defaults to `9`; lower values
   trade larger files for faster compression.
+- `COMPRESS_WORKERS`, `COMPRESS_CHUNK_RECORDS`: worker threads and chunk size
+  for JSONL serialization plus gzip compression. `COMPRESS_WORKERS` defaults to
+  `4`; values greater than `1` write concatenated gzip members, which standard
+  gzip readers handle as a single stream. `COMPRESS_CHUNK_RECORDS` defaults to
+  `256`.
 - `PROGRESS`, `PROGRESS_INTERVAL`: progress reporting controls. `PROGRESS`
   defaults to `1`; set it to `0` to disable tqdm. `PROGRESS_INTERVAL` is passed
-  to tqdm as `mininterval` and defaults to `5` seconds.
+  to tqdm as `mininterval` and defaults to `5` seconds. The progress postfix
+  reports output queue occupancy plus average milliseconds spent in reader,
+  queue put/get waits, JSON serialization, gzip compression, and writing.
 - `INCLUDE_TEXT`: include detokenized `text` in each record. Defaults to `0`;
   token ids are always written and can be detokenized later.
 - `EXTRA_ARGS`: additional arguments passed to `replay_training_batch.py`.
@@ -95,7 +104,9 @@ bash ../scripts/corpus/training-batch-replay/replay_training_task.sh \
 
 `replay_training_task.sh` writes the generated config to
 `OUTPUT_DIR/replay_config.sh` and uses `OUTPUT_DIR/cache` as the default
-`DATA_CACHE_PATH`.
+`DATA_CACHE_PATH`. It also tees stdout and stderr to
+`OUTPUT_DIR/logs/<output-basename>.log`; override `LOG_DIR` or `LOG` to change
+the log destination.
 
 The Python entrypoint also supports the same range directly:
 

@@ -29,7 +29,7 @@ OUTPUT=outputs/test-iter0-datapath.jsonl.gz \
 bash ../scripts/corpus/training-batch-replay/replay_training_batch.sh
 ```
 
-This writes 1024 JSONL records to `outputs/test-iter0-datapath.jsonl.gz` with the default `GLOBAL_BATCH_SIZE=1024`.
+This writes one global batch to `outputs/test-iter0-datapath.jsonl.gz`.
 
 ## Common Overrides
 
@@ -46,7 +46,9 @@ Useful variables:
 - `ITER_START`: first training iteration to replay, inclusive. Defaults to the beginning of the training loop when `ITER_END` is set.
 - `ITER_END`: training iteration end, exclusive. Defaults to the end of the training loop when `ITER_START` is set.
 - `TRAIN_STEPS`, `GLOBAL_BATCH_SIZE`, `SEQ_LENGTH`, `SEED`: reference training
-  parameters.
+  parameters. If omitted, `replay_training_batch.py` reads Megatron-LM's
+  argparse defaults where they exist; values that Megatron leaves as `None`
+  remain required.
 - `DATA_PATH`, `TOKENIZER_MODEL`, `DATA_CACHE_PATH`: data and tokenizer
   settings. `DATA_PATH` is passed directly to Megatron-LM's `--data-path`.
 - `OUTPUT_QUEUE_SIZE`: records buffered between dataset reading and JSONL gzip
@@ -54,8 +56,10 @@ Useful variables:
 - `GZIP_COMPRESSLEVEL`: gzip compression level. Defaults to `9`; lower values
   trade larger files for faster compression.
 - `PROGRESS`, `PROGRESS_INTERVAL`: progress reporting controls. `PROGRESS`
-  defaults to `1`; set it to `0` to disable. `PROGRESS_INTERVAL` defaults to
-  `5` seconds.
+  defaults to `1`; set it to `0` to disable tqdm. `PROGRESS_INTERVAL` is passed
+  to tqdm as `mininterval` and defaults to `5` seconds.
+- `INCLUDE_TEXT`: include detokenized `text` in each record. Defaults to `0`;
+  token ids are always written and can be detokenized later.
 - `EXTRA_ARGS`: additional arguments passed to `replay_training_batch.py`.
 
 ## Extracting From A Training Task
@@ -107,20 +111,16 @@ python ../scripts/corpus/training-batch-replay/replay_training_batch.py \
   --output outputs/train-iter100-110.jsonl.gz
 ```
 
-The default `DATA_PATH` used by `replay_training_batch.sh` is:
-
-```bash
-2563804308 /data/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0/train/ja/wiki_0000.jsonl_text_document 1826105478 /data/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0/train/ja/kaken_0000.jsonl_text_document
-```
-
 ## Output
 
-Each output line includes `iteration`, `dataset_id`, and `dataset_path`, so
-records can be traced back to the selected source dataset in the blend. It also
-includes `indexed_dataset_spans`, which records the zero-based `document_id`,
-token `offset`, and token `length` consumed from each original Megatron
-`.idx`/`.bin` instance. If a replayed training sample spans multiple instances,
-the spans list contains all of them in sample order.
+Each output line includes `iteration`, `token_ids`, `dataset_id`, and
+`dataset_path`, so records can be traced back to the selected source dataset in
+the blend. It also includes `indexed_dataset_spans`, which records the
+zero-based `document_id`, token `offset`, and token `length` consumed from each
+original Megatron `.idx`/`.bin` instance. If a replayed training sample spans
+multiple instances, the spans list contains all of them in sample order.
+Detokenized `text` is omitted by default; set `INCLUDE_TEXT=1` or pass
+`--include-text` to write it.
 
 The first record from the smoke test above has this shape:
 
@@ -128,7 +128,6 @@ The first record from the smoke test above has this shape:
 {
   "iteration": 0,
   "token_ids": [60220, 29421, 29871, 29421, 30182, 64842, 32171, 30701],
-  "text": "シュ・オ・モワーヌやサヴニエール＝クーレ・ド・セランをはじめ、高価なものもある。\n アンジュ (Anjou) - 赤・白・ロゼが作られているが、ロゼが有名。ほか...",
   "dataset_id": 0,
   "dataset_path": "/data/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0/train/ja/wiki_0000.jsonl_text_document",
   "indexed_dataset_spans": [

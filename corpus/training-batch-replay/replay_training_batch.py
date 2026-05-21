@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import ast
 import gzip
 import inspect
 import json
@@ -9,7 +10,6 @@ import shlex
 import subprocess
 import sys
 import threading
-import time
 from contextlib import contextmanager
 from pathlib import Path
 from types import SimpleNamespace
@@ -40,6 +40,28 @@ CONFIG_ENV_NAMES = (
     "DATA_PATH",
     "DATA_CACHE_PATH",
 )
+
+MEGATRON_DEFAULT_OPTIONS = {
+    "--global-batch-size": "global_batch_size",
+    "--train-iters": "train_iters",
+    "--seq-length": "seq_length",
+    "--seed": "seed",
+    "--split": "split",
+    "--tokenizer-type": "tokenizer_type",
+    "--make-vocab-size-divisible-by": "make_vocab_size_divisible_by",
+    "--vocab-extra-ids": "vocab_extra_ids",
+    "--data-cache-path": "data_cache_path",
+    "--no-mmap-bin-files": "mmap_bin_files",
+}
+
+SCRIPT_DEFAULTS = {
+    "output": "outputs/global-batches.jsonl.gz",
+    "output_queue_size": 256,
+    "gzip_compresslevel": 9,
+    "progress": True,
+    "progress_interval": 5.0,
+    "include_text": False,
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -143,6 +165,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Minimum seconds between progress updates.",
     )
+    parser.add_argument(
+        "--include-text",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Include detokenized text in each output record. Disabled by default.",
+    )
     args = parser.parse_args()
     apply_config_and_defaults(args, parser)
     return args
@@ -177,6 +205,60 @@ def read_shell_config(config_path: str) -> dict[str, str]:
     }
 
 
+def get_megatron_arg_defaults(megatron_path: str) -> dict[str, Any]:
+    arguments_path = (
+        Path(megatron_path).expanduser().resolve() / "megatron" / "training" / "arguments.py"
+    )
+    if not arguments_path.is_file():
+        raise FileNotFoundError(
+            f"cannot read Megatron-LM argument defaults: {arguments_path}"
+        )
+
+    tree = ast.parse(arguments_path.read_text(encoding="utf-8"), filename=str(arguments_path))
+    defaults: dict[str, Any] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Call):
+            continue
+        if not isinstance(node.func, ast.Attribute) or node.func.attr != "add_argument":
+            continue
+
+        option_names = [
+            arg.value
+            for arg in node.args
+            if isinstance(arg, ast.Constant) and isinstance(arg.value, str)
+        ]
+        matched_options = [
+            option_name
+            for option_name in option_names
+            if option_name in MEGATRON_DEFAULT_OPTIONS
+        ]
+        if not matched_options:
+            continue
+
+        keyword_by_name = {keyword.arg: keyword.value for keyword in node.keywords}
+        if "default" in keyword_by_name:
+            default_value = ast.literal_eval(keyword_by_name["default"])
+        else:
+            action_node = keyword_by_name.get("action")
+            action = (
+                action_node.value
+                if isinstance(action_node, ast.Constant)
+                and isinstance(action_node.value, str)
+                else None
+            )
+            if action == "store_false":
+                default_value = True
+            elif action == "store_true":
+                default_value = False
+            else:
+                default_value = None
+
+        for option_name in matched_options:
+            defaults[MEGATRON_DEFAULT_OPTIONS[option_name]] = default_value
+
+    return defaults
+
+
 def apply_config_and_defaults(
     args: argparse.Namespace,
     parser: argparse.ArgumentParser,
@@ -201,30 +283,30 @@ def apply_config_and_defaults(
     if args.data_path is None and "DATA_PATH" in config:
         args.data_path = shlex.split(config["DATA_PATH"])
 
-    defaults = {
-        "global_batch_size": 1024,
-        "train_iters": 6000,
-        "seq_length": 2048,
-        "seed": 1234,
-        "split": "1,0,0",
-        "tokenizer_type": "Llama2Tokenizer",
-        "make_vocab_size_divisible_by": 128,
-        "vocab_extra_ids": 0,
-        "data_cache_path": "./cache",
-        "mmap_bin_files": True,
-        "output": "outputs/global-batches.jsonl.gz",
-        "output_queue_size": 256,
-        "gzip_compresslevel": 9,
-        "progress": True,
-        "progress_interval": 5.0,
-    }
-    for attr_name, default_value in defaults.items():
+    megatron_defaults = {}
+    if args.megatron_path is not None:
+        megatron_defaults = get_megatron_arg_defaults(args.megatron_path)
+    for attr_name, default_value in megatron_defaults.items():
+        if default_value is not None and getattr(args, attr_name) is None:
+            setattr(args, attr_name, default_value)
+
+    if args.split is None and args.data_path is not None:
+        # Match Megatron-LM's effective legacy default in validate_args().
+        args.split = "969, 30, 1"
+
+    for attr_name, default_value in SCRIPT_DEFAULTS.items():
         if getattr(args, attr_name) is None:
             setattr(args, attr_name, default_value)
 
     missing = []
     for attr_name, option_name in (
         ("megatron_path", "--megatron-path"),
+        ("global_batch_size", "--global-batch-size"),
+        ("train_iters", "--train-iters"),
+        ("seq_length", "--seq-length"),
+        ("seed", "--seed"),
+        ("split", "--split"),
+        ("tokenizer_type", "--tokenizer-type"),
         ("tokenizer_model", "--tokenizer-model"),
         ("data_path", "--data-path"),
     ):
@@ -473,6 +555,7 @@ def get_indexed_dataset_spans(
 
 
 def build_sample_record(
+    args: argparse.Namespace,
     dataset: Any,
     dataset_index: int,
     iteration: int,
@@ -484,8 +567,9 @@ def build_sample_record(
     record = {
         "iteration": iteration,
         "token_ids": token_ids,
-        "text": tokenizer.detokenize(token_ids),
     }
+    if args.include_text:
+        record["text"] = tokenizer.detokenize(token_ids)
     record["dataset_id"] = int(item.get("dataset_id", 0))
     if record["dataset_id"] < len(dataset_paths):
         record["dataset_path"] = dataset_paths[record["dataset_id"]]
@@ -516,6 +600,7 @@ def iter_global_batch_records(
     for dataset_index in dataset_indices:
         item = dataset[dataset_index]
         yield build_sample_record(
+            args,
             dataset,
             dataset_index,
             iteration,
@@ -540,44 +625,30 @@ def iter_output_payloads(args: argparse.Namespace):
 
 class ProgressReporter:
     def __init__(self, total: int | None, interval_seconds: float, enabled: bool) -> None:
-        self.total = total
-        self.interval_seconds = interval_seconds
         self.enabled = enabled
-        self.count = 0
-        self.started_at = time.monotonic()
-        self.last_report_at = self.started_at
-        self.is_tty = sys.stderr.isatty()
-
-    def update(self, increment: int = 1, force: bool = False) -> None:
-        if not self.enabled:
-            return
-        self.count += increment
-        now = time.monotonic()
-        if not force and now - self.last_report_at < self.interval_seconds:
-            return
-        self.last_report_at = now
-        elapsed = max(now - self.started_at, 1e-9)
-        rate = self.count / elapsed
-        if self.total:
-            percent = min(100.0, 100.0 * self.count / self.total)
-            message = (
-                f"progress: {self.count:,}/{self.total:,} records "
-                f"({percent:5.1f}%, {rate:,.1f} records/s)"
+        self.bar = None
+        if self.enabled:
+            try:
+                from tqdm import tqdm
+            except ImportError as exc:
+                raise RuntimeError(
+                    "tqdm is required for progress reporting; install tqdm or pass --no-progress"
+                ) from exc
+            self.bar = tqdm(
+                total=total,
+                desc="replay",
+                unit="records",
+                mininterval=interval_seconds,
+                file=sys.stderr,
             )
-        else:
-            message = f"progress: {self.count:,} records ({rate:,.1f} records/s)"
 
-        if self.is_tty:
-            print(f"\r{message}", end="", file=sys.stderr, flush=True)
-        else:
-            print(message, file=sys.stderr, flush=True)
+    def update(self, increment: int = 1) -> None:
+        if self.bar is not None:
+            self.bar.update(increment)
 
     def finish(self) -> None:
-        if not self.enabled:
-            return
-        self.update(0, force=True)
-        if self.is_tty:
-            print(file=sys.stderr, flush=True)
+        if self.bar is not None:
+            self.bar.close()
 
 
 def get_expected_output_records(args: argparse.Namespace) -> int:

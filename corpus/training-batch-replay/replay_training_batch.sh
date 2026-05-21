@@ -25,27 +25,27 @@ ITER_INDEX=${ITER_INDEX:-}
 ITER_START=${ITER_START:-}
 ITER_END=${ITER_END:-}
 
-# Training config from environment/example/train.sh.
-GLOBAL_BATCH_SIZE=${GLOBAL_BATCH_SIZE:-1024}
-LR_WARMUP_STEPS=${LR_WARMUP_STEPS:-1000}
-LR_DECAY_ITERS=${LR_DECAY_ITERS:-5000}
-TRAIN_STEPS=${TRAIN_STEPS:-$((${LR_WARMUP_STEPS} + ${LR_DECAY_ITERS}))}
-SEQ_LENGTH=${SEQ_LENGTH:-2048}
-SEED=${SEED:-1234}
+# Training config. Leave replay-critical values unset when they are not
+# specified, so replay_training_batch.py can use Megatron-LM defaults or fail.
+GLOBAL_BATCH_SIZE=${GLOBAL_BATCH_SIZE:-}
+TRAIN_STEPS=${TRAIN_STEPS:-}
+SEQ_LENGTH=${SEQ_LENGTH:-}
+SEED=${SEED:-}
 
 # Data config.
-SPLIT=${SPLIT:-1,0,0}
-TOKENIZER_TYPE=${TOKENIZER_TYPE:-Llama2Tokenizer}
-TOKENIZER_MODEL=${TOKENIZER_MODEL:-src/llm-jp-tokenizer/models/ver3.0/llm-jp-tokenizer-100k.ver3.0b1.model}
-MAKE_VOCAB_SIZE_DIVISIBLE_BY=${MAKE_VOCAB_SIZE_DIVISIBLE_BY:-128}
-VOCAB_EXTRA_IDS=${VOCAB_EXTRA_IDS:-0}
-DATA_PATH=${DATA_PATH:-"2563804308 /data/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0/train/ja/wiki_0000.jsonl_text_document 1826105478 /data/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0/train/ja/kaken_0000.jsonl_text_document"}
-DATA_CACHE_PATH=${DATA_CACHE_PATH:-cache}
+SPLIT=${SPLIT:-}
+TOKENIZER_TYPE=${TOKENIZER_TYPE:-}
+TOKENIZER_MODEL=${TOKENIZER_MODEL:-}
+MAKE_VOCAB_SIZE_DIVISIBLE_BY=${MAKE_VOCAB_SIZE_DIVISIBLE_BY:-}
+VOCAB_EXTRA_IDS=${VOCAB_EXTRA_IDS:-}
+DATA_PATH=${DATA_PATH:-}
+DATA_CACHE_PATH=${DATA_CACHE_PATH:-}
 OUTPUT=${OUTPUT:-outputs/global-batches.jsonl.gz}
 OUTPUT_QUEUE_SIZE=${OUTPUT_QUEUE_SIZE:-256}
 GZIP_COMPRESSLEVEL=${GZIP_COMPRESSLEVEL:-9}
 PROGRESS=${PROGRESS:-1}
 PROGRESS_INTERVAL=${PROGRESS_INTERVAL:-5}
+INCLUDE_TEXT=${INCLUDE_TEXT:-0}
 MEGATRON_PATH=${MEGATRON_PATH:-src/Megatron-LM}
 
 mkdir -p "$(dirname "${OUTPUT}")"
@@ -72,6 +72,11 @@ if [[ "${PROGRESS}" == "0" || "${PROGRESS}" == "false" || "${PROGRESS}" == "Fals
   PROGRESS_ARGS=(--no-progress)
 fi
 
+TEXT_ARGS=(--no-include-text)
+if [[ "${INCLUDE_TEXT}" == "1" || "${INCLUDE_TEXT}" == "true" || "${INCLUDE_TEXT}" == "True" ]]; then
+  TEXT_ARGS=(--include-text)
+fi
+
 EXTRA_REPLAY_ARGS=()
 if [[ -n "${EXTRA_ARGS:-}" ]]; then
   # shellcheck disable=SC2206
@@ -81,26 +86,51 @@ fi
 # shellcheck disable=SC2206
 DATA_PATH_ARGS=(${DATA_PATH})
 
+REPLAY_ARGS=(--megatron-path "${MEGATRON_PATH}")
+if [[ -n "${GLOBAL_BATCH_SIZE}" ]]; then
+  REPLAY_ARGS+=(--global-batch-size "${GLOBAL_BATCH_SIZE}")
+fi
+if [[ -n "${TRAIN_STEPS}" ]]; then
+  REPLAY_ARGS+=(--train-iters "${TRAIN_STEPS}")
+fi
+if [[ -n "${SEQ_LENGTH}" ]]; then
+  REPLAY_ARGS+=(--seq-length "${SEQ_LENGTH}")
+fi
+if [[ -n "${SEED}" ]]; then
+  REPLAY_ARGS+=(--seed "${SEED}")
+fi
+if [[ -n "${TOKENIZER_TYPE}" ]]; then
+  REPLAY_ARGS+=(--tokenizer-type "${TOKENIZER_TYPE}")
+fi
+if [[ -n "${TOKENIZER_MODEL}" ]]; then
+  REPLAY_ARGS+=(--tokenizer-model "${TOKENIZER_MODEL}")
+fi
+if [[ -n "${MAKE_VOCAB_SIZE_DIVISIBLE_BY}" ]]; then
+  REPLAY_ARGS+=(--make-vocab-size-divisible-by "${MAKE_VOCAB_SIZE_DIVISIBLE_BY}")
+fi
+if [[ -n "${VOCAB_EXTRA_IDS}" ]]; then
+  REPLAY_ARGS+=(--vocab-extra-ids "${VOCAB_EXTRA_IDS}")
+fi
+if [[ ${#DATA_PATH_ARGS[@]} -gt 0 ]]; then
+  REPLAY_ARGS+=(--data-path "${DATA_PATH_ARGS[@]}")
+fi
+if [[ -n "${DATA_CACHE_PATH}" ]]; then
+  REPLAY_ARGS+=(--data-cache-path "${DATA_CACHE_PATH}")
+fi
+if [[ -n "${SPLIT}" ]]; then
+  REPLAY_ARGS+=(--split "${SPLIT}")
+fi
+
 python "${SCRIPT_DIR}/replay_training_batch.py" \
   "${CONFIG_ARGS[@]}" \
-  --megatron-path "${MEGATRON_PATH}" \
   "${ITER_RANGE_ARGS[@]}" \
-  --global-batch-size "${GLOBAL_BATCH_SIZE}" \
-  --train-iters "${TRAIN_STEPS}" \
-  --seq-length "${SEQ_LENGTH}" \
-  --seed "${SEED}" \
-  --tokenizer-type "${TOKENIZER_TYPE}" \
-  --tokenizer-model "${TOKENIZER_MODEL}" \
-  --make-vocab-size-divisible-by "${MAKE_VOCAB_SIZE_DIVISIBLE_BY}" \
-  --vocab-extra-ids "${VOCAB_EXTRA_IDS}" \
-  --data-path "${DATA_PATH_ARGS[@]}" \
-  --data-cache-path "${DATA_CACHE_PATH}" \
-  --split "${SPLIT}" \
+  "${REPLAY_ARGS[@]}" \
   --output "${OUTPUT}" \
   --output-queue-size "${OUTPUT_QUEUE_SIZE}" \
   --gzip-compresslevel "${GZIP_COMPRESSLEVEL}" \
   "${PROGRESS_ARGS[@]}" \
   --progress-interval "${PROGRESS_INTERVAL}" \
+  "${TEXT_ARGS[@]}" \
   "${EXTRA_REPLAY_ARGS[@]}"
 
 echo "Wrote replayed batch to ${OUTPUT}"

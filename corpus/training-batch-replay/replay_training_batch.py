@@ -489,11 +489,6 @@ def build_sample_record(
     record["dataset_id"] = int(item.get("dataset_id", 0))
     if record["dataset_id"] < len(dataset_paths):
         record["dataset_path"] = dataset_paths[record["dataset_id"]]
-    if hasattr(dataset, "dataset_sample_index"):
-        record["dataset_sample_index"] = int(dataset.dataset_sample_index[dataset_index])
-    else:
-        record["dataset_sample_index"] = dataset_index
-
     source_dataset, source_sample_index, _source_dataset_id = resolve_source_dataset_sample(
         dataset,
         dataset_index,

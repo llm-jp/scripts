@@ -115,12 +115,12 @@ The default `DATA_PATH` used by `replay_training_batch.sh` is:
 
 ## Output
 
-Each output line includes `iteration`, `dataset_id`, `dataset_path`, and
-`dataset_sample_index`, so records can be traced back to the selected source
-dataset in the blend. It also includes `indexed_dataset_spans`, which records the
-zero-based `document_id`, token `offset`, and token `length` consumed from each
-original Megatron `.idx`/`.bin` instance. If a replayed training sample spans
-multiple instances, the spans list contains all of them in sample order.
+Each output line includes `iteration`, `dataset_id`, and `dataset_path`, so
+records can be traced back to the selected source dataset in the blend. It also
+includes `indexed_dataset_spans`, which records the zero-based `document_id`,
+token `offset`, and token `length` consumed from each original Megatron
+`.idx`/`.bin` instance. If a replayed training sample spans multiple instances,
+the spans list contains all of them in sample order.
 
 The first record from the smoke test above has this shape:
 
@@ -131,7 +131,6 @@ The first record from the smoke test above has this shape:
   "text": "シュ・オ・モワーヌやサヴニエール＝クーレ・ド・セランをはじめ、高価なものもある。\n アンジュ (Anjou) - 赤・白・ロゼが作られているが、ロゼが有名。ほか...",
   "dataset_id": 0,
   "dataset_path": "/data/llm-jp-corpus/v3.0.0/training_resharded_tokenize_ver3.0/train/ja/wiki_0000.jsonl_text_document",
-  "dataset_sample_index": 0,
   "indexed_dataset_spans": [
     {"document_id": 701518, "offset": 317, "length": 594},
     {"document_id": 1259311, "offset": 0, "length": 1455}

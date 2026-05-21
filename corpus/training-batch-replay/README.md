@@ -49,7 +49,49 @@ Useful variables:
   parameters.
 - `DATA_PATH`, `TOKENIZER_MODEL`, `DATA_CACHE_PATH`: data and tokenizer
   settings. `DATA_PATH` is passed directly to Megatron-LM's `--data-path`.
+- `OUTPUT_QUEUE_SIZE`: records buffered between dataset reading and JSONL gzip
+  writing. Defaults to `256`; use `0` to disable pipelined writing.
+- `GZIP_COMPRESSLEVEL`: gzip compression level. Defaults to `9`; lower values
+  trade larger files for faster compression.
+- `PROGRESS`, `PROGRESS_INTERVAL`: progress reporting controls. `PROGRESS`
+  defaults to `1`; set it to `0` to disable. `PROGRESS_INTERVAL` defaults to
+  `5` seconds.
 - `EXTRA_ARGS`: additional arguments passed to `replay_training_batch.py`.
+
+## Extracting From A Training Task
+
+Use `extract_replay_config.py` to source a task's `train_data.sh` and
+`params.sh`, then emit a shell config file compatible with both
+`replay_training_batch.py` and `replay_training_batch.sh`. The only supported
+output format is `sh`, and it is the default.
+
+```bash
+python ../scripts/corpus/training-batch-replay/extract_replay_config.py \
+  /groups/gcg51557/experiments/0213_v4-8b/tasks/v4-8b \
+  --output replay_config.sh
+```
+
+Then pass the generated config to the Python replay entrypoint:
+
+```bash
+python ../scripts/corpus/training-batch-replay/replay_training_batch.py \
+  --config replay_config.sh \
+  --iter-index 0 \
+  --output outputs/iter_0000000.jsonl.gz
+```
+
+Or run the full task-oriented flow:
+
+```bash
+ENV_DIR=/groups/gcg51557/experiments/0213_v4-8b/env \
+OUTPUT_DIR=/groups/gcg51557/experiments/0342_llm-jp-4-corpus-dump/replayed_batches/v4-8b \
+bash ../scripts/corpus/training-batch-replay/replay_training_task.sh \
+  /groups/gcg51557/experiments/0213_v4-8b/tasks/v4-8b
+```
+
+`replay_training_task.sh` writes the generated config to
+`OUTPUT_DIR/replay_config.sh` and uses `OUTPUT_DIR/cache` as the default
+`DATA_CACHE_PATH`.
 
 The Python entrypoint also supports the same range directly:
 

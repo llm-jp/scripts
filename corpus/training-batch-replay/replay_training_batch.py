@@ -14,19 +14,32 @@ import threading
 import time
 from collections import deque
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 
 # The global variables for Megatron-LM imports are populated by configure_megatron_imports().
-numpy: Any = None
 torch: Any = None
 BlendedMegatronDatasetBuilder: Any = None
 build_tokenizer: Any = None
 GPTDataset: Any = None
 GPTDatasetConfig: Any = None
-Split: Any = None
+
+
+@dataclass(frozen=True)
+class ReadTimings:
+    getitem_seconds: float = 0.0
+    token_ids_seconds: float = 0.0
+    spans_seconds: float = 0.0
+    record_seconds: float = 0.0
+
+
+@dataclass(frozen=True)
+class TimedPayload:
+    payload: dict[str, Any]
+    timings: ReadTimings
 
 
 CONFIG_ENV_NAMES = (
@@ -351,13 +364,11 @@ def apply_config_and_defaults(
 
 
 def configure_megatron_imports(megatron_path: str) -> None:
-    global numpy
     global torch
     global BlendedMegatronDatasetBuilder
     global build_tokenizer
     global GPTDataset
     global GPTDatasetConfig
-    global Split
 
     resolved = Path(megatron_path).expanduser().resolve()
     if not resolved.is_dir():
@@ -372,7 +383,6 @@ def configure_megatron_imports(megatron_path: str) -> None:
         sys.path.insert(0, resolved_str)
 
     try:
-        import numpy as imported_numpy
         import torch as imported_torch
         from megatron.core.datasets.blended_megatron_dataset_builder import (
             BlendedMegatronDatasetBuilder as ImportedBlendedMegatronDatasetBuilder,
@@ -381,7 +391,6 @@ def configure_megatron_imports(megatron_path: str) -> None:
             GPTDataset as ImportedGPTDataset,
             GPTDatasetConfig as ImportedGPTDatasetConfig,
         )
-        from megatron.core.datasets.utils import Split as ImportedSplit
         from megatron.training.tokenizer import build_tokenizer as imported_build_tokenizer
     except ImportError as exc:
         raise ImportError(
@@ -389,13 +398,11 @@ def configure_megatron_imports(megatron_path: str) -> None:
             "environment for Megatron-LM is activated before running this script."
         ) from exc
 
-    numpy = imported_numpy
     torch = imported_torch
     BlendedMegatronDatasetBuilder = ImportedBlendedMegatronDatasetBuilder
     build_tokenizer = imported_build_tokenizer
     GPTDataset = ImportedGPTDataset
     GPTDatasetConfig = ImportedGPTDatasetConfig
-    Split = ImportedSplit
 
 
 @contextmanager
@@ -593,8 +600,9 @@ def build_sample_record(
     item: dict[str, Any],
     tokenizer: Any,
     dataset_paths: list[str],
-) -> dict[str, Any]:
-    token_ids = item["tokens"].tolist() + [int(item["labels"][-1])]
+    token_ids: list[int],
+) -> tuple[dict[str, Any], float, float]:
+    record_started_at = time.perf_counter()
     record = {
         "iteration": iteration,
         "token_ids": token_ids,
@@ -609,11 +617,14 @@ def build_sample_record(
         dataset_index,
         item,
     )
+    spans_started_at = time.perf_counter()
     indexed_dataset_spans = get_indexed_dataset_spans(source_dataset, source_sample_index)
+    spans_seconds = time.perf_counter() - spans_started_at
     record["indexed_dataset_spans"] = indexed_dataset_spans
     if "dataset_path" not in record and hasattr(source_dataset, "dataset_path"):
         record["dataset_path"] = source_dataset.dataset_path
-    return record
+    record_seconds = time.perf_counter() - record_started_at - spans_seconds
+    return record, spans_seconds, record_seconds
 
 
 def build_sample_record_from_index(
@@ -623,9 +634,16 @@ def build_sample_record_from_index(
     dataset_paths: list[str],
     iteration: int,
     dataset_index: int,
-) -> dict[str, Any]:
+) -> TimedPayload:
+    getitem_started_at = time.perf_counter()
     item = dataset[dataset_index]
-    return build_sample_record(
+    getitem_seconds = time.perf_counter() - getitem_started_at
+
+    token_ids_started_at = time.perf_counter()
+    token_ids = item["tokens"].tolist() + [int(item["labels"][-1])]
+    token_ids_seconds = time.perf_counter() - token_ids_started_at
+
+    record, spans_seconds, record_seconds = build_sample_record(
         args,
         dataset,
         dataset_index,
@@ -633,6 +651,16 @@ def build_sample_record_from_index(
         item,
         tokenizer,
         dataset_paths,
+        token_ids,
+    )
+    return TimedPayload(
+        payload=record,
+        timings=ReadTimings(
+            getitem_seconds=getitem_seconds,
+            token_ids_seconds=token_ids_seconds,
+            spans_seconds=spans_seconds,
+            record_seconds=record_seconds,
+        ),
     )
 
 
@@ -680,7 +708,7 @@ def iter_output_payloads_parallel(
 
     work_items = iter(iter_iteration_dataset_indices(args, len(dataset)))
     max_pending = reader_workers * 2
-    pending: deque[concurrent.futures.Future[dict[str, Any]]] = deque()
+    pending: deque[concurrent.futures.Future[TimedPayload]] = deque()
 
     def submit_next(executor: concurrent.futures.ThreadPoolExecutor) -> bool:
         try:
@@ -762,6 +790,14 @@ class PerformanceStats:
         self.queue_max_size = queue_max_size
         self.reader_count = 0
         self.reader_seconds = 0.0
+        self.getitem_count = 0
+        self.getitem_seconds = 0.0
+        self.token_ids_count = 0
+        self.token_ids_seconds = 0.0
+        self.spans_count = 0
+        self.spans_seconds = 0.0
+        self.record_count = 0
+        self.record_seconds = 0.0
         self.put_wait_count = 0
         self.put_wait_seconds = 0.0
         self.get_wait_count = 0
@@ -781,6 +817,17 @@ class PerformanceStats:
         with self.lock:
             self.reader_count += 1
             self.reader_seconds += seconds
+
+    def add_read_timings(self, timings: ReadTimings, count: int = 1) -> None:
+        with self.lock:
+            self.getitem_count += count
+            self.getitem_seconds += timings.getitem_seconds
+            self.token_ids_count += count
+            self.token_ids_seconds += timings.token_ids_seconds
+            self.spans_count += count
+            self.spans_seconds += timings.spans_seconds
+            self.record_count += count
+            self.record_seconds += timings.record_seconds
 
     def add_put_wait(self, seconds: float) -> None:
         with self.lock:
@@ -818,6 +865,12 @@ class PerformanceStats:
             queue_size = self.queue_size
             queue_max_size = self.queue_max_size
             reader_ms = self._average_ms(self.reader_seconds, self.reader_count)
+            getitem_ms = self._average_ms(self.getitem_seconds, self.getitem_count)
+            token_ids_ms = self._average_ms(
+                self.token_ids_seconds, self.token_ids_count
+            )
+            spans_ms = self._average_ms(self.spans_seconds, self.spans_count)
+            record_ms = self._average_ms(self.record_seconds, self.record_count)
             put_wait_ms = self._average_ms(self.put_wait_seconds, self.put_wait_count)
             get_wait_ms = self._average_ms(self.get_wait_seconds, self.get_wait_count)
             json_ms = self._average_ms(self.json_seconds, self.json_count)
@@ -833,6 +886,10 @@ class PerformanceStats:
         return (
             f"{queue_text} "
             f"read={reader_ms:.1f}ms "
+            f"getitem={getitem_ms:.1f}ms "
+            f"tok={token_ids_ms:.1f}ms "
+            f"spans={spans_ms:.1f}ms "
+            f"record={record_ms:.1f}ms "
             f"put={put_wait_ms:.1f}ms "
             f"get={get_wait_ms:.1f}ms "
             f"json={json_ms:.1f}ms "
@@ -855,6 +912,13 @@ def resolve_output_path(output_path: str) -> Path:
     return resolved
 
 
+def unwrap_timed_payload(item: Any, stats: PerformanceStats) -> dict[str, Any]:
+    if isinstance(item, TimedPayload):
+        stats.add_read_timings(item.timings)
+        return item.payload
+    return item
+
+
 def write_output_serial(
     payloads: Any,
     output_path: str,
@@ -873,10 +937,11 @@ def write_output_serial(
         while True:
             read_started_at = time.perf_counter()
             try:
-                payload = next(payload_iter)
+                payload_item = next(payload_iter)
             except StopIteration:
                 break
             stats.add_reader(time.perf_counter() - read_started_at)
+            payload = unwrap_timed_payload(payload_item, stats)
 
             json_started_at = time.perf_counter()
             line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
@@ -914,12 +979,13 @@ def write_output_pipelined(
             ) as writer:
                 while True:
                     get_started_at = time.perf_counter()
-                    payload = output_queue.get()
+                    payload_item = output_queue.get()
                     stats.add_get_wait(time.perf_counter() - get_started_at)
                     stats.set_queue_size(output_queue.qsize())
                     try:
-                        if payload is sentinel:
+                        if payload_item is sentinel:
                             return
+                        payload = unwrap_timed_payload(payload_item, stats)
                         json_started_at = time.perf_counter()
                         line = json.dumps(
                             payload,
@@ -1015,12 +1081,13 @@ def iter_payload_chunks(
         while len(chunk) < compress_chunk_records:
             read_started_at = time.perf_counter()
             try:
-                payload = next(payload_iter)
+                payload_item = next(payload_iter)
             except StopIteration:
                 if chunk:
                     yield chunk
                 return
             stats.add_reader(time.perf_counter() - read_started_at)
+            payload = unwrap_timed_payload(payload_item, stats)
             chunk.append(payload)
         yield chunk
 

@@ -66,7 +66,9 @@ Useful variables:
   defaults to `1`; set it to `0` to disable tqdm. `PROGRESS_INTERVAL` is passed
   to tqdm as `mininterval` and defaults to `5` seconds. The progress postfix
   reports output queue occupancy plus average milliseconds spent in reader,
-  queue put/get waits, JSON serialization, gzip compression, and writing.
+  reader sub-steps (`getitem`, token id conversion, span lookup, record
+  assembly), queue put/get waits, JSON serialization, gzip compression, and
+  writing.
 - `INCLUDE_TEXT`: include detokenized `text` in each record. Defaults to `0`;
   token ids are always written and can be detokenized later.
 - `EXTRA_ARGS`: additional arguments passed to `replay_training_batch.py`.

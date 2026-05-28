@@ -169,6 +169,12 @@ def load_args() -> argparse.Namespace:
     parser.add_argument("--ncpus", type=int, default=192, help=argparse.SUPPRESS)
     parser.add_argument("--walltime", default="24:00:00", help=argparse.SUPPRESS)
     parser.add_argument("--pbs-option", dest="pbs_options", nargs="*", default=[], help=argparse.SUPPRESS)
+    parser.add_argument(
+        "--depend-afterany",
+        nargs="*",
+        default=[],
+        help=argparse.SUPPRESS,
+    )
     parser.add_argument("--dry-run", action="store_true", help="Print the generated qsub script without submitting.")
 
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -224,6 +230,13 @@ def check_args(args: argparse.Namespace) -> tuple[str, Path]:
     return range_label, output
 
 
+def build_pbs_options(args: argparse.Namespace) -> str:
+    pbs_options = list(args.pbs_options)
+    if args.depend_afterany:
+        pbs_options.append(f"#PBS -W depend=afterany:{':'.join(args.depend_afterany)}")
+    return "\n".join(pbs_options)
+
+
 def main() -> None:
     args = load_args()
     range_label, output = check_args(args)
@@ -239,7 +252,7 @@ def main() -> None:
         walltime=args.walltime,
         output_dir=str(output_dir),
         range_label=range_label,
-        pbs_options="\n".join(args.pbs_options),
+        pbs_options=build_pbs_options(args),
         repo_dir=shell_quote(args.repo_dir),
         env_dir=shell_quote(args.env_dir),
         task_dir=shell_quote(args.task_dir),

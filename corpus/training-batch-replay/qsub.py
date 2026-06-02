@@ -17,6 +17,7 @@ import os
 import shlex
 import subprocess
 from pathlib import Path
+from typing import Optional, Tuple
 
 
 DEFAULT_ENV_DIR = "/groups/gcg51557/experiments/0213_v4-8b/env"
@@ -92,7 +93,7 @@ def shell_quote(value: object) -> str:
     return shlex.quote(str(value))
 
 
-def shell_quote_optional(value: object | None) -> str:
+def shell_quote_optional(value: Optional[object]) -> str:
     if value is None:
         return "''"
     return shell_quote(value)
@@ -102,7 +103,11 @@ def default_repo_dir() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
-def format_range_label(iter_index: int | None, iter_start: int | None, iter_end: int | None) -> str:
+def format_range_label(
+    iter_index: Optional[int],
+    iter_start: Optional[int],
+    iter_end: Optional[int],
+) -> str:
     if iter_index is not None:
         return f"iter_{iter_index:07d}"
     if iter_start is None and iter_end is None:
@@ -181,7 +186,7 @@ def load_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def check_args(args: argparse.Namespace) -> tuple[str, Path]:
+def check_args(args: argparse.Namespace) -> Tuple[str, Path]:
     if args.iter_index is not None and (args.iter_start is not None or args.iter_end is not None):
         raise ValueError("--iter-index cannot be used with --iter-start or --iter-end.")
     if args.iter_index is not None and args.iter_index < 0:

@@ -4,6 +4,7 @@ import argparse
 import shlex
 import subprocess
 from pathlib import Path
+from typing import Optional
 
 
 REPLAY_OPTION_NAMES = {
@@ -122,9 +123,10 @@ printf '%s\\0' "${{ALL_PARAMS[@]}}"
     return train_data_path, all_params
 
 
-def option_value(all_params: list[str], name: str) -> str | None:
+def option_value(all_params: list[str], name: str) -> Optional[str]:
     option = f"--{name}"
-    for index, value in enumerate(all_params):
+    for index in range(len(all_params) - 1, -1, -1):
+        value = all_params[index]
         if value == option:
             next_index = index + 1
             if next_index >= len(all_params) or all_params[next_index].startswith("--"):
@@ -137,7 +139,7 @@ def extract_data_path(all_params: list[str], train_data_path: list[str]) -> list
     if "--data-path" not in all_params:
         return train_data_path
 
-    start = all_params.index("--data-path") + 1
+    start = len(all_params) - 1 - all_params[::-1].index("--data-path") + 1
     end = start
     while end < len(all_params) and not all_params[end].startswith("--"):
         end += 1
@@ -211,7 +213,7 @@ def yield_default_assignment(name: str, value: str) -> str:
     return f"export {name}=${{{name}:-{shlex.quote(value)}}}"
 
 
-def emit_sh(config: dict[str, object], output_path: Path | None) -> None:
+def emit_sh(config: dict[str, object], output_path: Optional[Path]) -> None:
     text = "\n".join(iter_sh_lines(config)) + "\n"
     if output_path is None:
         print(text, end="")

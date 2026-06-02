@@ -17,7 +17,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, Optional
 
 
 # The global variables for Megatron-LM imports are populated by configure_megatron_imports().
@@ -547,7 +547,7 @@ def resolve_source_dataset_sample(
     dataset: Any,
     dataset_index: int,
     item: dict[str, Any],
-) -> tuple[Any, int, int | None]:
+) -> tuple[Any, int, Optional[int]]:
     if hasattr(dataset, "datasets"):
         dataset_id = int(item.get("dataset_id", dataset.dataset_index[dataset_index]))
         dataset_sample_index = int(
@@ -749,7 +749,7 @@ def iter_output_payloads(args: argparse.Namespace):
 
 
 class ProgressReporter:
-    def __init__(self, total: int | None, interval_seconds: float, enabled: bool) -> None:
+    def __init__(self, total: Optional[int], interval_seconds: float, enabled: bool) -> None:
         self.enabled = enabled
         self.interval_seconds = interval_seconds
         self.last_postfix_at = 0.0
@@ -769,7 +769,7 @@ class ProgressReporter:
                 file=sys.stderr,
             )
 
-    def update(self, increment: int = 1, stats: "PerformanceStats | None" = None) -> None:
+    def update(self, increment: int = 1, stats: Optional["PerformanceStats"] = None) -> None:
         if self.bar is not None:
             if stats is not None:
                 now = time.monotonic()
@@ -784,9 +784,9 @@ class ProgressReporter:
 
 
 class PerformanceStats:
-    def __init__(self, queue_max_size: int | None = None) -> None:
+    def __init__(self, queue_max_size: Optional[int] = None) -> None:
         self.lock = threading.Lock()
-        self.queue_size: int | None = None
+        self.queue_size: Optional[int] = None
         self.queue_max_size = queue_max_size
         self.reader_count = 0
         self.reader_seconds = 0.0
@@ -809,7 +809,7 @@ class PerformanceStats:
         self.write_count = 0
         self.write_seconds = 0.0
 
-    def set_queue_size(self, value: int | None) -> None:
+    def set_queue_size(self, value: Optional[int]) -> None:
         with self.lock:
             self.queue_size = value
 

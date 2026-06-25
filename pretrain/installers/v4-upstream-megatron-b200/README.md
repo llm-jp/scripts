@@ -13,7 +13,7 @@ Blackwell.
 | torch | 2.12.0 + cu130 |
 | Transformer Engine | 2.16.0 (prebuilt cu13 wheel) |
 | FlashAttention | **4** (`flash-attn-4` 4.0.0b17 + cutlass-dsl 4.5.2 + quack 0.5.0) |
-| APEX | latest `main`, built for sm_100 |
+| APEX | `becbb77cea4cb54f2929f7c938a0a6f7dd1fdc39`, built for sm_100 |
 | Megatron-LM | `llm-jp/Megatron-LM` @ `core_v0.18.0_b200` |
 | Tokenizer | `llm-jp/llm-jp-tokenizer` @ `v3.0b2` |
 
@@ -50,4 +50,4 @@ source <env_install_path>/venv/bin/activate         # Python venv
 - `PRETRAIN_MEGATRON_REPO` / `PRETRAIN_MEGATRON_TAG` — Megatron-LM source/branch.
 - `PRETRAIN_TORCH_VERSION`, `PRETRAIN_TRANSFORMER_ENGINE_VERSION`, etc. — pins.
 - `PRETRAIN_CUDA_HOME` — system CUDA toolkit used for nvcc/APEX.
-- `PRETRAIN_APEX_COMMIT` — pin APEX (empty = latest `main`).
+- `PRETRAIN_APEX_COMMIT` — override the pinned APEX commit.

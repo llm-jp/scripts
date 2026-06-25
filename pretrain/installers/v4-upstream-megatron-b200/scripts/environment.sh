@@ -31,7 +31,7 @@ export PRETRAIN_CUBLAS_VERSION=13.5.1.27    # TE 2.16 needs cublasLtGroupedMatri
 export PRETRAIN_FLASH_ATTENTION_4_VERSION=4.0.0b17
 export PRETRAIN_CUTLASS_DSL_VERSION=4.5.2   # quack 0.5.0 needs ThrMma (removed in 4.6.0.dev0)
 export PRETRAIN_QUACK_VERSION=0.5.0
-export PRETRAIN_APEX_COMMIT="${PRETRAIN_APEX_COMMIT:-}"   # empty = latest main (--depth 1)
+export PRETRAIN_APEX_COMMIT="${PRETRAIN_APEX_COMMIT:-becbb77cea4cb54f2929f7c938a0a6f7dd1fdc39}"
 
 # ----- Blackwell / B200 build flags ------------------------------------------
 export TORCH_CUDA_ARCH_LIST=10.0

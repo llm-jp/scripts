@@ -1,14 +1,21 @@
 # Python dependencies for upstream Megatron-LM training on B200.
 accelerate==1.14.0
-datasets==5.0.0
+datasets==4.8.4
 einops==0.8.2
+fsspec==2026.2.0
+mcore-bridge==1.5.1
+ms-swift==4.3.1
 ninja==1.13.0
 omegaconf==2.3.1
 onnx==1.22.0
 onnxscript==0.7.0
 packaging==26.2
+pandas==2.3.3
 peft==0.19.1
+pillow==11.3.0
 pybind11==3.0.4
+pydantic==2.12.3
+pydantic-core==2.41.4
 PyYAML==6.0.3
 regex==2026.5.9
 safetensors==0.8.0

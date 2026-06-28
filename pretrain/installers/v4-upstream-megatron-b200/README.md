@@ -17,6 +17,18 @@ Blackwell.
 | Megatron-LM | `llm-jp/Megatron-LM` @ `core_v0.18.0_b200` |
 | Tokenizer | `llm-jp/llm-jp-tokenizer` @ `v3.0b2` |
 
+## Prerequisites
+
+The build driver (`run_setup.sh` / `sbatch_setup.sh`) calls `uv` directly on the
+node, so `uv` must be on `PATH` before you start. If it is not installed:
+
+```bash
+export UV_VERSION=0.7.2
+curl -LsSf "https://astral.sh/uv/${UV_VERSION}/install.sh" | sh
+export PATH="$HOME/.local/bin:$PATH"
+uv --version
+```
+
 ## Usage
 
 Build (submits to the Slurm `cpu` partition — it has internet + cores):

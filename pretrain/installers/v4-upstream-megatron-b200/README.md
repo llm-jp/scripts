@@ -10,7 +10,7 @@ Blackwell.
 |---|---|
 | Python | 3.12 (uv-managed) |
 | CUDA toolkit | 13.0.3 (system, for nvcc/APEX) |
-| torch | 2.12.0 + cu130 |
+| torch | 2.12.1 + cu130 |
 | Transformer Engine | 2.16.0 (prebuilt cu13 wheel) |
 | FlashAttention | **4** (`flash-attn-4` 4.0.0b17 + cutlass-dsl 4.5.2 + quack 0.5.0) |
 | APEX | `becbb77cea4cb54f2929f7c938a0a6f7dd1fdc39`, built for sm_100 |

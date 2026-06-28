@@ -25,7 +25,7 @@ export PRETRAIN_CUDA_HOME="${PRETRAIN_CUDA_HOME:-/usr/local/cuda-toolkit/13.0.3}
 export PRETRAIN_CUDA_INDEX=cu130
 
 # ----- toolchain versions ----------------------------------------------------
-export PRETRAIN_TORCH_VERSION=2.12.0
+export PRETRAIN_TORCH_VERSION=2.12.1
 export PRETRAIN_TRANSFORMER_ENGINE_VERSION=2.16.0
 export PRETRAIN_CUBLAS_VERSION=13.5.1.27    # TE 2.16 needs cublasLtGroupedMatrixLayoutInit
 export PRETRAIN_FLASH_ATTENTION_4_VERSION=4.0.0b17

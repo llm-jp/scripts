@@ -86,8 +86,9 @@ ALL_PARAMS+=(
 # 70 layers with embedding+loss counted as layers (account-for) -> 72/(PP6*VPP2)
 # = 6 layers per virtual stage. DP = world/(TP*PP*CP) = NODES*8/6, and EP=8 must
 # divide DP (holds for 24/30/36/42 nodes). Node count is the only parallelism knob
-# left (via NODES); see submit script. Checkpoints are NOT reshardable across node
-# counts with overlap on, so a resume must use the same node count.
+# left (via NODES); see submit script. NOTE: checkpoints are NOT portable across
+# node counts here -- a resume must use the SAME node count as the save (see the
+# Checkpoint I/O block for why both reshardable formats are unusable on 291B).
 ALL_PARAMS+=(
     --tensor-model-parallel-size 1
     --pipeline-model-parallel-size 6
@@ -106,8 +107,11 @@ ALL_PARAMS+=(
 
 # Distributed-optimizer communication overlap (always on; ~6% faster). Verified
 # to run on PP6/VPP2 (job 1774); it only deadlocked on the old PP4 config (1681).
-# NOTE: overlap ties the optimizer bucket layout to DP, so a checkpoint saved with
-# overlap cannot be resumed at a different node count (DP) or with overlap off.
+# NOTE: overlap pads the optimizer bucket layout to DP, so the default bucket-space
+# (dp_reshardable) checkpoint format is NOT portable across node counts (jobs 1786
+# and 1791 both died with "Global shape mismatch" on a pure DP48->DP40 resume).
+# The DP-independent --dist-ckpt-optim-fully-reshardable format would fix that but
+# OOMs the save on 291B (rank0 gather; job 1794), so node count stays fixed.
 ALL_PARAMS+=(
     --overlap-grad-reduce
     --overlap-param-gather
@@ -149,6 +153,12 @@ ALL_PARAMS+=(
     --ckpt-format torch_dist
     --use-persistent-ckpt-worker
 )
+# NOTE: do NOT add --dist-ckpt-optim-fully-reshardable here. It would make
+# checkpoints portable across node counts, but on this 291B model it OOMs the
+# save: fully_reshardable internally routes through get_parameter_state_dp_zero,
+# i.e. it GATHERS the full fp32 optimizer state onto DP rank 0, which SIGKILLs
+# (exitcode -9) at the first save. Proven on job 1794 (died gathering iter-500).
+# So node count is FIXED at the save-time DP; resume must use the same node count.
 
 # Logging
 ALL_PARAMS+=(

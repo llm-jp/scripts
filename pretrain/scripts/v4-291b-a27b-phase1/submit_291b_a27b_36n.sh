@@ -46,6 +46,12 @@ MICRO_BATCH_SIZE=2; GLOBAL_BATCH_SIZE=2880
 export SAVE_INTERVAL=${SAVE_INTERVAL:-100}
 export NUM_DATASET_BUILDER_THREADS=${NUM_DATASET_BUILDER_THREADS:-16}
 export DISTRIBUTED_TIMEOUT_MINUTES=${DISTRIBUTED_TIMEOUT_MINUTES:-1440}
+# GPT/Blended index cache. Defaults to a per-run dir under MODEL_DIR (self-contained,
+# built once on the first run and reused on later restarts). To skip even that first
+# build, point DATA_CACHE_DIR at an existing prebuilt cache for this blend (the
+# indices are model-arch-independent), e.g.:
+#   DATA_CACHE_DIR=/path/to/shared/data_cache
+# A restart then LOADS the index (~seconds) instead of rebuilding it (~5-10 min).
 export DATA_CACHE_DIR=${DATA_CACHE_DIR:-${MODEL_DIR}/data_cache}
 export WANDB_ENTITY=${WANDB_ENTITY:-llm-jp}
 export WANDB_PROJECT=${WANDB_PROJECT:-0279_wsd_test}

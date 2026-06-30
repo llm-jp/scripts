@@ -21,8 +21,10 @@ Build the reference dir:
 REF=/path/to/hf_ref            # e.g. .../0279_v4-291b-a27b-hf-ref
 mkdir -p "$REF"
 cp v4-291b-a27b/config.json "$REF"/config.json          # per-model config (this dir)
-# tokenizer files (reuse an existing v4 HF ref, same tokenizer for every v4 model):
-cp /home/taishi/experiments/0279_v4-moe-32b-a3.8b-hf-ref-config/{special_tokens_map.json,tokenizer_config.json,tokenizer.model} "$REF"/
+# tokenizer files: copy from any existing v4 HF reference (the tokenizer is the
+# same for every v4 model). Set V4_TOKENIZER_SRC to that reference dir:
+V4_TOKENIZER_SRC=/path/to/any/v4-hf-ref
+cp "$V4_TOKENIZER_SRC"/{special_tokens_map.json,tokenizer_config.json,tokenizer.model} "$REF"/
 ```
 
 Per-model configs are derived from the Qwen3-MoE shape; `v4-291b-a27b/config.json`
@@ -34,7 +36,7 @@ is the 332B shape reduced to `num_hidden_layers=70` with `num_key_value_heads=8`
 ```bash
 sbatch --nodelist=<node> \
   --export=ALL,\
-VENV_DIR=/home/taishi/envs/megatron-lm-b200,\
+VENV_DIR=/path/to/envs/megatron-lm-b200,\
 MEGATRON_CKPT_STEP=100,\
 MODELSCOPE_CACHE=/path/to/modelscope_cache,\
 MCORE_PATH=/path/to/model_dir/checkpoints,\

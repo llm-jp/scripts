@@ -168,6 +168,21 @@ ALL_PARAMS+=(
     --use-persistent-ckpt-worker
 )
 
+# Optimizer checkpoint resharding (node-count flexibility). IMPORTANT findings on
+# this 291B setup:
+#  - Default 'dp_reshardable' does NOT actually let you change node count: TP/PP
+#    changes are rejected ("(TP,PP) mismatch ... not supported"), and even a
+#    pure-DP change (e.g. 36->30 nodes, PP fixed) fails with an optimizer-buffer
+#    shape mismatch because overlap's bucket padding is tied to DP. So with the
+#    fast config (overlap on) the node count is effectively FIXED.
+#  - RESHARDABLE_CKPT=1 ('fully_reshardable') WOULD allow TP/PP/DP changes, but it
+#    gathers the full optimizer state on DP rank0 and HOST-OOMs on 291B (OOM-killer
+#    SIGKILLs ranks). Needs --distrib-optim-fully-reshardable-mem-efficient (+gloo),
+#    untested. Left here as a knob; not usable as-is on 291B.
+if [ "${RESHARDABLE_CKPT:-0}" = "1" ]; then
+    ALL_PARAMS+=( --dist-ckpt-optim-fully-reshardable )
+fi
+
 # Logging
 ALL_PARAMS+=(
     --log-interval 1

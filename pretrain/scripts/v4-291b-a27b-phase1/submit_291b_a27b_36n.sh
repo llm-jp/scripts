@@ -19,10 +19,9 @@ Usage:
   bash submit_291b_a27b_36n.sh <ENV_DIR> <MODEL_DIR>
 
 Environment overrides (defaults in parens):
+  # Parallelism (TP1/PP6/CP1/EP8/VPP2), batch (mbs2/gbs2880) and overlap are all
+  # hardcoded in base/params.sh. NODES is the only parallelism knob (24/30/36).
   NODES=36
-  # Parallelism (TP1/PP6/CP1/EP8/VPP2) is hardcoded in base/params.sh, not here.
-  MICRO_BATCH_SIZE=2  GLOBAL_BATCH_SIZE=2880
-  COMM_OVERLAP=1           # overlap grad-reduce/param-gather (ON; set 0 if a config deadlocks)
   SAVE_INTERVAL=100
   NUM_DATASET_BUILDER_THREADS=16
   DISTRIBUTED_TIMEOUT_MINUTES=1440
@@ -41,8 +40,9 @@ export GPUS_PER_NODE=${GPUS_PER_NODE:-8}
 # mirror it only for the DP/divisibility math and run naming below; edit both
 # places to change. NODES is the only parallelism knob (for 24/30/36/42 nodes).
 TP=1; PP=6; EP=8; CP=1; VPP=2
-export MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-2}
-export GLOBAL_BATCH_SIZE=${GLOBAL_BATCH_SIZE:-2880}
+# Batch sizes are hardcoded in base/params.sh; mirrored here for the divisibility
+# math and naming. mbs2/gbs2880 divides on 24/30/36 nodes (not 42/48).
+MICRO_BATCH_SIZE=2; GLOBAL_BATCH_SIZE=2880
 export SAVE_INTERVAL=${SAVE_INTERVAL:-100}
 export NUM_DATASET_BUILDER_THREADS=${NUM_DATASET_BUILDER_THREADS:-16}
 export DISTRIBUTED_TIMEOUT_MINUTES=${DISTRIBUTED_TIMEOUT_MINUTES:-1440}

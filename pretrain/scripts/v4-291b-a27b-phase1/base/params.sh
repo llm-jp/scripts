@@ -78,8 +78,8 @@ ALL_PARAMS+=(
 #   mbs=2, gbs=2880 -> 30 microbatches
 # (Old TP1/PP4 default gave DP=72: mbs=2 -> 20, mbs=4 -> 10.)
 ALL_PARAMS+=(
-    --micro-batch-size ${MICRO_BATCH_SIZE:-4}
-    --global-batch-size ${GLOBAL_BATCH_SIZE:-2880}
+    --micro-batch-size 2
+    --global-batch-size 2880
 )
 
 # Parallelism (decided config, hardcoded): TP1 / PP6 / CP1 / EP8 / ETP1 / VPP2.
@@ -104,18 +104,14 @@ ALL_PARAMS+=(
     --num-virtual-stages-per-pipeline-rank 2
 )
 
-# Distributed-optimizer communication overlap (ON by default; ~6% faster).
-# Verified to run on PP6/VPP2 (job 1774). It deadlocked at iteration 2 only on the
-# old PP4 config (job 1681), so that was config-specific. Set COMM_OVERLAP=0 to
-# disable if a new config deadlocks. NOTE: toggling overlap changes the
-# distributed-optimizer bucket layout, so a checkpoint saved with one setting
-# cannot be resumed with the other.
-if [ "${COMM_OVERLAP:-1}" = "1" ]; then
-    ALL_PARAMS+=(
-        --overlap-grad-reduce
-        --overlap-param-gather
-    )
-fi
+# Distributed-optimizer communication overlap (always on; ~6% faster). Verified
+# to run on PP6/VPP2 (job 1774); it only deadlocked on the old PP4 config (1681).
+# NOTE: overlap ties the optimizer bucket layout to DP, so a checkpoint saved with
+# overlap cannot be resumed at a different node count (DP) or with overlap off.
+ALL_PARAMS+=(
+    --overlap-grad-reduce
+    --overlap-param-gather
+)
 
 # Recompute for initial memory headroom.
 ALL_PARAMS+=(

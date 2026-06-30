@@ -152,15 +152,14 @@ ALL_PARAMS+=(
     --manual-gc-interval 100
 )
 
-# Checkpoint I/O format
+# Checkpoint I/O format. Do NOT add --use-persistent-ckpt-worker on this cluster:
+# the persistent worker needs pidfd_getfd cross-process FD passing, which the
+# kernel blocks (ptrace_scope), hanging the save. Plain --async-save (temporal
+# worker) avoids it and still saves non-blocking.
 ALL_PARAMS+=(
     --async-save
     --ckpt-format torch_dist
 )
-
-if [ "${USE_PERSISTENT_CKPT_WORKER:-1}" = "1" ]; then
-    ALL_PARAMS+=( --use-persistent-ckpt-worker )
-fi
 
 # Logging
 ALL_PARAMS+=(

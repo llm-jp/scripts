@@ -22,7 +22,7 @@ Environment overrides (defaults in parens):
   NODES=36
   TP=1  PP=6  CP=1  VPP=2  EP=8  ACCOUNT_EMB=1
   MICRO_BATCH_SIZE=2  GLOBAL_BATCH_SIZE=2880
-  COMM_OVERLAP=0           # 1 re-enables overlap-grad-reduce/param-gather (deadlocks here)
+  COMM_OVERLAP=1           # overlap grad-reduce/param-gather (ON; set 0 if a config deadlocks)
   SAVE_INTERVAL=100
   NUM_DATASET_BUILDER_THREADS=16
   DISTRIBUTED_TIMEOUT_MINUTES=1440

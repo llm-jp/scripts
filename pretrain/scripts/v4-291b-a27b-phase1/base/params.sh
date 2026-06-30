@@ -118,9 +118,13 @@ if [ "${VPP:-1}" -gt 1 ]; then
     ALL_PARAMS+=( --num-virtual-stages-per-pipeline-rank ${VPP} )
 fi
 
-# Distributed-optimizer communication overlap. Set COMM_OVERLAP=0 to disable
-# (e.g. to rule out an overlap-related NCCL hang at iteration 2).
-if [ "${COMM_OVERLAP:-0}" = "1" ]; then
+# Distributed-optimizer communication overlap (ON by default; ~6% faster).
+# Verified to run on PP6/VPP2 (job 1774). It deadlocked at iteration 2 only on the
+# old PP4 config (job 1681), so that was config-specific. Set COMM_OVERLAP=0 to
+# disable if a new config deadlocks. NOTE: toggling overlap changes the
+# distributed-optimizer bucket layout, so a checkpoint saved with one setting
+# cannot be resumed with the other.
+if [ "${COMM_OVERLAP:-1}" = "1" ]; then
     ALL_PARAMS+=(
         --overlap-grad-reduce
         --overlap-param-gather
@@ -152,13 +156,16 @@ ALL_PARAMS+=(
     --manual-gc-interval 100
 )
 
-# Checkpoint I/O format. Do NOT add --use-persistent-ckpt-worker on this cluster:
-# the persistent worker needs pidfd_getfd cross-process FD passing, which the
-# kernel blocks (ptrace_scope), hanging the save. Plain --async-save (temporal
-# worker) avoids it and still saves non-blocking.
+# Checkpoint I/O format. --async-save (non-blocking) requires
+# --use-persistent-ckpt-worker, which needs kernel.yama.ptrace_scope=0
+# (pidfd_getfd cross-process FD passing). The cluster admin set ptrace_scope=0 on
+# the compute nodes, so the persistent worker + true async save now work. If a
+# node ever reverts to ptrace_scope=1 the persistent worker hangs the save; drop
+# --use-persistent-ckpt-worker there (mcore then falls back to a synchronous save).
 ALL_PARAMS+=(
     --async-save
     --ckpt-format torch_dist
+    --use-persistent-ckpt-worker
 )
 
 # Logging

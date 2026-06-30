@@ -82,41 +82,27 @@ ALL_PARAMS+=(
     --global-batch-size ${GLOBAL_BATCH_SIZE:-2880}
 )
 
-# Parallelism. 70 layers; DP = world / (TP*PP*CP), and EP must divide DP.
-#   PP=4 (default): explicit 17/18/18/17 decoder split.
-#   PP=6 + VPP=2 + ACCOUNT_EMB=1: embedding+loss each count as a layer
-#     (70+2=72), giving an even 72/(PP*VPP)=6 layers per virtual stage.
+# Parallelism (decided config, hardcoded): TP1 / PP6 / CP1 / EP8 / ETP1 / VPP2.
+# 70 layers with embedding+loss counted as layers (account-for) -> 72/(PP6*VPP2)
+# = 6 layers per virtual stage. DP = world/(TP*PP*CP) = NODES*8/6, and EP=8 must
+# divide DP (holds for 24/30/36/42 nodes). Node count is the only parallelism knob
+# left (via NODES); see submit script. Checkpoints are NOT reshardable across node
+# counts with overlap on, so a resume must use the same node count.
 ALL_PARAMS+=(
-    --tensor-model-parallel-size ${TP:-1}
-    --pipeline-model-parallel-size ${PP:-4}
-    --expert-model-parallel-size ${EP:-8}
+    --tensor-model-parallel-size 1
+    --pipeline-model-parallel-size 6
+    --expert-model-parallel-size 8
     --expert-tensor-parallel-size 1
-    --context-parallel-size ${CP:-1}
+    --context-parallel-size 1
     --sequence-parallel
     --use-distributed-optimizer
     --distributed-backend nccl
     --distributed-timeout-minutes ${DISTRIBUTED_TIMEOUT_MINUTES:-120}
     --num-dataset-builder-threads ${NUM_DATASET_BUILDER_THREADS:-1}
+    --account-for-embedding-in-pipeline-split
+    --account-for-loss-in-pipeline-split
+    --num-virtual-stages-per-pipeline-rank 2
 )
-
-# Pipeline layer split: account-for-embedding/loss (even PP*VPP division) vs the
-# explicit PP=4 first/last split.
-if [ "${ACCOUNT_EMB:-0}" = "1" ]; then
-    ALL_PARAMS+=(
-        --account-for-embedding-in-pipeline-split
-        --account-for-loss-in-pipeline-split
-    )
-else
-    ALL_PARAMS+=(
-        --decoder-first-pipeline-num-layers 17
-        --decoder-last-pipeline-num-layers 17
-    )
-fi
-
-# Virtual pipeline parallelism (interleaved 1F1B) when VPP>1.
-if [ "${VPP:-1}" -gt 1 ]; then
-    ALL_PARAMS+=( --num-virtual-stages-per-pipeline-rank ${VPP} )
-fi
 
 # Distributed-optimizer communication overlap (ON by default; ~6% faster).
 # Verified to run on PP6/VPP2 (job 1774). It deadlocked at iteration 2 only on the

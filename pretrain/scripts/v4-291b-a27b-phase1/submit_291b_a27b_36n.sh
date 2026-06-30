@@ -20,7 +20,7 @@ Usage:
 
 Environment overrides (defaults in parens):
   NODES=36
-  TP=1  PP=6  CP=1  VPP=2  EP=8  ACCOUNT_EMB=1
+  # Parallelism (TP1/PP6/CP1/EP8/VPP2) is hardcoded in base/params.sh, not here.
   MICRO_BATCH_SIZE=2  GLOBAL_BATCH_SIZE=2880
   COMM_OVERLAP=1           # overlap grad-reduce/param-gather (ON; set 0 if a config deadlocks)
   SAVE_INTERVAL=100
@@ -37,12 +37,10 @@ fi
 
 export NODES=${NODES:-36}
 export GPUS_PER_NODE=${GPUS_PER_NODE:-8}
-export TP=${TP:-1}
-export PP=${PP:-6}
-export EP=${EP:-8}
-export CP=${CP:-1}
-export VPP=${VPP:-2}
-export ACCOUNT_EMB=${ACCOUNT_EMB:-1}
+# Parallelism is hardcoded in base/params.sh (TP1/PP6/CP1/EP8/ETP1/VPP2). These
+# mirror it only for the DP/divisibility math and run naming below; edit both
+# places to change. NODES is the only parallelism knob (for 24/30/36/42 nodes).
+TP=1; PP=6; EP=8; CP=1; VPP=2
 export MICRO_BATCH_SIZE=${MICRO_BATCH_SIZE:-2}
 export GLOBAL_BATCH_SIZE=${GLOBAL_BATCH_SIZE:-2880}
 export SAVE_INTERVAL=${SAVE_INTERVAL:-100}
@@ -85,7 +83,7 @@ cd "${SCRIPT_DIR}"
 echo "Submitting ${JOB_NAME}"
 echo "  ENV_DIR=${ENV_DIR}"
 echo "  MODEL_DIR=${MODEL_DIR}"
-echo "  nodes=${NODES} world=${WORLD_SIZE} tp=${TP} pp=${PP} cp=${CP} vpp=${VPP} dp=${DP} ep=${EP} expert_dp=${EXPERT_DP} account_emb=${ACCOUNT_EMB}"
+echo "  nodes=${NODES} world=${WORLD_SIZE} tp=${TP} pp=${PP} cp=${CP} vpp=${VPP} dp=${DP} ep=${EP} expert_dp=${EXPERT_DP}"
 echo "  mbs=${MICRO_BATCH_SIZE} gbs=${GLOBAL_BATCH_SIZE} microbatches=${NUM_MICROBATCHES}"
 echo "  data_cache=${DATA_CACHE_DIR}"
 echo "  wandb=${WANDB_ENTITY}/${WANDB_PROJECT}:${WANDB_EXP_NAME}"

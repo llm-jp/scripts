@@ -113,3 +113,4 @@ ALL_PARAMS+=(
 # https://docs.nvidia.com/nemo-framework/user-guide/latest/performance/performance-guide.html#communication-overlaps-and-tuning
 export NVTE_FWD_LAYERNORM_SM_MARGIN=16
 export NVTE_BWD_LAYERNORM_SM_MARGIN=16
+

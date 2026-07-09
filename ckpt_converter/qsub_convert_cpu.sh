@@ -3,8 +3,6 @@
 #PBS -q R9920251000
 #PBS -N 0208_convert
 #PBS -l select=1
-#PBS -o /dev/null
-#PBS -e /dev/null
 #PBS -m n
 
 set -eu -o pipefail
@@ -38,8 +36,11 @@ echo "CKPT_ROOT=${CKPT_ROOT}"
 echo "HF_TOKENIZER_PATH=${HF_TOKENIZER_PATH}"
 echo "OUTPUT_DIR=${OUTPUT_DIR}"
 echo "LOADER_SAVER_PATH=${LOADER_SAVER_PATH}"
+echo "PARALLEL_SIZE=${PARALLEL_SIZE}"
 
 source ${VENV_DIR}/bin/activate
+
+export CUDA_DEVICE_MAX_CONNECTIONS=1
 
 # Force CPU
 export CUDA_VISIBLE_DEVICES=""
@@ -47,9 +48,13 @@ export NVIDIA_VISIBLE_DEVICES=""
 export OMP_NUM_THREADS=${OMP_NUM_THREADS:-8}
 
 # Logs
-mkdir -p ${TASK_DIR}/logs
-LOGFILE=${TASK_DIR}/logs/convert_${ITER}_${JOBID}.out
-ERRFILE=${TASK_DIR}/logs/convert_${ITER}_${JOBID}.err
+# mkdir -p ${TASK_DIR}/logs
+# LOGFILE=${TASK_DIR}/logs/convert_${ITER}_${JOBID}.out
+# ERRFILE=${TASK_DIR}/logs/convert_${ITER}_${JOBID}.err
+# exec > "$LOGFILE" 2> "$ERRFILE"
+mkdir -p ${OUTPUT_DIR}/logs
+LOGFILE=${OUTPUT_DIR}/logs/convert_${ITER}_${JOBID}.out
+ERRFILE=${OUTPUT_DIR}/logs/convert_${ITER}_${JOBID}.err
 exec > "$LOGFILE" 2> "$ERRFILE"
 
 # Sanity checks
@@ -73,7 +78,8 @@ ln -s "${CKPT_ROOT}/${ITER_NAME}" "${LOAD_ROOT}/${ITER_NAME}"
 echo "Converting torch_dist -> HF on CPU..."
 
 PYTHONPATH="${LOADER_SAVER_PATH}:${MEGATRON_PATH}:${PYTHONPATH:-}" \
-python "${MEGATRON_PATH}/tools/checkpoint/convert.py" \
+torchrun --standalone --nproc_per_node ${PARALLEL_SIZE} \
+"${MEGATRON_PATH}/tools/checkpoint/convert.py" \
   --model-type GPT \
   --loader mcore_cpu \
   --loader-transformer-impl local \

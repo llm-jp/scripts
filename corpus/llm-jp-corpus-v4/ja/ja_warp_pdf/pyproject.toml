@@ -1,0 +1,19 @@
+[project]
+name = "ja-warp-pdf"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "Hirokazu Kiyomaru", email = "h.kiyomaru@gmail.com" }
+]
+dependencies = [
+    "bunkai[lb] @ git+https://github.com/hkiyomaru/bunkai@feature/sequential-prediction",
+    "transformers==4.33.3",
+    "pytest>=8.3.4",
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[tool.rye]
+managed = true
+virtual = true
+dev-dependencies = []

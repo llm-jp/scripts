@@ -7,7 +7,8 @@ Typical usage:
 Defaults:
     With no optional flags, runs swallow v202411 and both llm-jp-eval versions
     (v1.4.1 and v2.1.0). Use --disable-swallow and/or --disable-llm-jp-eval to
-    skip each evaluation; use --llm-jp-eval-versions to select specific versions.
+    skip each evaluation; use --llm-jp-eval-versions to select specific versions
+    (v2.1.3 and v2.1.5, the latest release, are also available).
 
 Environment variables:
     HF_HOME must point to a path under /groups/gcg51557/experiments.
@@ -101,7 +102,12 @@ LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
     "v1.4.1": "llm-jp-eval",
     "v2.1.0": "llm-jp-eval_v2.1.0",
     "v2.1.3": "llm-jp-eval_v2.1.3",
+    "v2.1.5": "llm-jp-eval_v2.1.5",
 }
+
+# Versions whose run script takes option-style flags (--max_num_samples,
+# --apply_chat_template, ...). v1.4.1 and v2.1.0 take positional arguments.
+LLM_JP_EVAL_OPTS_STYLE_VERSIONS = ("v2.1.3", "v2.1.5")
 
 
 def load_args():
@@ -115,7 +121,7 @@ def load_args():
     # Evaluator versions
     parser.add_argument("--swallow-version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
     parser.add_argument("--disable-swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
-    parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0", "v2.1.3"], help="Versions of the llm-jp-eval environment to run.")
+    parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0", "v2.1.3", "v2.1.5"], help="Versions of the llm-jp-eval environment to run.")
     parser.add_argument("--disable-llm-jp-eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")
 
     # Job configuration
@@ -187,7 +193,7 @@ def main():
                 )
             else:
                 llm_jp_eval_output_subdir = f"llm-jp-eval/{version}"
-            if version == "v2.1.3":
+            if version in LLM_JP_EVAL_OPTS_STYLE_VERSIONS:
                 chunk = LLM_JP_EVAL_TEMPLATE.format(
                     llm_jp_eval_version=version,
                     llm_jp_eval_output_subdir=llm_jp_eval_output_subdir,

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# llm-jp-eval v2.1.0 installation script
+# llm-jp-eval v2.1.5 installation script
 #
 # This script use CPU on a cluster.
 #  - In a SLURM environment, it is recommend to use CPU nodes.
@@ -83,15 +83,9 @@ pushd llm-jp-eval-inference
 git fetch origin $LLM_JP_EVAL_INFERENCE_COMMIT_HASH
 git checkout $LLM_JP_EVAL_INFERENCE_COMMIT_HASH
 
-# For models emitting Harmony format with a non-Harmony vocabulary (e.g.
-# llm-jp-4 thinking), re-encode the decoded text with the Harmony encoding
-# before parse_chat_output; also strips spurious whitespace in decoding.
-PATCH_FILE=${INSTALLER_DIR}/patches/inference-harmony-reencode.patch
-if git apply --reverse --check $PATCH_FILE 2>/dev/null; then
-  echo "Patch already applied; skipping."
-else
-  git apply $PATCH_FILE
-fi
+# NOTE: The Harmony re-encode patch required for v2.1.3 is no longer needed:
+# upstream now ships the same handling in
+# inference-modules/vllm/reasoning_adapters.py.
 
 pushd inference-modules/vllm
 uv sync --no-cache --python $PYTHON_VERSION
@@ -103,12 +97,11 @@ popd  # llm-jp-eval-inference
 # --version-name は実のところデータセットの出力先のディレクトリの名称としてだけ使われる。
 # この値は `llm_jp_eval.__version__` に一致させなければならない。dumpやeval時にこの値から
 # データセットを読みに行くので、不一致があるとエラーになる。
-# llm-jp-evalのパッケージとしてのバージョンはもう >2.0.0 であるが、`__version__` が依然として
-# 2.0.0 であるため、やむを得ず 2.0.0 を指定している。
+# v2.1.5 では `__version__` (2.1.5) がリリースタグと一致するため、そのまま指定できる。
 uv run python scripts/preprocess_dataset.py \
   --dataset-name all \
   --output-dir ${ENV_DIR}/data/llm-jp-eval \
-  --version-name 2.0.0
+  --version-name ${LLM_JP_EVAL_TAG}
 
 # The locked torch (2.6.0/cu124) has no Blackwell (sm_100) kernels; BERTScore
 # and COMET in the eval phase need a cu128 build on B200.

@@ -22,6 +22,9 @@ bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
 
 ### インストール手順 (Slurmクラスタ)
 
+2026年度から利用しているさくらインターネットのクラスタ (Slurm, B200 GPU) を想定した手順です。
+`scripts/sbatch.py` や各種スクリプト中の "this cluster" はこのクラスタを指します。
+
 ```bash
 # インストール先を指定 (実験ディレクトリ直下の environment/ を推奨)
 INSTALL_DIR="Path/to/experiment_dir/environment" # FIX_ME
@@ -105,7 +108,7 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
   <model_name_or_absolute_path> \
   <output_dir_absolute_path> \
   --experiment-dir <実験ディレクトリ> \
-  [--llm-jp-eval-versions v1.4.1 v2.1.3] \
+  [--llm-jp-eval-versions v1.4.1 v2.1.3 v2.1.5] \
   [--partition gpu] \
   [--gpus 1] \
   [--dry-run]
@@ -116,7 +119,8 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
 
 > [!NOTE]
 > - singularity等のコンテナランタイムがないノードでは、llm-jp-eval v2系のコード実行系データセット (`mbpp`, `jhumaneval`) とCGカテゴリは自動的にスキップされます (`DISABLE_CODE_EXEC=1` で明示的な無効化も可能)。そのためAVGスコアはコード実行を含む環境での結果と直接比較できません。なおllm-jp-eval v1.4.1のmbppはインプロセスの`exec()`で評価されるため、コンテナランタイムなしでも実行されます。
-> - llm-jp-eval v2.1.0はvllm 0.9.0.1 / torch 2.7.0 (cu126) に依存しており、Blackwell世代 (B200等, sm_100) のGPUでは動作しない可能性があります。その場合はvllm 0.11.2 / torch 2.9.0 (cu128) を使用するv2.1.3を利用してください。
+> - llm-jp-eval v2.1.0はvllm 0.9.0.1 / torch 2.7.0 (cu126) に依存しており、Blackwell世代 (B200等, sm_100) のGPUでは動作しない可能性があります。その場合はvllm 0.11.2 / torch 2.9.0 (cu128) を使用するv2.1.3、またはvllm 0.19.1 / torch 2.10.0を使用するv2.1.5を利用してください。
+> - llm-jp-eval v2.1.5は本インストーラ作成時点 (2026-07-20) の最新リリースです。llm-jp-eval-inferenceにはリリースタグがないため、同時点の最新コミット (`c6cd0fa`) を固定しています。v2.1.3までで必要だったHarmony再エンコードパッチはupstreamに取り込み済みのため適用しません。v2.1.5ではデータセットに`jculture_mcq`・`jfinqa`・`structeval`が追加されているため、AVGスコアはv2.1.3以前と直接比較できません。
 
 ### ジョブ形式での実行 (on ABCI)
 

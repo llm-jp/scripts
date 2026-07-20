@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Generate and submit a Slurm sbatch script for running swallow and llm-jp-eval.
 
-Slurm counterpart of qsub.py (which targets PBS on ABCI).
+Slurm counterpart of qsub.py (which targets PBS on ABCI). This script targets
+the Sakura Internet cluster used by LLM-jp from JFY2026 (Slurm; GPU nodes with
+B200 [sm_100] GPUs; no container runtime). "This cluster" below and in the
+generated job scripts refers to that cluster.
 
 Typical usage:
     python3 sbatch.py <model_name_or_path> <output_dir> --experiment-dir <dir>
@@ -9,7 +12,8 @@ Typical usage:
 Defaults:
     With no optional flags, runs swallow v202411 and both llm-jp-eval versions
     (v1.4.1 and v2.1.3). Use --disable-swallow and/or --disable-llm-jp-eval to
-    skip each evaluation; use --llm-jp-eval-versions to select specific versions.
+    skip each evaluation; use --llm-jp-eval-versions to select specific versions
+    (v2.1.5, the latest release, is also available).
     llm-jp-eval v2.1.0 is not supported on this cluster (B200/sm_100 vs its
     locked vllm 0.9.0.1 / torch 2.7.0+cu126).
 
@@ -29,6 +33,7 @@ import os
 import logging
 import subprocess
 
+# Path on the Sakura Internet cluster (JFY2026)
 DEFAULT_EXPERIMENT_DIR = "/data/experiments/0219_dev_eval_script"
 
 TEMPLATE = """#!/bin/bash
@@ -55,8 +60,9 @@ mkdir -p $LOG_DIR
 
 export HF_HOME="{hf_home}"
 {hf_token_line}
-# FlashInfer JIT (llm-jp-eval v2.1.3) needs a CUDA toolkit; GPU nodes on this
-# cluster have no /usr/local/cuda default. Load the version matching torch (cu128).
+# FlashInfer JIT (llm-jp-eval v2.1.3/v2.1.5) needs a CUDA toolkit; GPU nodes on
+# this cluster (Sakura Internet, JFY2026) have no /usr/local/cuda default.
+# Load the version matching torch.
 if [ -f /etc/profile.d/modules.sh ]; then
     source /etc/profile.d/modules.sh
     module load {cuda_module} || true
@@ -115,7 +121,12 @@ LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
     "v1.4.1": "llm-jp-eval",
     "v2.1.0": "llm-jp-eval_v2.1.0",
     "v2.1.3": "llm-jp-eval_v2.1.3",
+    "v2.1.5": "llm-jp-eval_v2.1.5",
 }
+
+# Versions whose run script takes option-style flags (--max_num_samples,
+# --apply_chat_template, ...). v1.4.1 and v2.1.0 take positional arguments.
+LLM_JP_EVAL_OPTS_STYLE_VERSIONS = ("v2.1.3", "v2.1.5")
 
 
 def load_args():
@@ -127,11 +138,11 @@ def load_args():
     parser.add_argument("--experiment-dir", type=str, default=os.environ.get("INTG_EVAL_EXPERIMENT_DIR", DEFAULT_EXPERIMENT_DIR), help=f"Directory where the evaluation environment is installed (i.e. the parent of 'environment/'). Defaults to the INTG_EVAL_EXPERIMENT_DIR environment variable, or {DEFAULT_EXPERIMENT_DIR}.")
 
     # Evaluator versions
-    parser.add_argument("--swallow-version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
+    parser.add_argument("--swallow-version", type=str, default="v202411", choices=["v202411", "v202411-tf5", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run. 'v202411-tf5' is an experimental transformers-5.x variant (same evaluation code; for models requiring transformers>=5.6).")
     parser.add_argument("--disable-swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
     # NOTE: v2.1.0 is excluded: its locked vllm 0.9.0.1 / torch 2.7.0 (cu126)
     # cannot run on this cluster's B200 (sm_100) GPUs. Use v2.1.3 instead.
-    parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.3"], choices=["v1.4.1", "v2.1.3"], help="Versions of the llm-jp-eval environment to run.")
+    parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.3"], choices=["v1.4.1", "v2.1.3", "v2.1.5"], help="Versions of the llm-jp-eval environment to run.")
     parser.add_argument("--disable-llm-jp-eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")
 
     # Job configuration
@@ -205,7 +216,7 @@ def main():
                 )
             else:
                 llm_jp_eval_output_subdir = f"llm-jp-eval/{version}"
-            if version == "v2.1.3":
+            if version in LLM_JP_EVAL_OPTS_STYLE_VERSIONS:
                 chunk = LLM_JP_EVAL_TEMPLATE.format(
                     llm_jp_eval_version=version,
                     llm_jp_eval_output_subdir=llm_jp_eval_output_subdir,

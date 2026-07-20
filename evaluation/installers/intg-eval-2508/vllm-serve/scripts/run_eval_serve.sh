@@ -39,7 +39,9 @@ if [ $# -lt 2 ]; then usage; fi
 MODEL=$1; shift
 OUTPUT_DIR=$(realpath "$1"); shift
 
-EXPERIMENT_DIR="${INTG_EVAL_EXPERIMENT_DIR:-$(realpath "${SCRIPT_DIR}/../../..")}"
+# Installed layout is <experiment_dir>/environment/vllm-serve/run_eval_serve.sh,
+# so the experiment dir is two levels up from this script.
+EXPERIMENT_DIR="${INTG_EVAL_EXPERIMENT_DIR:-$(realpath "${SCRIPT_DIR}/../..")}"
 SERVE_VENV=""
 TP=""
 GPU_MEM_UTIL=0.9
@@ -76,11 +78,14 @@ ENV_DIR=${EXPERIMENT_DIR}/environment
 LOG_DIR=${OUTPUT_DIR}/logs
 mkdir -p "$LOG_DIR"
 
-# Auto-detect a venv that can serve the model. Preference order: the newest
-# llm-jp-eval inference venv (vllm 0.19.x), then the transformers-v5 swallow
-# variant, then the original swallow harness venv (vllm 0.10.x).
+# Auto-detect a venv that can serve the model. Preference order: a dedicated
+# serve venv (see README: needed e.g. for vllm 0.11.2, whose server breaks
+# with openai>=1.99.2), then the newest llm-jp-eval inference venv
+# (vllm 0.19.x), then the transformers-v5 swallow variant, then the original
+# swallow harness venv (vllm 0.10.x).
 if [ -z "$SERVE_VENV" ]; then
     for cand in \
+        "${ENV_DIR}"/vllm-serve/serve-venv-* \
         "${ENV_DIR}/llm-jp-eval-v2.1.5/environment/src/llm-jp-eval/llm-jp-eval-inference/inference-modules/vllm/.venv" \
         "${ENV_DIR}/swallow_v202411-tf5/environment/venv-harness" \
         "${ENV_DIR}/swallow_v202411/environment/venv-harness"; do

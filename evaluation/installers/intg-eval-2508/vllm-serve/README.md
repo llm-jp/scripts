@@ -46,7 +46,30 @@ bash $ENV_DIR/vllm-serve/run_eval_serve.sh \
 ```
 
 サーバーの venv は `--serve-venv` で指定可能 (デフォルトは自動検出:
-llm-jp-eval-v2.1.5 の vllm venv → swallow_v202411-tf5 → swallow_v202411)。
+`vllm-serve/serve-venv-*` → llm-jp-eval-v2.1.5 の vllm venv →
+swallow_v202411-tf5 → swallow_v202411)。
+
+### vllm 0.11.2 venv は `vllm serve` が起動できない場合がある
+
+llm-jp-eval-v2.1.3 の vllm venv (vllm 0.11.2 + openai 1.99.5) では
+`vllm serve` が import エラーで即死します。vllm 0.11.2 は
+`openai.types.chat.chat_completion_message_tool_call_param` の `Function` 型に
+依存していますが、この型は openai 1.99.2 の型再構成で削除されており、
+vllm の依存指定 (`openai>=1.99.1`) が上限を欠くためです。オフライン評価は
+サーバーを使わないため影響ありません。
+
+対処: 既存 venv は変更せず、サーバー専用 venv を作成します
+(スコア互換性のため vllm / torch などは既存 venv と同一バージョンに揃える):
+
+```bash
+uv venv --python 3.11.13 $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2
+uv pip install --python $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2/bin/python \
+  vllm==0.11.2 openai==1.99.1 flashinfer-python==0.5.2 \
+  xformers==0.0.33.post1 numpy==1.26.4 transformers==4.57.6
+```
+
+`vllm-serve/serve-venv-*` は自動検出の最優先候補なので、作成後は
+`--serve-venv` の指定は不要です。
 
 ## スコア互換性に関する注意
 

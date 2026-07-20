@@ -20,6 +20,29 @@ cd scripts/evaluation/installers/intg-eval-2508
 bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
 ```
 
+### インストール手順 (Slurmクラスタ)
+
+```bash
+# インストール先を指定 (実験ディレクトリ直下の environment/ を推奨)
+INSTALL_DIR="Path/to/experiment_dir/environment" # FIX_ME
+
+# インストーラーを取得
+git clone https://github.com/llm-jp/scripts.git -b feat/intg-eval-installer
+
+# ディレクトリ移動
+cd scripts/evaluation/installers/intg-eval-2508
+
+# インストール (CPUパーティションへのジョブ投入を推奨)
+sbatch --partition=cpu install.sh $INSTALL_DIR
+# もしくはログインノードで直接実行
+# bash install.sh $INSTALL_DIR > logs/install-eval.out 2> logs/install-eval.err
+```
+
+> [!NOTE]
+> `uv` がPATH上にある場合、CPythonのソースビルドの代わりにuv管理のスタンドアロンPythonを使用します。
+> ノードに `liblzma-dev` / `libbz2-dev` / `libsqlite3-dev` などの開発ヘッダがない環境では
+> ソースビルドされたPythonに `_lzma` 等のモジュールが欠落するため、uvの使用を推奨します。
+
 ### インストール手順 (on ABCI)
 
 ```bash
@@ -74,6 +97,26 @@ bash $INSTALL_DIR/scripts/run_eval.sh \
   <model_name_or_absolute_path> \
   <output_dir>
 ```
+
+### ジョブ形式での実行 (Slurm)
+
+```bash
+python3 $INSTALL_DIR/scripts/sbatch.py \
+  <model_name_or_absolute_path> \
+  <output_dir_absolute_path> \
+  --experiment-dir <実験ディレクトリ> \
+  [--llm-jp-eval-versions v1.4.1 v2.1.3] \
+  [--partition gpu] \
+  [--gpus 1] \
+  [--dry-run]
+```
+
+- `--experiment-dir` は評価環境をインストールした実験ディレクトリ (`environment/` の親) を指定します。環境変数 `INTG_EVAL_EXPERIMENT_DIR` でも指定可能です。
+- その他のオプションは `qsub.py` と共通です (`--help` を参照)。
+
+> [!NOTE]
+> - singularity等のコンテナランタイムがないノードでは、llm-jp-eval v2系のコード実行系データセット (`mbpp`, `jhumaneval`) とCGカテゴリは自動的にスキップされます (`DISABLE_CODE_EXEC=1` で明示的な無効化も可能)。そのためAVGスコアはコード実行を含む環境での結果と直接比較できません。なおllm-jp-eval v1.4.1のmbppはインプロセスの`exec()`で評価されるため、コンテナランタイムなしでも実行されます。
+> - llm-jp-eval v2.1.0はvllm 0.9.0.1 / torch 2.7.0 (cu126) に依存しており、Blackwell世代 (B200等, sm_100) のGPUでは動作しない可能性があります。その場合はvllm 0.11.2 / torch 2.9.0 (cu128) を使用するv2.1.3を利用してください。
 
 ### ジョブ形式での実行 (on ABCI)
 

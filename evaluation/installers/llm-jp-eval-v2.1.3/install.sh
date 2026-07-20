@@ -76,12 +76,26 @@ if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
 fi
 uv sync --no-cache --python $PYTHON_VERSION
 
+# The locked torch (2.6.0/cu124) has no Blackwell (sm_100) kernels; COMET in
+# the eval phase needs a cu128 build on B200.
+uv pip install --python .venv/bin/python "torch==2.8.0"
+
 if [[ ! -d llm-jp-eval-inference ]]; then
   git clone --depth 1 https://github.com/llm-jp/llm-jp-eval-inference
 fi
 pushd llm-jp-eval-inference
 git fetch origin $LLM_JP_EVAL_INFERENCE_COMMIT_HASH
 git checkout $LLM_JP_EVAL_INFERENCE_COMMIT_HASH
+
+# For models emitting Harmony format with a non-Harmony vocabulary (e.g.
+# llm-jp-4 thinking), re-encode the decoded text with the Harmony encoding
+# before parse_chat_output; also strips spurious whitespace in decoding.
+PATCH_FILE=${INSTALLER_DIR}/patches/inference-harmony-reencode.patch
+if git apply --reverse --check $PATCH_FILE 2>/dev/null; then
+  echo "Patch already applied; skipping."
+else
+  git apply $PATCH_FILE
+fi
 
 pushd inference-modules/vllm
 uv sync --no-cache --python $PYTHON_VERSION

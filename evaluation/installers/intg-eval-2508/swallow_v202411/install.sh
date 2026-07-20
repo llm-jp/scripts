@@ -60,6 +60,17 @@ SWALLOW_REPO_URL=https://github.com/llm-jp/swallow-eval-customization.git
 if [[ ! -d src/swallow-evaluation ]]; then
   git clone $SWALLOW_REPO_URL src/swallow-evaluation -b v202411
 fi
+
+# Apply vLLM >=0.10 compatibility fixes to lm-evaluation-harness-en
+# (ray-based data parallelism replaced with multiprocessing; TokensPrompt API)
+pushd src/swallow-evaluation
+PATCH_FILE=${INSTALLER_DIR}/patches/vllm_causallms-vllm010-compat.patch
+if git apply --reverse --check $PATCH_FILE 2>/dev/null; then
+  echo "Patch already applied; skipping."
+else
+  git apply $PATCH_FILE
+fi
+popd
 # Copy enviroment scripts
 cp ${INSTALLER_DIR}/install.sh .
 mkdir -p scripts
@@ -70,15 +81,25 @@ source scripts/environment.sh
 set > installer_envvar.log
 
 
-# Install Python (function in $INSTALLER_COMMON)
+# Install Python
+# Prefer a uv-managed standalone CPython: it bundles lzma/bz2/sqlite3, which
+# a source build silently omits when the node lacks the dev headers.
 pushd src
-if [[ ! -d "${ENV_DIR}/python" ]]; then
-  install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+if command -v uv >/dev/null 2>&1; then
+  export UV_PYTHON_INSTALL_DIR=${ENV_DIR}/python
+  uv python install ${PYTHON_VERSION}
+  PYTHON_BIN=$(uv python find --managed-python ${PYTHON_VERSION})
+else
+  ## Build CPython from source (function in $INSTALLER_COMMON)
+  if [[ ! -d "${ENV_DIR}/python" ]]; then
+    install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+  fi
+  PYTHON_BIN=${ENV_DIR}/python/bin/python3
 fi
 popd # $ENV_DIR
 
 # Prepare venv for swallow harness_en and bigcode
-python/bin/python3 -m venv venv-harness venv-postprocessing
+$PYTHON_BIN -m venv venv-harness venv-postprocessing
 
 source venv-postprocessing/bin/activate
 pip install wandb pandas
@@ -94,6 +115,9 @@ pip install sentencepiece==0.2.0 protobuf==5.28.3 transformers==4.46.2
 pip install 'accelerate>=0.26.0'
 pip install datasets==2.21.0
 pip install vllm==v0.10.2
+# vllm==0.10.2 pulls in transformers 5.x, whose tokenizer API is incompatible
+# with vllm's get_cached_tokenizer; re-pin to a known-good 4.x release
+pip install transformers==4.56.2
 pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu121
 deactivate
 popd # $ENV_DIR

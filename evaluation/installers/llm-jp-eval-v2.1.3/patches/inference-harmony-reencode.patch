@@ -1,0 +1,49 @@
+diff --git a/inference-modules/vllm/inference.py b/inference-modules/vllm/inference.py
+index 5b82630..e651560 100644
+--- a/inference-modules/vllm/inference.py
++++ b/inference-modules/vllm/inference.py
+@@ -1,6 +1,7 @@
+ import copy
+ import logging
+ import os
++import re
+ import sys
+ 
+ from typing import Any, Dict
+@@ -18,7 +19,7 @@ import vllm.sampling_params
+ 
+ from schemas import InferenceConfig
+ from transformers import PreTrainedTokenizerBase
+-from vllm.entrypoints.harmony_utils import parse_chat_output
++from vllm.entrypoints.harmony_utils import get_encoding, parse_chat_output
+ from vllm.entrypoints.openai.protocol import ChatCompletionRequest
+ from vllm.reasoning.abs_reasoning_parsers import ReasoningParserManager
+ 
+@@ -109,7 +110,26 @@ class VLLMGenerator(GeneratorBase[InferenceConfig]):
+         # GPT-OSS: reasoning parser's extract_reasoning_content is not implemented for non-streaming mode
+         # Use parse_chat_output directly to parse Harmony format token IDs
+         if self.cfg.model.reasoning_parser == "openai_gptoss":
+-            reasoning_content, final_content, _ = parse_chat_output(output_token_ids)
++            # output_token_ids は非Harmony語彙のため、特殊トークン込みでデコードして
++            # Harmonyエンコーディングで再エンコードする
++            text_with_special = self.tokenizer.decode(
++                output_token_ids, skip_special_tokens=False
++            )
++            # Harmonyの特殊トークン後のスペースを除去して正規化
++            # <|channel|> analysis → <|channel|>analysis
++            # <|start|> assistant → <|start|>assistant
++            text_normalized = re.sub(r'(<\|[^|]+\|>)\s+', r'\1', text_with_special)
++            harmony_token_ids = get_encoding().encode(
++                text_normalized, allowed_special="all"
++            )
++            try:
++                reasoning_content, final_content, _ = parse_chat_output(harmony_token_ids)
++            except Exception as e:
++                logger.warning(
++                    f"Harmony parse failed (likely truncated output): {e}\n"
++                    f"text_normalized: {text_normalized!r}"
++                )
++                return None, output_text
+ 
+             # If generation stopped during reasoning phase, use reasoning_content as final answer
+             if final_content is None and reasoning_content:

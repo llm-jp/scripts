@@ -63,14 +63,24 @@ set > installer_envvar.log
 mkdir -p src
 pushd src
 
-## Install Python (function in $INSTALLER_COMMON)
-if [[ ! -d "${ENV_DIR}/python" ]]; then
-  install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+## Install Python
+## Prefer a uv-managed standalone CPython: it bundles lzma/bz2/sqlite3, which
+## a source build silently omits when the node lacks the dev headers.
+if command -v uv >/dev/null 2>&1; then
+  export UV_PYTHON_INSTALL_DIR=${ENV_DIR}/python
+  uv python install ${PYTHON_VERSION}
+  PYTHON_BIN=$(uv python find --managed-python ${PYTHON_VERSION})
+else
+  ## Build CPython from source (function in $INSTALLER_COMMON)
+  if [[ ! -d "${ENV_DIR}/python" ]]; then
+    install_python v${PYTHON_VERSION} ${ENV_DIR}/python
+  fi
+  PYTHON_BIN=${ENV_DIR}/python/bin/python3
 fi
 popd # $ENV_DIR
 
 # Prepare venv
-python/bin/python3 -m venv venv-eval venv-vllm
+$PYTHON_BIN -m venv venv-eval venv-vllm
 
 # Install vllm
 source venv-vllm/bin/activate
@@ -90,9 +100,27 @@ pushd llm-jp-eval
 if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
   git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
 fi
+
+# The original chabsa download URL is dead; use the Kaggle mirror instead
+# (upstream fix: llm-jp/llm-jp-eval@e3810b15)
+sed -i 's|https://s3-ap-northeast-1.amazonaws.com/dev.tech-sketch.jp/chakki/public/chABSA-dataset.zip|https://www.kaggle.com/api/v1/datasets/download/takahirokubo0/chabsa|' \
+  src/llm_jp_eval/jaster/chabsa.py
+
+# LLM.generate() lost the prompt_token_ids keyword in vLLM >=0.5; use TokensPrompt
+PATCH_FILE=${INSTALLER_DIR}/patches/offline-inference-vllm010-compat.patch
+if git apply --reverse --check $PATCH_FILE 2>/dev/null; then
+  echo "Patch already applied; skipping."
+else
+  git apply $PATCH_FILE
+fi
+
 pip install --no-cache-dir -r requirements.txt
 pip install --no-cache-dir -r ${ENV_DIR}/requirements-eval.txt
 pip install --no-cache-dir -e .
+
+# The transitively-resolved torch (2.4.x/cu121) has no Blackwell (sm_100)
+# kernels; BERTScore in the evaluate phase needs a cu128 build on B200.
+pip install --no-cache-dir "torch==2.8.0"
 
 # Preprocess dataset
 python scripts/preprocess_dataset.py \

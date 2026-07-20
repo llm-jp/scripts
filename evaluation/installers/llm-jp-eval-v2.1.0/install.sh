@@ -74,6 +74,12 @@ git checkout $LLM_JP_EVAL_COMMIT_HASH
 if [ -n "$LLM_JP_EVAL_BUG_FIX_COMMIT_IDS" ]; then
   git cherry-pick -m 1 ${LLM_JP_EVAL_BUG_FIX_COMMIT_IDS}
 fi
+
+# The original chabsa download URL is dead; use the Kaggle mirror instead
+# (upstream fix: llm-jp/llm-jp-eval@e3810b15, included in commits after 2025-10-26)
+sed -i 's|https://s3-ap-northeast-1.amazonaws.com/dev.tech-sketch.jp/chakki/public/chABSA-dataset.zip|https://www.kaggle.com/api/v1/datasets/download/takahirokubo0/chabsa|' \
+  src/llm_jp_eval/jaster/chabsa.py
+
 uv sync --no-cache --python $PYTHON_VERSION
 
 if [[ ! -d llm-jp-eval-inference ]]; then

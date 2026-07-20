@@ -1,0 +1,17 @@
+diff --git a/offline_inference/vllm/offline_inference_vllm.py b/offline_inference/vllm/offline_inference_vllm.py
+index bebd6fe..8cbb0ae 100644
+--- a/offline_inference/vllm/offline_inference_vllm.py
++++ b/offline_inference/vllm/offline_inference_vllm.py
+@@ -27,7 +27,11 @@ def generate(target_data, model, tokenizer, encode_kwargs, sampling_params) -> D
+     with torch.inference_mode():
+         results = copy.deepcopy(target_data)
+         prompt_token_ids = [tokenizer.encode(sample["prompt"], **encode_kwargs) for sample in results["samples"]]
+-        outputs = model.generate(sampling_params=sampling_params, prompt_token_ids=prompt_token_ids)
++        # vLLM >=0.5 removed the prompt_token_ids keyword from LLM.generate()
++        outputs = model.generate(
++            [vllm.TokensPrompt(prompt_token_ids=t) for t in prompt_token_ids],
++            sampling_params=sampling_params,
++        )
+         for i, output in enumerate(outputs):
+             results["samples"][i]["generated"] = output.outputs[0].text
+     return results

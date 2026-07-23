@@ -140,18 +140,38 @@ class OpenAIGenerator(GeneratorBase[InferenceConfig]):
         max_tokens = params.pop("max_tokens", None) or max_output_len
         native = {k: v for k, v in params.items() if k in OPENAI_NATIVE_PARAMS}
         extra_body = {k: v for k, v in params.items() if k not in OPENAI_NATIVE_PARAMS}
-        if self.cfg.server.max_model_len:
-            extra_body["truncate_prompt_tokens"] = max(1, self.cfg.server.max_model_len - max_tokens)
+        max_model_len = self.cfg.server.max_model_len
+
+        def _request_params(prompt_len: int) -> tuple:
+            """(max_tokens, truncate_prompt_tokens) for one request.
+
+            Emulates the offline module under model.max_model_len: normally
+            reserve room for max_tokens by truncating the prompt. When
+            max_tokens itself does not fit in the context (e.g. jhle's
+            output_length=8192 > max_model_len=4096) the server would reject
+            the request, so keep the prompt and clamp max_tokens instead,
+            which is what offline vLLM does implicitly.
+            """
+            if not max_model_len:
+                return max_tokens, None
+            if max_tokens < max_model_len:
+                return max_tokens, max(1, max_model_len - max_tokens)
+            truncate = min(max(prompt_len, 1), max_model_len - 1)
+            return max_model_len - truncate, truncate
 
         def _complete(tokens: List[int]) -> str:
+            request_max_tokens, truncate_prompt_tokens = _request_params(len(tokens))
+            request_extra_body = dict(extra_body)
+            if truncate_prompt_tokens is not None:
+                request_extra_body["truncate_prompt_tokens"] = truncate_prompt_tokens
             last_exc: Exception | None = None
             for attempt in range(self.cfg.server.max_retries + 1):
                 try:
                     response = self.client.completions.create(
                         model=self.cfg.server.model,
                         prompt=tokens,
-                        max_tokens=max_tokens,
-                        extra_body=extra_body or None,
+                        max_tokens=request_max_tokens,
+                        extra_body=request_extra_body or None,
                         **native,
                     )
                     return response.choices[0].text

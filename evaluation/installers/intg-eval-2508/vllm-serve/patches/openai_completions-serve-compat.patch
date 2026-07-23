@@ -1,8 +1,24 @@
 diff --git a/lm-evaluation-harness-en/lm_eval/models/openai_completions.py b/lm-evaluation-harness-en/lm_eval/models/openai_completions.py
-index c50ae63..6e8386a 100644
+index c50ae63..b366799 100644
 --- a/lm-evaluation-harness-en/lm_eval/models/openai_completions.py
 +++ b/lm-evaluation-harness-en/lm_eval/models/openai_completions.py
-@@ -111,6 +111,12 @@ class OpenaiCompletionsLM(TemplateLM):
+@@ -1,6 +1,7 @@
+ import copy
+ import os
+ from collections import defaultdict
++from concurrent.futures import ThreadPoolExecutor
+ from importlib.util import find_spec
+ from typing import List, Literal, Optional, Tuple
+ 
+@@ -89,6 +90,7 @@ class OpenaiCompletionsLM(TemplateLM):
+         batch_size: int = 1,
+         seed: int = 1234,
+         max_length: Optional[int] = None,
++        num_concurrent: int = 1,
+     ) -> None:
+         """
+ 
+@@ -111,7 +113,16 @@ class OpenaiCompletionsLM(TemplateLM):
          self.base_url = base_url
          self.tokenizer_backend = tokenizer_backend
          self.truncate = truncate
@@ -13,9 +29,98 @@ index c50ae63..6e8386a 100644
 +        except (TypeError, ValueError):
 +            pass
          self._batch_size = batch_size
++        # Number of batches kept in flight concurrently against an
++        # OpenAI-compatible server (model_args may pass it as a string).
++        self.num_concurrent = int(num_concurrent)
          self._max_gen_toks = max_gen_toks
          self._max_length = max_length
-@@ -281,7 +287,9 @@ class OpenaiCompletionsLM(TemplateLM):
+ 
+@@ -190,11 +201,11 @@ class OpenaiCompletionsLM(TemplateLM):
+             return -len(toks), tuple(toks)
+ 
+         re_ord = utils.Reorderer(requests, _collate)
++        chunk_list = list(
++            lm_eval.models.utils.chunks(re_ord.get_reordered(), self.batch_size)
++        )
+ 
+-        for chunk in tqdm(
+-            list(lm_eval.models.utils.chunks(re_ord.get_reordered(), self.batch_size)),
+-            disable=disable_tqdm,
+-        ):
++        def _process_chunk(chunk):
+             inps = []
+             ctxlens = []
+             for cache_key, context_enc, continuation_enc in chunk:
+@@ -219,11 +230,32 @@ class OpenaiCompletionsLM(TemplateLM):
+                 seed=self.seed,
+             )
+ 
+-            for resp, ctxlen, (cache_key, context_enc, continuation_enc) in zip(
+-                response.choices, ctxlens, chunk
+-            ):
+-                answer = get_result(resp, ctxlen)
++            return [
++                get_result(resp, ctxlen)
++                for resp, ctxlen in zip(response.choices, ctxlens)
++            ]
++
++        # Keeping several batches in flight lets the server's continuous
++        # batching saturate the GPU; the per-request computation and the
++        # result order are unchanged (executor.map preserves order).
++        if self.num_concurrent > 1:
++            with ThreadPoolExecutor(max_workers=self.num_concurrent) as executor:
++                chunk_results = list(
++                    tqdm(
++                        executor.map(_process_chunk, chunk_list),
++                        total=len(chunk_list),
++                        disable=disable_tqdm,
++                    )
++                )
++        else:
++            chunk_results = [
++                _process_chunk(chunk) for chunk in tqdm(chunk_list, disable=disable_tqdm)
++            ]
+ 
++        for chunk, answers in zip(chunk_list, chunk_results):
++            for answer, (cache_key, context_enc, continuation_enc) in zip(
++                answers, chunk
++            ):
+                 res.append(answer)
+ 
+                 # partial caching
+@@ -257,15 +289,18 @@ class OpenaiCompletionsLM(TemplateLM):
+                 yield ret, lastuntil
+ 
+         # todo: more intelligent batching for heterogeneous `until`
+-        for chunk, request_args in tqdm(
+-            list(sameuntil_chunks(re_ord.get_reordered(), self.batch_size)),
+-            disable=disable_tqdm,
+-        ):
++        chunk_list = list(sameuntil_chunks(re_ord.get_reordered(), self.batch_size))
++
++        def _process_chunk(chunk_and_args):
++            chunk, request_args = chunk_and_args
++            # Copy before mutating: the args dict is shared between chunks of
++            # the same task (and between threads when num_concurrent > 1).
++            request_args = dict(request_args)
++            max_gen_toks = request_args.get("max_gen_toks", self._max_gen_toks)
+             inps = []
+-            self._max_gen_toks = request_args.get("max_gen_toks", self.max_gen_toks)
+             for context, _ in chunk:
+                 context_enc = self.tok_encode(context)
+-                inp = context_enc[-(self.max_length - self.max_gen_toks) :]
++                inp = context_enc[-(self.max_length - max_gen_toks) :]
+                 inps.append(inp)
+ 
+             until = request_args.get("until", ["<|endoftext|>"])
+@@ -275,24 +310,44 @@ class OpenaiCompletionsLM(TemplateLM):
+                 client=self.client,
+                 model=self.model,
+                 prompt=inps,
+-                max_tokens=self.max_gen_toks,
++                max_tokens=max_gen_toks,
+                 stop=until,
+                 seed=self.seed,
                  **{
                      k: v
                      for k, v in request_args.items()
@@ -25,4 +130,36 @@ index c50ae63..6e8386a 100644
 +                    if k not in ["do_sample", "max_gen_toks", "until"]
                  },
              )
++            outs = []
              for resp, (context, args_) in zip(response.choices, chunk):
+                 s = getattr(resp, "text")
+ 
+-                until_ = until
+-
+-                for term in until_:
++                for term in until:
+                     if len(term) > 0:
+                         s = s.split(term)[0]
+ 
++                outs.append((context, until, s))
++            return outs
++
++        if self.num_concurrent > 1:
++            with ThreadPoolExecutor(max_workers=self.num_concurrent) as executor:
++                chunk_results = list(
++                    tqdm(
++                        executor.map(_process_chunk, chunk_list),
++                        total=len(chunk_list),
++                        disable=disable_tqdm,
++                    )
++                )
++        else:
++            chunk_results = [
++                _process_chunk(chunk) for chunk in tqdm(chunk_list, disable=disable_tqdm)
++            ]
++
++        for outs in chunk_results:
++            for context, until_, s in outs:
+                 # partial caching
+                 self.cache_hook.add_partial(
+                     "generate_until", (context, {"until": until_}), s

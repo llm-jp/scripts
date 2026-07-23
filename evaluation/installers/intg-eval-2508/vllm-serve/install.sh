@@ -36,13 +36,19 @@ cp "${INSTALLER_DIR}"/scripts/serve_common.sh \
 # environment. openai_completions.py is not used by the offline (run-eval.sh)
 # flow, so this does not change existing behavior.
 PATCH_FILE=${INSTALLER_DIR}/patches/openai_completions-serve-compat.patch
+PATCH_TARGET=lm-evaluation-harness-en/lm_eval/models/openai_completions.py
 for swallow_env in "${TARGET_DIR}"/swallow_v202411*/; do
   repo=${swallow_env}environment/src/swallow-evaluation
   [ -d "$repo" ] || continue
   pushd "$repo"
   if git apply --reverse --check "$PATCH_FILE" 2>/dev/null; then
     echo "Patch already applied in ${repo}; skipping."
+  elif git apply --check "$PATCH_FILE" 2>/dev/null; then
+    git apply "$PATCH_FILE"
   else
+    # An older revision of this patch is likely applied; the file is not
+    # touched by the offline flow, so restore it and apply the current one.
+    git checkout -- "$PATCH_TARGET"
     git apply "$PATCH_FILE"
   fi
   popd

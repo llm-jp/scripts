@@ -98,6 +98,12 @@ uv pip install --python $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2/bin/python \
 1. `batch_size` が CLI から文字列で渡ると chunking の比較が壊れる → int キャスト
 2. `generate_until` が `until` を `completions.create()` にそのまま渡し、
    openai クライアント 2.x が未知引数として拒否 → 除外 (`stop` として送信済み)
+3. `num_concurrent` (model_args) を追加: バッチを ThreadPoolExecutor で複数
+   同時にサーバーへ送る。素の実装はバッチ 1 本ずつの直列送信で、サーバーの
+   continuous batching に仕事が渡らず GPU が遊ぶ (150m の実測でオフライン比
+   2.4 倍遅かった)。リクエスト内容・結果順序は不変で、変わるのはバッチ構成
+   のみ (既に許容済みの数値ゆらぎと同クラス)。デフォルト 16
+   (`--swallow-num-concurrent` で変更可)
 
 `openai_completions.py` は従来のオフライン評価フロー (`--model vllm`) では
 使用されないため、**既存の評価挙動には影響しません**。

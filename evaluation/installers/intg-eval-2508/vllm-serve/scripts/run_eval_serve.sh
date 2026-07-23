@@ -22,6 +22,9 @@
 #   --swallow-max-length N    max_length for the harness client (default: the
 #                             server's max_model_len, matching the offline
 #                             harness which follows the engine's context size)
+#   --swallow-num-concurrent N batches (of 16 prompts) kept in flight against
+#                             the server (default: 16); larger values keep the
+#                             server's continuous batching saturated
 #   --llm-jp-eval-versions V... llm-jp-eval versions to run (e.g. v2.1.5; default: none)
 #   --max-num-samples N       llm-jp-eval max_num_samples (default: 100)
 #   --apply-chat-template     llm-jp-eval: apply chat template
@@ -56,6 +59,7 @@ PORT=""
 RUN_SWALLOW=false
 SWALLOW_ENV=swallow_v202411-tf5
 SWALLOW_MAX_LENGTH=""
+SWALLOW_NUM_CONCURRENT=16
 LLM_JP_EVAL_VERSIONS=()
 MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
@@ -74,6 +78,7 @@ while [ $# -gt 0 ]; do
         --swallow) RUN_SWALLOW=true; shift ;;
         --swallow-env) SWALLOW_ENV=$2; shift 2 ;;
         --swallow-max-length) SWALLOW_MAX_LENGTH=$2; shift 2 ;;
+        --swallow-num-concurrent) SWALLOW_NUM_CONCURRENT=$2; shift 2 ;;
         --llm-jp-eval-versions) shift; while [ $# -gt 0 ] && [[ $1 != --* ]]; do LLM_JP_EVAL_VERSIONS+=("$1"); shift; done ;;
         --max-num-samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --apply-chat-template) APPLY_CHAT_TEMPLATE=true; shift ;;
@@ -148,6 +153,7 @@ if [ "$RUN_SWALLOW" = true ]; then
         "$BASE_URL" \
         "${ENV_DIR}/${SWALLOW_ENV}" \
         "$SWALLOW_MAX_LENGTH" \
+        "$SWALLOW_NUM_CONCURRENT" \
         > "${LOG_DIR}/swallow_eval.log" 2> "${LOG_DIR}/swallow_eval.err"
 fi
 

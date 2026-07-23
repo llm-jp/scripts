@@ -5,12 +5,15 @@
 # `lm_eval --model local-completions` against a pre-launched vLLM server.
 # lm_eval starts 6 times as before, but never loads the model.
 #
-# Usage: run-swallow-serve.sh MODEL OUTPUT_DIR BASE_URL SWALLOW_ENV_DIR [MAX_LENGTH]
+# Usage: run-swallow-serve.sh MODEL OUTPUT_DIR BASE_URL SWALLOW_ENV_DIR [MAX_LENGTH] [NUM_CONCURRENT]
 #   MODEL           Model name/path; must equal the --served-model-name of the server
 #   OUTPUT_DIR      Output directory (same layout as run-eval.sh)
 #   BASE_URL        e.g. http://127.0.0.1:8000/v1
 #   SWALLOW_ENV_DIR Installed swallow environment (e.g. .../environment/swallow_v202411-tf5)
 #   MAX_LENGTH      Harness client max context length (default: 4096)
+#   NUM_CONCURRENT  Batches kept in flight against the server (default: 16).
+#                   batch_size (16) x NUM_CONCURRENT prompts are queued on the
+#                   server so its continuous batching can saturate the GPU.
 #
 # Score-parity notes vs the offline vllm backend:
 # - Prompts are sent as token IDs produced by the same HF tokenizer, and
@@ -21,8 +24,8 @@
 
 set -eux -o pipefail
 
-if [[ $# -lt 4 || $# -gt 5 ]]; then
-    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL SWALLOW_ENV_DIR [MAX_LENGTH]"
+if [[ $# -lt 4 || $# -gt 6 ]]; then
+    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL SWALLOW_ENV_DIR [MAX_LENGTH] [NUM_CONCURRENT]"
     exit 1
 fi
 
@@ -31,6 +34,7 @@ OUTPUT_DIR=$2
 BASE_URL=$3
 SWALLOW_ENV_DIR=$4
 MAX_LENGTH=${5:-4096}
+NUM_CONCURRENT=${6:-16}
 
 mkdir -p "$OUTPUT_DIR/results"
 OUTPUT_DIR=$(realpath "$OUTPUT_DIR")
@@ -41,7 +45,7 @@ VENV_DIR=${SWALLOW_ENV_DIR}/environment/venv-harness
 # The openai client requires this to be set even for keyless local servers.
 export OPENAI_API_KEY="${OPENAI_API_KEY:-EMPTY}"
 
-MODEL_ARGS="model=${MODEL},base_url=${BASE_URL},tokenizer=${MODEL},tokenizer_backend=huggingface,max_length=${MAX_LENGTH}"
+MODEL_ARGS="model=${MODEL},base_url=${BASE_URL},tokenizer=${MODEL},tokenizer_backend=huggingface,max_length=${MAX_LENGTH},num_concurrent=${NUM_CONCURRENT}"
 
 # Task groups below mirror scripts/evaluate_english-vllm.sh in the swallow
 # repository; keep them in sync.

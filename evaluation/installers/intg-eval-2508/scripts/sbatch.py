@@ -63,6 +63,10 @@ TEMPLATE = """#!/bin/bash
 
 set -ux
 
+# Wall-clock markers for run-time comparison (Slurm accounting is disabled on
+# this cluster, so elapsed time is not recoverable after the job otherwise).
+echo "[intg-eval] job start: $(date -Is) (job=${{SLURM_JOB_ID:-?}} node=$(hostname))"
+
 # Model name or **absolute path** to the model
 MODEL_NAME_OR_PATH="{model_name_or_path}"
 # **Absolute path** to the output directory
@@ -89,6 +93,8 @@ pushd {experiment_dir}/environment
 {swallow_template}
 
 {llm_jp_eval_template}
+
+echo "[intg-eval] job end: $(date -Is)"
 """
 
 # NOTE: The following templates are kept in sync with qsub.py. They are inlined

@@ -30,6 +30,7 @@ cp "${INSTALLER_DIR}"/scripts/serve_common.sh \
    "${INSTALLER_DIR}"/scripts/run-swallow-serve.sh \
    "${INSTALLER_DIR}"/scripts/run_llm-jp-eval-serve.sh \
    "${INSTALLER_DIR}"/scripts/inference_openai.py \
+   "${INSTALLER_DIR}"/scripts/compare_results.py \
    "$SERVE_DIR/"
 
 # Apply the local-completions compatibility patch to each installed swallow

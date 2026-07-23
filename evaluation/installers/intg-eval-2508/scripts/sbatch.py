@@ -200,7 +200,7 @@ def load_args():
     parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. llm-jp-eval supports the v2 series only, and --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
     parser.add_argument("--serve-venv", type=str, default=None, help="venv that provides `vllm serve` (only with --vllm-serve; default: auto-detect, see vllm-serve/README.md).")
     parser.add_argument("--max-model-len", type=int, default=None, help="--max-model-len for the vLLM server (only with --vllm-serve; default: model config).")
-    parser.add_argument("--swallow-num-concurrent", type=int, default=None, help="Batches (of 16 prompts) the swallow client keeps in flight against the server (only with --vllm-serve; default: 16). Larger values keep the server's continuous batching saturated.")
+    parser.add_argument("--client-concurrency", type=int, default=None, help="Prompts each evaluation client keeps in flight against the shared vLLM server (only with --vllm-serve; default: 256, on the order of vLLM's default max_num_seqs). Each client translates this into its own request shape, so the saturation target is framework-independent.")
 
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -232,8 +232,8 @@ def check_args(args):
                 "--reasoning-parser is not yet implemented in the serve-mode client "
                 "(inference_openai.py); use the offline mode."
             )
-    elif args.serve_venv or args.max_model_len or args.swallow_num_concurrent:
-        raise ValueError("--serve-venv, --max-model-len and --swallow-num-concurrent require --vllm-serve.")
+    elif args.serve_venv or args.max_model_len or args.client_concurrency:
+        raise ValueError("--serve-venv, --max-model-len and --client-concurrency require --vllm-serve.")
 
 
 def main():
@@ -262,10 +262,10 @@ def main():
         serve_args.append(f"--gpu-memory-utilization {args.gpu_memory_utilization}")
         if args.max_model_len:
             serve_args.append(f"--max-model-len {args.max_model_len}")
+        if args.client_concurrency:
+            serve_args.append(f"--client-concurrency {args.client_concurrency}")
         if args.swallow_version and not args.disable_swallow:
             serve_args.append(f"--swallow --swallow-env swallow_{args.swallow_version}")
-            if args.swallow_num_concurrent:
-                serve_args.append(f"--swallow-num-concurrent {args.swallow_num_concurrent}")
         if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
             serve_args.append("--llm-jp-eval-versions " + " ".join(args.llm_jp_eval_versions))
             serve_args.append(f"--max-num-samples {args.llm_jp_eval_max_num_samples}")

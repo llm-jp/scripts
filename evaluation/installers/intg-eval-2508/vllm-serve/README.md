@@ -102,8 +102,21 @@ uv pip install --python $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2/bin/python \
    同時にサーバーへ送る。素の実装はバッチ 1 本ずつの直列送信で、サーバーの
    continuous batching に仕事が渡らず GPU が遊ぶ (150m の実測でオフライン比
    2.4 倍遅かった)。リクエスト内容・結果順序は不変で、変わるのはバッチ構成
-   のみ (既に許容済みの数値ゆらぎと同クラス)。デフォルト 16
-   (`--swallow-num-concurrent` で変更可)
+   のみ (既に許容済みの数値ゆらぎと同クラス)
+
+## クライアント並列度 (`--client-concurrency`)
+
+サーバーを飽和させるための in-flight プロンプト数はフレームワークに依らない
+共通概念なので、`run_eval_serve.sh` の `--client-concurrency N` (デフォルト
+256 ≈ vLLM の max_num_seqs 相当) に一本化しています。各クライアントが自分の
+リクエスト形に変換します:
+
+- swallow: `num_concurrent = ceil(N / batch_size)` (バッチ 16 プロンプト単位)
+- llm-jp-eval: `server.num_concurrent = N` (1 プロンプト/リクエストなので 1:1)
+- 新しい評価フレームワークを追加する場合も、そのアダプタで同様に変換する
+
+過剰な値は速度向上には繋がらないが害も小さい (サーバー内キューで待つだけ)。
+不足すると GPU が遊ぶため、大きめが安全側。
 
 `openai_completions.py` は従来のオフライン評価フロー (`--model vllm`) では
 使用されないため、**既存の評価挙動には影響しません**。

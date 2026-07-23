@@ -7,7 +7,12 @@
 #
 # Usage:
 #   run_llm-jp-eval-serve.sh MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR \
-#       [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON]
+#       [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON] \
+#       [--client-concurrency N]
+#
+#   --client-concurrency N  Prompts kept in flight against the server
+#       (default: 256); becomes server.num_concurrent of inference_openai.py
+#       (single-prompt requests, so the count maps 1:1).
 #
 #   MODEL           Served model name (must equal the server's model id)
 #   OUTPUT_DIR      Output directory
@@ -33,11 +38,13 @@ VERSION_ENV_DIR=$(realpath $1); shift
 MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
 TOKENIZE_KWARGS=""
+CLIENT_CONCURRENCY=256
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --apply_chat_template) APPLY_CHAT_TEMPLATE=true; shift ;;
         --tokenize_kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
+        --client-concurrency) CLIENT_CONCURRENCY=$2; shift 2 ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -101,6 +108,7 @@ cat > ${SERVE_CONFIG} <<EOF
 server:
   base_url: ${BASE_URL}
   model: ${MODEL_PATH}
+  num_concurrent: ${CLIENT_CONCURRENCY}
 tokenizer:
   pretrained_model_name_or_path: ${MODEL_PATH}
 EOF

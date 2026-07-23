@@ -22,9 +22,14 @@
 #   --swallow-max-length N    max_length for the harness client (default: the
 #                             server's max_model_len, matching the offline
 #                             harness which follows the engine's context size)
-#   --swallow-num-concurrent N batches (of 16 prompts) kept in flight against
-#                             the server (default: 16); larger values keep the
-#                             server's continuous batching saturated
+#   --client-concurrency N    prompts each evaluation client keeps in flight
+#                             against the server (default: 256, on the order
+#                             of vLLM's default max_num_seqs). Each client
+#                             translates this into its own request shape
+#                             (swallow: N / batch_size concurrent batches;
+#                             llm-jp-eval: N concurrent single-prompt
+#                             requests), so the server-side saturation target
+#                             is framework-independent.
 #   --llm-jp-eval-versions V... llm-jp-eval versions to run (e.g. v2.1.5; default: none)
 #   --max-num-samples N       llm-jp-eval max_num_samples (default: 100)
 #   --apply-chat-template     llm-jp-eval: apply chat template
@@ -59,7 +64,7 @@ PORT=""
 RUN_SWALLOW=false
 SWALLOW_ENV=swallow_v202411-tf5
 SWALLOW_MAX_LENGTH=""
-SWALLOW_NUM_CONCURRENT=16
+CLIENT_CONCURRENCY=256
 LLM_JP_EVAL_VERSIONS=()
 MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
@@ -78,7 +83,7 @@ while [ $# -gt 0 ]; do
         --swallow) RUN_SWALLOW=true; shift ;;
         --swallow-env) SWALLOW_ENV=$2; shift 2 ;;
         --swallow-max-length) SWALLOW_MAX_LENGTH=$2; shift 2 ;;
-        --swallow-num-concurrent) SWALLOW_NUM_CONCURRENT=$2; shift 2 ;;
+        --client-concurrency) CLIENT_CONCURRENCY=$2; shift 2 ;;
         --llm-jp-eval-versions) shift; while [ $# -gt 0 ] && [[ $1 != --* ]]; do LLM_JP_EVAL_VERSIONS+=("$1"); shift; done ;;
         --max-num-samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --apply-chat-template) APPLY_CHAT_TEMPLATE=true; shift ;;
@@ -153,7 +158,7 @@ if [ "$RUN_SWALLOW" = true ]; then
         "$BASE_URL" \
         "${ENV_DIR}/${SWALLOW_ENV}" \
         "$SWALLOW_MAX_LENGTH" \
-        "$SWALLOW_NUM_CONCURRENT" \
+        "$CLIENT_CONCURRENCY" \
         > "${LOG_DIR}/swallow_eval.log" 2> "${LOG_DIR}/swallow_eval.err"
 fi
 
@@ -171,6 +176,7 @@ for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
     else
         version_output_dir=${OUTPUT_DIR}/llm-jp-eval/${version}
     fi
+    LLM_JP_EVAL_OPTS+=(--client-concurrency "$CLIENT_CONCURRENCY")
     mkdir -p "$version_output_dir"
     bash "${SCRIPT_DIR}/run_llm-jp-eval-serve.sh" \
         "$MODEL" \

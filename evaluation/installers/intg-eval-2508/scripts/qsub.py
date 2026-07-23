@@ -10,6 +10,16 @@ Defaults:
     skip each evaluation; use --llm-jp-eval-versions to select specific versions
     (v2.1.3 and v2.1.5, the latest release, are also available).
 
+vllm-serve mode (EXPERIMENTAL):
+    With --vllm-serve, all evaluations run against a single shared vLLM
+    server, so the model is loaded once per job instead of once per lm_eval
+    invocation / llm-jp-eval version (useful for large models):
+        python3 qsub.py <model> <output_dir> --vllm-serve \\
+            --llm-jp-eval-versions v2.1.5
+    Requires the vllm-serve scripts installed under
+    <experiment-dir>/environment/vllm-serve. llm-jp-eval v2.1.3/v2.1.5 only;
+    --reasoning-parser and --data-parallel-size > 1 are not supported.
+
 Environment variables:
     HF_HOME must point to a path under /groups/gcg51557/experiments.
     HF_TOKEN must be set for Hugging Face access.
@@ -97,6 +107,17 @@ bash run_llm-jp-eval.sh \\
 popd
 """
 
+VLLM_SERVE_TEMPLATE = """\
+# Run all evaluations against a single shared vLLM server (the model is
+# loaded exactly once per job). Requires the vllm-serve scripts to be
+# installed under {experiment_dir}/environment/vllm-serve (see
+# installers/intg-eval-2508/vllm-serve/README.md).
+bash {experiment_dir}/environment/vllm-serve/run_eval_serve.sh \\
+    $MODEL_NAME_OR_PATH \\
+    $OUTPUT_DIR \\
+{serve_args}
+"""
+
 # The same output subdirectory structure as qsub_nonbreaking.py
 LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
     "v1.4.1": "llm-jp-eval",
@@ -143,6 +164,11 @@ def load_args():
     parser.add_argument("--reasoning-parser", type=str, default=None, help="Reasoning parser to extract final response (e.g. 'openai_gptoss').")
     parser.add_argument("--chat-template-args", type=str, nargs="*", default=None, metavar="KEY=VALUE", help="Extra keyword arguments for chat template application (e.g. 'reasoning_effort=low'). Requires --apply-chat-template.")
 
+    # vllm-serve mode (EXPERIMENTAL)
+    parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. llm-jp-eval supports v2.1.3/v2.1.5 only; --reasoning-parser, --data-parallel-size > 1 and --legacy-output are not supported.")
+    parser.add_argument("--serve-venv", type=str, default=None, help="venv that provides `vllm serve` (only with --vllm-serve; default: auto-detect, see vllm-serve/README.md).")
+    parser.add_argument("--max-model-len", type=int, default=None, help="--max-model-len for the vLLM server (only with --vllm-serve; default: model config).")
+
     # Logging configuration
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -159,6 +185,23 @@ def check_args(args):
     if args.rtype == "rt_HG" and args.select != 1:
         raise ValueError(f"Invalid selection '{args.select}' for resource type '{args.rtype}'. Only 1 GPU can be selected.")
 
+    if args.vllm_serve:
+        if not args.disable_llm_jp_eval:
+            unsupported = [v for v in args.llm_jp_eval_versions if v not in LLM_JP_EVAL_OPTS_STYLE_VERSIONS]
+            if unsupported:
+                raise ValueError(
+                    f"--vllm-serve supports llm-jp-eval versions {list(LLM_JP_EVAL_OPTS_STYLE_VERSIONS)} only, "
+                    f"got {unsupported}. Pass e.g. '--llm-jp-eval-versions v2.1.5' (or --disable-llm-jp-eval)."
+                )
+        if args.reasoning_parser:
+            raise ValueError("--reasoning-parser is not supported with --vllm-serve; use the offline mode.")
+        if args.data_parallel_size != 1:
+            raise ValueError("--data-parallel-size > 1 is not supported with --vllm-serve.")
+        if args.legacy_output:
+            raise ValueError("--legacy-output is not supported with --vllm-serve.")
+    elif args.serve_venv or args.max_model_len:
+        raise ValueError("--serve-venv and --max-model-len require --vllm-serve.")
+
 
 def main():
     args = load_args()
@@ -167,24 +210,47 @@ def main():
 
     check_args(args)
 
+    tokenize_kwargs_json = ""
+    if args.chat_template_args:
+        # Default value hardcoded in llm-jp-eval-inference's BaseInferenceConfig.tokenize_kwargs
+        d = {"add_special_tokens": True}
+        d.update(dict(arg.split("=", 1) for arg in args.chat_template_args))
+        tokenize_kwargs_json = json.dumps(d, ensure_ascii=False, separators=(",", ":"))
+
     swallow_template = ""
-    if args.swallow_version and not args.disable_swallow:
+    llm_jp_eval_template = ""
+    if args.vllm_serve:
+        serve_args = [f"--experiment-dir {args.experiment_dir}"]
+        if args.serve_venv:
+            serve_args.append(f"--serve-venv {args.serve_venv}")
+        serve_args.append(f"--tensor-parallel-size {args.tensor_parallel_size}")
+        serve_args.append(f"--gpu-memory-utilization {args.gpu_memory_utilization}")
+        if args.max_model_len:
+            serve_args.append(f"--max-model-len {args.max_model_len}")
+        if args.swallow_version and not args.disable_swallow:
+            serve_args.append(f"--swallow --swallow-env swallow_{args.swallow_version}")
+        if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
+            serve_args.append("--llm-jp-eval-versions " + " ".join(args.llm_jp_eval_versions))
+            serve_args.append(f"--max-num-samples {args.llm_jp_eval_max_num_samples}")
+            if args.apply_chat_template:
+                serve_args.append("--apply-chat-template")
+            if tokenize_kwargs_json:
+                serve_args.append(f"--tokenize-kwargs '{tokenize_kwargs_json}'")
+        swallow_template = VLLM_SERVE_TEMPLATE.format(
+            experiment_dir=args.experiment_dir,
+            serve_args=" \\\n".join(f"    {a}" for a in serve_args),
+        )
+    if not args.vllm_serve and args.swallow_version and not args.disable_swallow:
         swallow_template = SWALLOW_TEMPLATE.format(
             swallow_version=args.swallow_version,
             gpu_memory_utilization=args.gpu_memory_utilization,
             tensor_parallel_size=args.tensor_parallel_size,
             data_parallel_size=args.data_parallel_size,
         )
-    llm_jp_eval_template = ""
-    if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
+    if not args.vllm_serve and args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
         apply_chat_template_flag = " --apply_chat_template" if args.apply_chat_template else ""
         reasoning_parser_flag = f" --reasoning_parser {args.reasoning_parser}" if args.reasoning_parser else ""
-        chat_template_args_flag = ""
-        if args.chat_template_args:
-            # Default value hardcoded in llm-jp-eval-inference's BaseInferenceConfig.tokenize_kwargs
-            d = {"add_special_tokens": True}
-            d.update(dict(arg.split("=", 1) for arg in args.chat_template_args))
-            chat_template_args_flag = f" --tokenize_kwargs '{json.dumps(d, ensure_ascii=False, separators=(',', ':'))}'"
+        chat_template_args_flag = f" --tokenize_kwargs '{tokenize_kwargs_json}'" if tokenize_kwargs_json else ""
         chunks = []
         for version in args.llm_jp_eval_versions:
             if args.legacy_output:

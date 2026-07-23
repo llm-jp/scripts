@@ -102,23 +102,23 @@ uv pip install --python $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2/bin/python \
 `openai_completions.py` は従来のオフライン評価フロー (`--model vllm`) では
 使用されないため、**既存の評価挙動には影響しません**。
 
-## 検証状況 (2026-07-20)
+## 検証状況 (2026-07-23)
 
-- mock OpenAI サーバー (CPU) に対して:
+- mock OpenAI サーバー (CPU, さくら) に対して:
   - `lm_eval local-completions`: hellaswag (loglikelihood) + gsm8k (生成) 完走
   - `inference_openai.py`: jamp 100 サンプル (v2.1.5 の実 venv 使用) 完走
-- **実 GPU + 実 vLLM サーバーでの end-to-end とスコア一致性検証は未実施**
-  (GPU キュー空き待ち)。検証手順は下記
-
-## GPU 検証手順 (TODO)
-
-```bash
-# 1. スモークテスト (150m, サーバー共有で swallow+llm-jp-eval)
-sbatch --partition=gpu --gpus=1 --mem=180G --time=6:00:00 --wrap "\
-  bash $ENV_DIR/vllm-serve/run_eval_serve.sh llm-jp/llm-jp-3-150m \
-    /data/experiments/<exp>/results/serve-smoke-<date> \
-    --swallow --llm-jp-eval-versions v2.1.5"
-
-# 2. スコア一致性: 同一モデルのオフライン実行結果 (sbatch.py 経由) と
-#    swallow result.json / llm-jp-eval result.json を比較
-```
+- **実 GPU end-to-end + スコア一致性検証済み** (ABCI H100 1枚,
+  llm-jp/llm-jp-3-150m, swallow_v202411 + llm-jp-eval v2.1.3,
+  サーバー venv は vllm 0.11.2 の専用 venv):
+  - `echo=True + max_tokens=0 + logprobs` の prompt logprobs 取得、トークン
+    ID 配列プロンプト、`truncate_prompt_tokens` (extra_body) すべて動作
+  - swallow: オフライン (venv-harness vllm 0.10.2) とサーバー経由 (0.11.2)
+    でエンジン版が異なる前提で、全メトリクス |diff| ≤ 0.006
+    (hellaswag 0.0002, mmlu 0.0016, bbh_cot 0.0041)
+  - llm-jp-eval v2.1.3: 同一 vllm 0.11.2 同士で AVG 0.1060 (offline) vs
+    0.1083 (serve)。temperature=1.0 / seed=None サンプリングのため個別
+    タスク (各100サンプル) はノイズ幅 (±0.03-0.13) の差があるが、集計値に
+    系統差なし
+  - この検証で発見・修正済み: vllm 0.11.2 venv の `vllm serve` 起動不可
+    (前節)、output_length がコンテキストを超えるデータセット (jhle=8192)
+    での 400 エラー (リクエスト毎クランプで解決)

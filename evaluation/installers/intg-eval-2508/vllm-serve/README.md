@@ -81,8 +81,15 @@ uv pip install --python $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2/bin/python \
   オフラインと同一。バッチ境界起因の数値ゆらぎは通常の実行間差と同程度
 - llm-jp-eval の `--reasoning_parser` は本モードでは**未対応** (オフライン版を
   使用してください)
-- `server.max_model_len` (デフォルト 4096) は vLLM の `truncate_prompt_tokens`
-  でオフライン版の `model.max_model_len` を模倣します
+- `server.max_model_len` (デフォルト 4096) はオフライン版の
+  `model.max_model_len` を模倣します: オフライン vLLM と同様プロンプトは
+  保持したまま、生成長をリクエスト毎に残りコンテキストへクランプします
+  (プロンプト単体がコンテキストを超える場合のみ `truncate_prompt_tokens`
+  で切り詰め)
+- swallow クライアントの `max_length` はデフォルトでサーバーの実際の
+  max_model_len (= モデル config、`--max-model-len` 指定時はその値) に
+  追従します。オフライン版ハーネスがエンジンのコンテキスト長に従うのと
+  同じ挙動です (`--swallow-max-length` で上書き可)
 
 ## 適用されるパッチ
 

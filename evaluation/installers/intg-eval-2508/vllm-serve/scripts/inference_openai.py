@@ -145,19 +145,21 @@ class OpenAIGenerator(GeneratorBase[InferenceConfig]):
         def _request_params(prompt_len: int) -> tuple:
             """(max_tokens, truncate_prompt_tokens) for one request.
 
-            Emulates the offline module under model.max_model_len: normally
-            reserve room for max_tokens by truncating the prompt. When
-            max_tokens itself does not fit in the context (e.g. jhle's
-            output_length=8192 > max_model_len=4096) the server would reject
-            the request, so keep the prompt and clamp max_tokens instead,
-            which is what offline vLLM does implicitly.
+            Offline parity under model.max_model_len: offline vLLM keeps the
+            prompt as-is and implicitly clamps the generation length to the
+            remaining context (prompt + output <= max_model_len), e.g. jhle
+            requests output_length=8192 against a 4096 context. The OpenAI
+            server instead rejects such requests up front, so apply the same
+            clamp client-side. Prompts that alone fill the context (offline
+            vLLM would raise) are truncated to leave room for one token.
             """
             if not max_model_len:
                 return max_tokens, None
-            if max_tokens < max_model_len:
-                return max_tokens, max(1, max_model_len - max_tokens)
-            truncate = min(max(prompt_len, 1), max_model_len - 1)
-            return max_model_len - truncate, truncate
+            truncate = None
+            if prompt_len > max_model_len - 1:
+                truncate = max_model_len - 1
+                prompt_len = truncate
+            return min(max_tokens, max_model_len - prompt_len), truncate
 
         def _complete(tokens: List[int]) -> str:
             request_max_tokens, truncate_prompt_tokens = _request_params(len(tokens))

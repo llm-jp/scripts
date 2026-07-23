@@ -12,17 +12,22 @@
 # Options:
 #   --experiment-dir DIR      Parent of environment/ (default: $INTG_EVAL_EXPERIMENT_DIR or the directory two levels up from this script)
 #   --serve-venv DIR          venv that provides `vllm serve` (default: auto-detect, see below)
-#   --tensor-parallel-size N  (default: number of visible GPUs)
+#   --tensor-parallel-size N  (default: number of visible GPUs / data-parallel-size)
+#   --data-parallel-size N    --data-parallel-size for the server (default: 1)
 #   --gpu-memory-utilization F (default: 0.9)
 #   --max-model-len N         --max-model-len for the server (default: model config)
 #   --port N                  (default: random open port)
 #   --swallow                 Run the swallow English evaluation
 #   --swallow-env NAME        swallow environment dir name (default: swallow_v202411-tf5)
-#   --swallow-max-length N    max_length for the harness client (default: 4096)
+#   --swallow-max-length N    max_length for the harness client (default: the
+#                             server's max_model_len, matching the offline
+#                             harness which follows the engine's context size)
 #   --llm-jp-eval-versions V... llm-jp-eval versions to run (e.g. v2.1.5; default: none)
 #   --max-num-samples N       llm-jp-eval max_num_samples (default: 100)
 #   --apply-chat-template     llm-jp-eval: apply chat template
 #   --tokenize-kwargs JSON    llm-jp-eval: tokenize_kwargs JSON
+#   --legacy-output           llm-jp-eval results under llm-jp-eval_<version>/
+#                             instead of llm-jp-eval/<version>/
 #
 # The server venv, swallow environment and llm-jp-eval environments must be
 # installed beforehand (see ../README.md). Existing environments are only
@@ -44,22 +49,25 @@ OUTPUT_DIR=$(realpath "$1"); shift
 EXPERIMENT_DIR="${INTG_EVAL_EXPERIMENT_DIR:-$(realpath "${SCRIPT_DIR}/../..")}"
 SERVE_VENV=""
 TP=""
+DP=1
 GPU_MEM_UTIL=0.9
 MAX_MODEL_LEN=""
 PORT=""
 RUN_SWALLOW=false
 SWALLOW_ENV=swallow_v202411-tf5
-SWALLOW_MAX_LENGTH=4096
+SWALLOW_MAX_LENGTH=""
 LLM_JP_EVAL_VERSIONS=()
 MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
 TOKENIZE_KWARGS=""
+LEGACY_OUTPUT=false
 
 while [ $# -gt 0 ]; do
     case $1 in
         --experiment-dir) EXPERIMENT_DIR=$2; shift 2 ;;
         --serve-venv) SERVE_VENV=$2; shift 2 ;;
         --tensor-parallel-size) TP=$2; shift 2 ;;
+        --data-parallel-size) DP=$2; shift 2 ;;
         --gpu-memory-utilization) GPU_MEM_UTIL=$2; shift 2 ;;
         --max-model-len) MAX_MODEL_LEN=$2; shift 2 ;;
         --port) PORT=$2; shift 2 ;;
@@ -70,6 +78,7 @@ while [ $# -gt 0 ]; do
         --max-num-samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --apply-chat-template) APPLY_CHAT_TEMPLATE=true; shift ;;
         --tokenize-kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
+        --legacy-output) LEGACY_OUTPUT=true; shift ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -98,7 +107,7 @@ if [ -z "$SERVE_VENV" ] || [ ! -x "${SERVE_VENV}/bin/vllm" ]; then
 fi
 
 if [ -z "$TP" ]; then
-    TP=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+    TP=$(( $(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l) / DP ))
 fi
 if [ -z "$PORT" ]; then
     PORT=$(find_open_port)
@@ -109,6 +118,9 @@ SERVER_ARGS=()
 if [ -n "$MAX_MODEL_LEN" ]; then
     SERVER_ARGS+=(--max-model-len "$MAX_MODEL_LEN")
 fi
+if [ "$DP" -gt 1 ]; then
+    SERVER_ARGS+=(--data-parallel-size "$DP")
+fi
 
 >&2 echo "== serve venv: $SERVE_VENV"
 >&2 echo "== model: $MODEL (tp=$TP)"
@@ -118,6 +130,15 @@ start_vllm_server "$SERVE_VENV" "$MODEL" "$PORT" "$TP" "$GPU_MEM_UTIL" \
     "${LOG_DIR}/vllm_serve.log" ${SERVER_ARGS[@]+"${SERVER_ARGS[@]}"}
 trap stop_vllm_server EXIT
 wait_vllm_server "$PORT" 3600
+
+# Default the harness client's max_length to the server's actual context
+# size, matching the offline harness (which follows the engine's
+# max_model_len derived from the model config).
+if [ -z "$SWALLOW_MAX_LENGTH" ]; then
+    SWALLOW_MAX_LENGTH=$(curl -sf "http://127.0.0.1:${PORT}/v1/models" \
+        | python3 -c 'import json,sys; print(json.load(sys.stdin)["data"][0]["max_model_len"])')
+    >&2 echo "== swallow max_length defaulted to server max_model_len: ${SWALLOW_MAX_LENGTH}"
+fi
 
 if [ "$RUN_SWALLOW" = true ]; then
     >&2 echo "== running swallow (${SWALLOW_ENV}) against ${BASE_URL}"
@@ -139,10 +160,15 @@ for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
     if [ -n "$TOKENIZE_KWARGS" ]; then
         LLM_JP_EVAL_OPTS+=(--tokenize_kwargs "$TOKENIZE_KWARGS")
     fi
-    mkdir -p "${OUTPUT_DIR}/llm-jp-eval/${version}"
+    if [ "$LEGACY_OUTPUT" = true ]; then
+        version_output_dir=${OUTPUT_DIR}/llm-jp-eval_${version}
+    else
+        version_output_dir=${OUTPUT_DIR}/llm-jp-eval/${version}
+    fi
+    mkdir -p "$version_output_dir"
     bash "${SCRIPT_DIR}/run_llm-jp-eval-serve.sh" \
         "$MODEL" \
-        "${OUTPUT_DIR}/llm-jp-eval/${version}" \
+        "$version_output_dir" \
         "$BASE_URL" \
         "${ENV_DIR}/llm-jp-eval-${version}" \
         "${LLM_JP_EVAL_OPTS[@]}" \

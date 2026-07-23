@@ -17,8 +17,11 @@ vllm-serve mode (EXPERIMENTAL):
         python3 qsub.py <model> <output_dir> --vllm-serve \\
             --llm-jp-eval-versions v2.1.5
     Requires the vllm-serve scripts installed under
-    <experiment-dir>/environment/vllm-serve. llm-jp-eval v2.1.3/v2.1.5 only;
-    --reasoning-parser and --data-parallel-size > 1 are not supported.
+    <experiment-dir>/environment/vllm-serve. llm-jp-eval v2 series only
+    (v1.4.1 predates the dump/inference/eval split); --reasoning-parser is
+    not yet implemented in the serve client. Note that scores follow the
+    vLLM version of the *server* venv, so they are only comparable with
+    offline runs that used the same vLLM version.
 
 Environment variables:
     HF_HOME must point to a path under /groups/gcg51557/experiments.
@@ -130,6 +133,11 @@ LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
 # --apply_chat_template, ...). v1.4.1 and v2.1.0 take positional arguments.
 LLM_JP_EVAL_OPTS_STYLE_VERSIONS = ("v2.1.3", "v2.1.5")
 
+# Versions usable with --vllm-serve: the v2 series shares the dump /
+# inference / eval split that the serve-mode client plugs into. v1.4.1 has a
+# different architecture (no dump phase) and would need its own client.
+LLM_JP_EVAL_SERVE_VERSIONS = ("v2.1.0", "v2.1.3", "v2.1.5")
+
 
 def load_args():
     parser = argparse.ArgumentParser(description="Generate qsub script for evaluation jobs.")
@@ -165,7 +173,7 @@ def load_args():
     parser.add_argument("--chat-template-args", type=str, nargs="*", default=None, metavar="KEY=VALUE", help="Extra keyword arguments for chat template application (e.g. 'reasoning_effort=low'). Requires --apply-chat-template.")
 
     # vllm-serve mode (EXPERIMENTAL)
-    parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. llm-jp-eval supports v2.1.3/v2.1.5 only; --reasoning-parser, --data-parallel-size > 1 and --legacy-output are not supported.")
+    parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. llm-jp-eval supports the v2 series only, and --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
     parser.add_argument("--serve-venv", type=str, default=None, help="venv that provides `vllm serve` (only with --vllm-serve; default: auto-detect, see vllm-serve/README.md).")
     parser.add_argument("--max-model-len", type=int, default=None, help="--max-model-len for the vLLM server (only with --vllm-serve; default: model config).")
 
@@ -187,18 +195,18 @@ def check_args(args):
 
     if args.vllm_serve:
         if not args.disable_llm_jp_eval:
-            unsupported = [v for v in args.llm_jp_eval_versions if v not in LLM_JP_EVAL_OPTS_STYLE_VERSIONS]
+            unsupported = [v for v in args.llm_jp_eval_versions if v not in LLM_JP_EVAL_SERVE_VERSIONS]
             if unsupported:
                 raise ValueError(
-                    f"--vllm-serve supports llm-jp-eval versions {list(LLM_JP_EVAL_OPTS_STYLE_VERSIONS)} only, "
-                    f"got {unsupported}. Pass e.g. '--llm-jp-eval-versions v2.1.5' (or --disable-llm-jp-eval)."
+                    f"--vllm-serve supports llm-jp-eval versions {list(LLM_JP_EVAL_SERVE_VERSIONS)} only, "
+                    f"got {unsupported}. v1.4.1 predates the dump/inference/eval split the serve client "
+                    "relies on. Pass e.g. '--llm-jp-eval-versions v2.1.5' (or --disable-llm-jp-eval)."
                 )
         if args.reasoning_parser:
-            raise ValueError("--reasoning-parser is not supported with --vllm-serve; use the offline mode.")
-        if args.data_parallel_size != 1:
-            raise ValueError("--data-parallel-size > 1 is not supported with --vllm-serve.")
-        if args.legacy_output:
-            raise ValueError("--legacy-output is not supported with --vllm-serve.")
+            raise ValueError(
+                "--reasoning-parser is not yet implemented in the serve-mode client "
+                "(inference_openai.py); use the offline mode."
+            )
     elif args.serve_venv or args.max_model_len:
         raise ValueError("--serve-venv and --max-model-len require --vllm-serve.")
 
@@ -224,6 +232,8 @@ def main():
         if args.serve_venv:
             serve_args.append(f"--serve-venv {args.serve_venv}")
         serve_args.append(f"--tensor-parallel-size {args.tensor_parallel_size}")
+        if args.data_parallel_size != 1:
+            serve_args.append(f"--data-parallel-size {args.data_parallel_size}")
         serve_args.append(f"--gpu-memory-utilization {args.gpu_memory_utilization}")
         if args.max_model_len:
             serve_args.append(f"--max-model-len {args.max_model_len}")
@@ -236,6 +246,8 @@ def main():
                 serve_args.append("--apply-chat-template")
             if tokenize_kwargs_json:
                 serve_args.append(f"--tokenize-kwargs '{tokenize_kwargs_json}'")
+            if args.legacy_output:
+                serve_args.append("--legacy-output")
         swallow_template = VLLM_SERVE_TEMPLATE.format(
             experiment_dir=args.experiment_dir,
             serve_args=" \\\n".join(f"    {a}" for a in serve_args),

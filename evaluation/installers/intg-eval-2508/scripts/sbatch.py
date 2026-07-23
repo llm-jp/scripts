@@ -24,11 +24,11 @@ vllm-serve mode (EXPERIMENTAL):
         python3 sbatch.py <model> <output_dir> --vllm-serve \\
             --llm-jp-eval-versions v2.1.5
     Requires the vllm-serve scripts installed under
-    <experiment-dir>/environment/vllm-serve. llm-jp-eval v2 series only
-    (v1.4.1 predates the dump/inference/eval split); --reasoning-parser is
-    not yet implemented in the serve client. Note that scores follow the
-    vLLM version of the *server* venv, so they are only comparable with
-    offline runs that used the same vLLM version.
+    <experiment-dir>/environment/vllm-serve. --reasoning-parser is not yet
+    implemented in the serve client, and v1.4.1 does not support
+    --apply-chat-template. Note that scores follow the vLLM version of the
+    *server* venv, so they are only comparable with offline runs that used
+    the same vLLM version.
 
 Environment variables:
     HF_HOME must be set (cache directory for models and datasets).
@@ -57,8 +57,8 @@ TEMPLATE = """#!/bin/bash
 #SBATCH --cpus-per-task={cpus_per_task}
 #SBATCH --mem={mem}
 #SBATCH --time={time}
-#SBATCH --output={output_dir}/logs/sbatch.out
-#SBATCH --error={output_dir}/logs/sbatch.err
+#SBATCH --output={output_dir}/logs/{artifact_stem}.out
+#SBATCH --error={output_dir}/logs/{artifact_stem}.err
 {options}
 
 set -ux
@@ -158,11 +158,32 @@ LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
 # --apply_chat_template, ...). v1.4.1 and v2.1.0 take positional arguments.
 LLM_JP_EVAL_OPTS_STYLE_VERSIONS = ("v2.1.3", "v2.1.5")
 
-# Versions usable with --vllm-serve: the v2 series shares the dump /
-# inference / eval split that the serve-mode client plugs into. v1.4.1 has a
-# different architecture (no dump phase) and would need its own client.
-# (v2.1.0 is additionally excluded on this cluster; see the NOTE above.)
-LLM_JP_EVAL_SERVE_VERSIONS = ("v2.1.3", "v2.1.5")
+# Versions usable with --vllm-serve. Every supported version has a dump /
+# inference / eval split the serve-mode client plugs into (v1.4.x through
+# run_llm-jp-eval-v1-serve.sh, v2.x through run_llm-jp-eval-serve.sh).
+# (v2.1.0 is excluded on this cluster; see the NOTE above.)
+LLM_JP_EVAL_SERVE_VERSIONS = ("v1.4.1", "v2.1.3", "v2.1.5")
+
+
+def eval_output_targets(args):
+    """Subdirectories under output_dir this job writes, and a slug naming them.
+
+    Used to let separate jobs (e.g. a swallow-only job and an
+    llm-jp-eval-only job) share one output directory without collisions.
+    """
+    targets = []
+    parts = []
+    if args.swallow_version and not args.disable_swallow:
+        targets.append("swallow")
+        parts.append("swallow")
+    if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
+        for version in args.llm_jp_eval_versions:
+            if args.legacy_output:
+                targets.append(LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING.get(version, f"llm-jp-eval_{version}"))
+            else:
+                targets.append(f"llm-jp-eval/{version}")
+        parts.append("llm-jp-eval-" + "-".join(args.llm_jp_eval_versions))
+    return targets, "+".join(parts) or "job"
 
 
 def load_args():
@@ -203,7 +224,7 @@ def load_args():
     parser.add_argument("--chat-template-args", type=str, nargs="*", default=None, metavar="KEY=VALUE", help="Extra keyword arguments for chat template application (e.g. 'reasoning_effort=low'). Requires --apply-chat-template.")
 
     # vllm-serve mode (EXPERIMENTAL)
-    parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. llm-jp-eval supports the v2 series only, and --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
+    parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
     parser.add_argument("--serve-venv", type=str, default=None, help="venv that provides `vllm serve` (only with --vllm-serve; default: auto-detect, see vllm-serve/README.md).")
     parser.add_argument("--max-model-len", type=int, default=None, help="--max-model-len for the vLLM server (only with --vllm-serve; default: model config).")
     parser.add_argument("--client-concurrency", type=int, default=None, help="Prompts each evaluation client keeps in flight against the shared vLLM server (only with --vllm-serve; default: 256, on the order of vLLM's default max_num_seqs). Each client translates this into its own request shape, so the saturation target is framework-independent.")
@@ -222,7 +243,14 @@ def check_args(args):
         raise ValueError(f"Output directory '{args.output_dir}' must be an absolute path.")
 
     if os.path.exists(args.output_dir):
-        raise ValueError(f"Output directory '{args.output_dir}' already exists. Please specify a new path.")
+        targets, _ = eval_output_targets(args)
+        existing = [t for t in targets if os.path.exists(os.path.join(args.output_dir, t))]
+        if existing:
+            raise ValueError(
+                f"Output directory '{args.output_dir}' already contains results for {existing}. "
+                "Sharing an output directory between jobs is only possible when their "
+                "evaluation targets do not overlap."
+            )
 
     if args.vllm_serve:
         if not args.disable_llm_jp_eval:
@@ -230,8 +258,12 @@ def check_args(args):
             if unsupported:
                 raise ValueError(
                     f"--vllm-serve supports llm-jp-eval versions {list(LLM_JP_EVAL_SERVE_VERSIONS)} only, "
-                    f"got {unsupported}. v1.4.1 predates the dump/inference/eval split the serve client "
-                    "relies on. Pass e.g. '--llm-jp-eval-versions v2.1.5' (or --disable-llm-jp-eval)."
+                    f"got {unsupported}. Pass e.g. '--llm-jp-eval-versions v2.1.5' (or --disable-llm-jp-eval)."
+                )
+            if "v1.4.1" in args.llm_jp_eval_versions and (args.apply_chat_template or args.chat_template_args):
+                raise ValueError(
+                    "--apply-chat-template / --chat-template-args are not supported by "
+                    "llm-jp-eval v1.4.1 in serve mode."
                 )
         if args.reasoning_parser:
             raise ValueError(
@@ -322,6 +354,17 @@ def main():
             chunks.append(chunk)
         llm_jp_eval_template = "\n".join(chunks)
 
+    # When sharing an existing output directory with other jobs, suffix the
+    # job artifacts (script, config, Slurm logs) so they do not overwrite
+    # each other; a fresh directory keeps the historical names.
+    _, eval_slug = eval_output_targets(args)
+    if os.path.exists(args.output_dir):
+        artifact_stem = f"sbatch_{eval_slug}"
+        config_name = f"config_{eval_slug}.json"
+    else:
+        artifact_stem = "sbatch"
+        config_name = "config.json"
+
     hf_home = os.environ.get("HF_HOME")
     if not hf_home:
         raise ValueError("HF_HOME environment variable is not set. Please set it to the path where Hugging Face datasets are stored.")
@@ -347,6 +390,7 @@ def main():
         experiment_dir=args.experiment_dir,
         model_name_or_path=args.model_name_or_path,
         options="\n".join(args.options),
+        artifact_stem=artifact_stem,
         cuda_module=args.cuda_module,
         swallow_template=swallow_template,
         llm_jp_eval_template=llm_jp_eval_template,
@@ -358,11 +402,11 @@ def main():
 
     os.makedirs(os.path.join(args.output_dir, "logs"), exist_ok=True)
 
-    sbatch_script_path = os.path.join(args.output_dir, "sbatch.sh")
+    sbatch_script_path = os.path.join(args.output_dir, f"{artifact_stem}.sh")
     with open(sbatch_script_path, "w") as f:
         f.write(sbatch_script)
 
-    config_path = os.path.join(args.output_dir, "config.json")
+    config_path = os.path.join(args.output_dir, config_name)
     config = dict(args._get_kwargs())
     with open(config_path, "w") as f:
         json.dump(config, f, indent=4)

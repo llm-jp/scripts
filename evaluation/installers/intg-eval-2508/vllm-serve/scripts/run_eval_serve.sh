@@ -30,7 +30,10 @@
 #                             llm-jp-eval: N concurrent single-prompt
 #                             requests), so the server-side saturation target
 #                             is framework-independent.
-#   --llm-jp-eval-versions V... llm-jp-eval versions to run (e.g. v2.1.5; default: none)
+#   --llm-jp-eval-versions V... llm-jp-eval versions to run (e.g. v1.4.1
+#                             v2.1.5; default: none). v1.4.x runs through
+#                             run_llm-jp-eval-v1-serve.sh (no chat-template
+#                             support)
 #   --max-num-samples N       llm-jp-eval max_num_samples (default: 100)
 #   --apply-chat-template     llm-jp-eval: apply chat template
 #   --tokenize-kwargs JSON    llm-jp-eval: tokenize_kwargs JSON
@@ -165,19 +168,39 @@ fi
 for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
     >&2 echo "== running llm-jp-eval ${version} against ${BASE_URL}"
     LLM_JP_EVAL_OPTS=(--max_num_samples "$MAX_NUM_SAMPLES")
+    if [ "$LEGACY_OUTPUT" = true ]; then
+        if [ "$version" = v1.4.1 ]; then
+            version_output_dir=${OUTPUT_DIR}/llm-jp-eval
+        else
+            version_output_dir=${OUTPUT_DIR}/llm-jp-eval_${version}
+        fi
+    else
+        version_output_dir=${OUTPUT_DIR}/llm-jp-eval/${version}
+    fi
+    LLM_JP_EVAL_OPTS+=(--client-concurrency "$CLIENT_CONCURRENCY")
+    mkdir -p "$version_output_dir"
+    if [[ $version == v1.* ]]; then
+        # v1.4.x: same dump/inference/eval split, but hydra-based configs and
+        # no chat-template support.
+        if [ "$APPLY_CHAT_TEMPLATE" = true ] || [ -n "$TOKENIZE_KWARGS" ]; then
+            >&2 echo "ERROR: --apply-chat-template / --tokenize-kwargs are not supported by llm-jp-eval ${version}."
+            exit 1
+        fi
+        bash "${SCRIPT_DIR}/run_llm-jp-eval-v1-serve.sh" \
+            "$MODEL" \
+            "$version_output_dir" \
+            "$BASE_URL" \
+            "${ENV_DIR}/llm-jp-eval-${version}" \
+            "${LLM_JP_EVAL_OPTS[@]}" \
+            > "${LOG_DIR}/llm-jp-eval-${version}.log" 2> "${LOG_DIR}/llm-jp-eval-${version}.err"
+        continue
+    fi
     if [ "$APPLY_CHAT_TEMPLATE" = true ]; then
         LLM_JP_EVAL_OPTS+=(--apply_chat_template)
     fi
     if [ -n "$TOKENIZE_KWARGS" ]; then
         LLM_JP_EVAL_OPTS+=(--tokenize_kwargs "$TOKENIZE_KWARGS")
     fi
-    if [ "$LEGACY_OUTPUT" = true ]; then
-        version_output_dir=${OUTPUT_DIR}/llm-jp-eval_${version}
-    else
-        version_output_dir=${OUTPUT_DIR}/llm-jp-eval/${version}
-    fi
-    LLM_JP_EVAL_OPTS+=(--client-concurrency "$CLIENT_CONCURRENCY")
-    mkdir -p "$version_output_dir"
     bash "${SCRIPT_DIR}/run_llm-jp-eval-serve.sh" \
         "$MODEL" \
         "$version_output_dir" \

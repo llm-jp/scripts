@@ -29,7 +29,9 @@ cp "${INSTALLER_DIR}"/scripts/serve_common.sh \
    "${INSTALLER_DIR}"/scripts/run_eval_serve.sh \
    "${INSTALLER_DIR}"/scripts/run-swallow-serve.sh \
    "${INSTALLER_DIR}"/scripts/run_llm-jp-eval-serve.sh \
+   "${INSTALLER_DIR}"/scripts/run_llm-jp-eval-v1-serve.sh \
    "${INSTALLER_DIR}"/scripts/inference_openai.py \
+   "${INSTALLER_DIR}"/scripts/inference_openai_v1.py \
    "${INSTALLER_DIR}"/scripts/compare_results.py \
    "$SERVE_DIR/"
 

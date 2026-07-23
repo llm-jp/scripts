@@ -25,9 +25,13 @@ vllm serve MODEL (GPU, 常駐)  ←  http://127.0.0.1:PORT/v1
 - swallow: 既存フォークの `local-completions` バックエンドを使用。プロンプトは
   HF tokenizer による**トークン ID 列**で送信され、loglikelihood は
   `echo=True + logprobs` で取得されるため、計算内容はオフライン版と同一
-- llm-jp-eval: `inference_openai.py` (GeneratorBase 継承) が dump 済みプロンプト
-  (chat template 適用込みのトークン ID) を `/v1/completions` に投げる。
-  dump / eval フェーズは各バージョンの環境をそのまま使用
+- llm-jp-eval v2.x: `inference_openai.py` (GeneratorBase 継承) が dump 済み
+  プロンプト (chat template 適用込みのトークン ID) を `/v1/completions` に
+  投げる。dump / eval フェーズは各バージョンの環境をそのまま使用
+- llm-jp-eval v1.4.x: `inference_openai_v1.py` (スタンドアロン) が
+  `offline_inference_vllm.py` の代替として同じ入出力形式で動く
+  (greedy / chat template 非対応は offline 版と同じ)。dump / eval は
+  v1.4.1 環境の venv-eval をそのまま使用
 
 ## 使い方
 

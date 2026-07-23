@@ -139,8 +139,21 @@ fi
 >&2 echo "== model: $MODEL (tp=$TP)"
 >&2 echo "== endpoint: $BASE_URL"
 
+# The server log is job-scoped, so name it after this job's eval set: two
+# serve jobs may share one output directory (normally one job runs all the
+# evaluations, but keep it fail-safe) and must not overwrite each other's
+# records. The per-eval logs below are already distinct by name.
+LOG_SLUG=""
+if [ "$RUN_SWALLOW" = true ]; then
+    LOG_SLUG=swallow
+fi
+if [ -n "${LLM_JP_EVAL_VERSIONS[*]+x}" ]; then
+    LOG_SLUG="${LOG_SLUG:+${LOG_SLUG}+}llm-jp-eval-$(IFS=-; echo "${LLM_JP_EVAL_VERSIONS[*]}")"
+fi
+VLLM_SERVE_LOG=${LOG_DIR}/vllm_serve${LOG_SLUG:+_${LOG_SLUG}}.log
+
 start_vllm_server "$SERVE_VENV" "$MODEL" "$PORT" "$TP" "$GPU_MEM_UTIL" \
-    "${LOG_DIR}/vllm_serve.log" ${SERVER_ARGS[@]+"${SERVER_ARGS[@]}"}
+    "$VLLM_SERVE_LOG" ${SERVER_ARGS[@]+"${SERVER_ARGS[@]}"}
 trap stop_vllm_server EXIT
 wait_vllm_server "$PORT" 3600
 

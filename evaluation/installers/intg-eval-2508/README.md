@@ -109,6 +109,7 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
   <output_dir_absolute_path> \
   --experiment-dir <実験ディレクトリ> \
   [--llm-jp-eval-versions v1.4.1 v2.1.3 v2.1.5] \
+  [--basemodel] \
   [--partition gpu] \
   [--gpus 1] \
   [--dry-run]
@@ -116,6 +117,27 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
 
 - `--experiment-dir` は評価環境をインストールした実験ディレクトリ (`environment/` の親) を指定します。環境変数 `INTG_EVAL_EXPERIMENT_DIR` でも指定可能です。
 - その他のオプションは `qsub.py` と共通です (`--help` を参照)。
+
+### 事前学習モデル (ベースモデル) のチェックポイント評価
+
+llm-jp-eval v2.1.5のベースモデル評価用設定 (upstreamの`config_basemodel.yaml`/`vllm_inference_basemodel.yaml`相当) でチェックポイント評価を行う場合は `--basemodel` を指定します。
+
+```bash
+python3 $INSTALL_DIR/scripts/sbatch.py \
+  <model_name_or_absolute_path> \
+  <output_dir_absolute_path> \
+  --experiment-dir <実験ディレクトリ> \
+  --disable-swallow \
+  --llm-jp-eval-versions v2.1.5 \
+  --basemodel
+```
+
+- `--basemodel` では以下が一括で切り替わります:
+  - プロンプトテンプレート: ベースモデル用のAlpaca風テンプレート (`config_basemodel.yaml`)
+  - データセット: 4-shotデータセットのみ (`eval_configs/only_4shots.yaml`。英語系データセットを含み、コード実行系は含まないためサンドボックス不要)
+  - 推論パラメータ: `add_special_tokens: False`, `temperature: 0.0` を明示的に固定
+- 日本語・英語のスコアは `result.json` の `lang_scores` フィールドに言語別に出力されます (英語スコアはllm-jp-evalの英語ベンチマークで算出されるため、チェックポイント評価ではswallow評価を `--disable-swallow` で省略できます)。
+- `--vllm-serve` とも併用可能です。
 
 > [!NOTE]
 > - singularity等のコンテナランタイムがないノードでは、llm-jp-eval v2系のコード実行系データセット (`mbpp`, `jhumaneval`) とCGカテゴリは自動的にスキップされます (`DISABLE_CODE_EXEC=1` で明示的な無効化も可能)。そのためAVGスコアはコード実行を含む環境での結果と直接比較できません。なおllm-jp-eval v1.4.1のmbppはインプロセスの`exec()`で評価されるため、コンテナランタイムなしでも実行されます。

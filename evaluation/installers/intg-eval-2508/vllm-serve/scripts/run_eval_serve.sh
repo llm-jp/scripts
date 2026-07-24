@@ -37,6 +37,10 @@
 #   --max-num-samples N       llm-jp-eval max_num_samples (default: 100)
 #   --apply-chat-template     llm-jp-eval: apply chat template
 #   --tokenize-kwargs JSON    llm-jp-eval: tokenize_kwargs JSON
+#   --basemodel               llm-jp-eval: base-model (pretrained checkpoint)
+#                             evaluation: fixed prompt template,
+#                             add_special_tokens=False, temperature=0.0 and
+#                             the 4-shot datasets only (v2.1.5+ only)
 #   --legacy-output           llm-jp-eval results under llm-jp-eval_<version>/
 #                             instead of llm-jp-eval/<version>/
 #
@@ -73,6 +77,7 @@ MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
 TOKENIZE_KWARGS=""
 LEGACY_OUTPUT=false
+BASEMODEL=false
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -92,6 +97,7 @@ while [ $# -gt 0 ]; do
         --apply-chat-template) APPLY_CHAT_TEMPLATE=true; shift ;;
         --tokenize-kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
         --legacy-output) LEGACY_OUTPUT=true; shift ;;
+        --basemodel) BASEMODEL=true; shift ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -199,6 +205,10 @@ for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
             >&2 echo "ERROR: --apply-chat-template / --tokenize-kwargs are not supported by llm-jp-eval ${version}."
             exit 1
         fi
+        if [ "$BASEMODEL" = true ]; then
+            >&2 echo "ERROR: --basemodel is not supported by llm-jp-eval ${version} (v2.1.5+ only)."
+            exit 1
+        fi
         bash "${SCRIPT_DIR}/run_llm-jp-eval-v1-serve.sh" \
             "$MODEL" \
             "$version_output_dir" \
@@ -213,6 +223,9 @@ for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
     fi
     if [ -n "$TOKENIZE_KWARGS" ]; then
         LLM_JP_EVAL_OPTS+=(--tokenize_kwargs "$TOKENIZE_KWARGS")
+    fi
+    if [ "$BASEMODEL" = true ]; then
+        LLM_JP_EVAL_OPTS+=(--basemodel)
     fi
     bash "${SCRIPT_DIR}/run_llm-jp-eval-serve.sh" \
         "$MODEL" \

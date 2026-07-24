@@ -127,7 +127,7 @@ LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
 mkdir -p $OUTPUT_DIR/{llm_jp_eval_output_subdir}
-LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args})
+LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args}{basemodel})
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/{llm_jp_eval_output_subdir} \\
@@ -163,6 +163,10 @@ LLM_JP_EVAL_OPTS_STYLE_VERSIONS = ("v2.1.3", "v2.1.5")
 # run_llm-jp-eval-v1-serve.sh, v2.x through run_llm-jp-eval-serve.sh).
 # (v2.1.0 is excluded on this cluster; see the NOTE above.)
 LLM_JP_EVAL_SERVE_VERSIONS = ("v1.4.1", "v2.1.3", "v2.1.5")
+
+# Versions whose installer ships the base-model evaluation resources
+# (config_basemodel.yaml / inference_config_basemodel.yaml) used by --basemodel.
+LLM_JP_EVAL_BASEMODEL_VERSIONS = ("v2.1.5",)
 
 
 def eval_output_targets(args):
@@ -222,6 +226,7 @@ def load_args():
     parser.add_argument("--apply-chat-template", action="store_true", help="Apply chat template when running inference.")
     parser.add_argument("--reasoning-parser", type=str, default=None, help="Reasoning parser to extract final response (e.g. 'openai_gptoss').")
     parser.add_argument("--chat-template-args", type=str, nargs="*", default=None, metavar="KEY=VALUE", help="Extra keyword arguments for chat template application (e.g. 'reasoning_effort=low'). Requires --apply-chat-template.")
+    parser.add_argument("--basemodel", action="store_true", help="Base-model (pretrained checkpoint) evaluation: fixed prompt template (config_basemodel.yaml), add_special_tokens=False, temperature=0.0 and the 4-shot datasets only (only_4shots.yaml). llm-jp-eval v2.1.5+ only; incompatible with --apply-chat-template. JA/EN scores are reported separately via lang_scores in result.json.")
 
     # vllm-serve mode (EXPERIMENTAL)
     parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
@@ -250,6 +255,16 @@ def check_args(args):
                 f"Output directory '{args.output_dir}' already contains results for {existing}. "
                 "Sharing an output directory between jobs is only possible when their "
                 "evaluation targets do not overlap."
+            )
+
+    if args.basemodel and not args.disable_llm_jp_eval:
+        if args.apply_chat_template or args.chat_template_args:
+            raise ValueError("--basemodel cannot be combined with --apply-chat-template / --chat-template-args.")
+        unsupported = [v for v in args.llm_jp_eval_versions if v not in LLM_JP_EVAL_BASEMODEL_VERSIONS]
+        if unsupported:
+            raise ValueError(
+                f"--basemodel supports llm-jp-eval versions {list(LLM_JP_EVAL_BASEMODEL_VERSIONS)} only, "
+                f"got {unsupported}. Pass e.g. '--llm-jp-eval-versions v2.1.5'."
             )
 
     if args.vllm_serve:
@@ -311,6 +326,8 @@ def main():
                 serve_args.append("--apply-chat-template")
             if tokenize_kwargs_json:
                 serve_args.append(f"--tokenize-kwargs '{tokenize_kwargs_json}'")
+            if args.basemodel:
+                serve_args.append("--basemodel")
             if args.legacy_output:
                 serve_args.append("--legacy-output")
         swallow_template = VLLM_SERVE_TEMPLATE.format(
@@ -328,6 +345,7 @@ def main():
         apply_chat_template_flag = " --apply_chat_template" if args.apply_chat_template else ""
         reasoning_parser_flag = f" --reasoning_parser {args.reasoning_parser}" if args.reasoning_parser else ""
         chat_template_args_flag = f" --tokenize_kwargs '{tokenize_kwargs_json}'" if tokenize_kwargs_json else ""
+        basemodel_flag = " --basemodel" if args.basemodel else ""
         chunks = []
         for version in args.llm_jp_eval_versions:
             if args.legacy_output:
@@ -344,6 +362,7 @@ def main():
                     apply_chat_template=apply_chat_template_flag,
                     reasoning_parser=reasoning_parser_flag,
                     chat_template_args=chat_template_args_flag,
+                    basemodel=basemodel_flag,
                 )
             else:
                 chunk = LLM_JP_EVAL_TEMPLATE_LEGACY.format(

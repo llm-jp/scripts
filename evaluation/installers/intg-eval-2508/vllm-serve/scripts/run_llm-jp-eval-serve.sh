@@ -8,11 +8,15 @@
 # Usage:
 #   run_llm-jp-eval-serve.sh MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR \
 #       [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON] \
-#       [--client-concurrency N]
+#       [--client-concurrency N] [--basemodel]
 #
 #   --client-concurrency N  Prompts kept in flight against the server
 #       (default: 256); becomes server.num_concurrent of inference_openai.py
 #       (single-prompt requests, so the count maps 1:1).
+#   --basemodel  Base-model (pretrained checkpoint) evaluation: fixed prompt
+#       template (config_basemodel.yaml), add_special_tokens=False,
+#       temperature=0.0, and the 4-shot datasets only (only_4shots.yaml).
+#       Requires the basemodel resources of the llm-jp-eval v2.1.5 installer.
 #
 #   MODEL           Served model name (must equal the server's model id)
 #   OUTPUT_DIR      Output directory
@@ -25,7 +29,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON]"
+    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON] [--basemodel]"
     exit 1
 }
 
@@ -39,15 +43,22 @@ MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
 TOKENIZE_KWARGS=""
 CLIENT_CONCURRENCY=256
+BASEMODEL=false
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --apply_chat_template) APPLY_CHAT_TEMPLATE=true; shift ;;
         --tokenize_kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
         --client-concurrency) CLIENT_CONCURRENCY=$2; shift 2 ;;
+        --basemodel) BASEMODEL=true; shift ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
+
+if [ "${BASEMODEL}" = true ] && { [ "${APPLY_CHAT_TEMPLATE}" = true ] || [ -n "${TOKENIZE_KWARGS}" ]; }; then
+    >&2 echo "Error: --basemodel cannot be combined with --apply_chat_template / --tokenize_kwargs."
+    exit 1
+fi
 
 SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 
@@ -62,10 +73,23 @@ LLM_JP_EVAL_DIR=${ENV_DIR}/src/llm-jp-eval
 DATASET_DIR=${ENV_DIR}/data/llm-jp-eval
 VLLM_VENV=${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/.venv
 
+CONFIG_FILE=config_base.yaml
+if [ "${BASEMODEL}" = true ]; then
+    CONFIG_FILE=config_basemodel.yaml
+    if [ ! -f "${CONFIG_DIR}/${CONFIG_FILE}" ]; then
+        >&2 echo "ERROR: ${CONFIG_DIR}/${CONFIG_FILE} not found; --basemodel requires an llm-jp-eval installation that ships the basemodel resources (v2.1.5 or later)."
+        exit 1
+    fi
+fi
+
 # Code-execution datasets (mbpp, jhumaneval) require the dify-sandbox container.
 # Skip them when no container runtime is available or DISABLE_CODE_EXEC=1 is set.
-EVAL_DATASET_CONFIG_PATH=${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml
-if command -v singularity >/dev/null 2>&1 && [ "${DISABLE_CODE_EXEC:-0}" != "1" ]; then
+if [ "${BASEMODEL}" = true ]; then
+    # only_4shots.yaml contains no code-execution datasets, so no sandbox is needed.
+    EVAL_DATASET_CONFIG_PATH=${LLM_JP_EVAL_DIR}/eval_configs/only_4shots.yaml
+    ENABLE_CODE_EXEC=false
+elif command -v singularity >/dev/null 2>&1 && [ "${DISABLE_CODE_EXEC:-0}" != "1" ]; then
+    EVAL_DATASET_CONFIG_PATH=${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml
     ENABLE_CODE_EXEC=true
 else
     ENABLE_CODE_EXEC=false
@@ -75,7 +99,7 @@ fi
 
 source ${LLM_JP_EVAL_DIR}/.venv/bin/activate
 
-if [ "${ENABLE_CODE_EXEC}" = false ]; then
+if [ "${ENABLE_CODE_EXEC}" = false ] && [ "${BASEMODEL}" = false ]; then
     python -c "
 import sys, yaml
 src, dst = sys.argv[1], sys.argv[2]
@@ -89,7 +113,7 @@ with open(dst, 'w') as f:
 fi
 
 DUMP_OPTS=(
-    --config=${CONFIG_DIR}/config_base.yaml
+    --config=${CONFIG_DIR}/${CONFIG_FILE}
     --output_dir=${DATASET_DIR}
     --eval_dataset_config_path=${EVAL_DATASET_CONFIG_PATH}
     --inference_input_dir=${PROMPT_OUTPUT_DIR}
@@ -112,6 +136,16 @@ server:
 tokenizer:
   pretrained_model_name_or_path: ${MODEL_PATH}
 EOF
+if [ "${BASEMODEL}" = true ]; then
+    # Offline parity with inference_config_basemodel.yaml of the v2.1.5
+    # installer: fix add_special_tokens and temperature explicitly.
+    cat >> ${SERVE_CONFIG} <<EOF
+tokenize_kwargs:
+  add_special_tokens: false
+generation_config:
+  temperature: 0.0
+EOF
+fi
 
 INFERENCE_OPTS=(
     --config=${SERVE_CONFIG}
@@ -170,7 +204,7 @@ fi
 # TODO: Specify the exact inference_result_dir for safety
 INFERENCE_RESULT_DIR=$(find "${OFFLINE_OUTPUT_DIR}" -mindepth 1 -maxdepth 1 -type d | head -n 1)
 EVAL_OPTS=(
-    --config=${CONFIG_DIR}/config_base.yaml
+    --config=${CONFIG_DIR}/${CONFIG_FILE}
     # NOTE: OUTPUT_DIRに出力したいが、一部のデータセットはなぜかeval時にdumpを実行する。
     #  その時、データセットの **読み込み先** として `output_dir` が参照されるため、
     #  `output_dir` にはデータセットの保存先 (DATASET_DIR) を指定しなければならない。

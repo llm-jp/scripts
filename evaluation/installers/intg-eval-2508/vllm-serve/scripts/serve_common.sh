@@ -16,6 +16,10 @@ start_vllm_server() {
 
     # `setsid` gives the server its own process group so that stop_vllm_server
     # can also reap the worker processes vllm spawns for tensor parallelism.
+    # The venv is invoked directly (not activated), so replicate activation for
+    # the server process: kernel JIT paths (flashinfer, MoE models) shell out
+    # to `ninja` etc. by name and die with FileNotFoundError otherwise.
+    PATH="${venv_dir}/bin:${PATH}" VIRTUAL_ENV="${venv_dir}" \
     setsid "${venv_dir}/bin/vllm" serve "$model" \
         --port "$port" \
         --tensor-parallel-size "$tp" \

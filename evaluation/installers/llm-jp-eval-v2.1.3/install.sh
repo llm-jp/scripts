@@ -96,6 +96,15 @@ fi
 pushd inference-modules/vllm
 uv sync --no-cache --python $PYTHON_VERSION
 
+# The locked openai (1.99.5) breaks `vllm serve`: vllm 0.11.2's server
+# entrypoint imports the `Function` type that openai 1.99.2 removed, and
+# vllm's dependency spec (openai>=1.99.1) has no upper bound. The openai
+# client is unused by the offline flow; pin it down so this venv can also
+# host the server for the vllm-serve mode.
+# NOTE: must come after this project's last `uv run`/`uv sync` (implicit
+# re-sync would revert the override).
+uv pip install --python .venv/bin/python "openai==1.99.1"
+
 popd  # inference-modules/vllm
 popd  # llm-jp-eval-inference
 

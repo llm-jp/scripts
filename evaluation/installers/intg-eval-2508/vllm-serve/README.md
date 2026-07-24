@@ -49,27 +49,37 @@ bash $ENV_DIR/vllm-serve/run_eval_serve.sh \
 `vllm-serve/serve-venv-*` → llm-jp-eval-v2.1.5 の vllm venv →
 swallow_v202411-tf5 → swallow_v202411)。
 
-### vllm 0.11.2 venv は `vllm serve` が起動できない場合がある
+### vllm 0.11.2 venv は openai を 1.99.1 にピンしないと `vllm serve` が起動できない
 
-llm-jp-eval-v2.1.3 の vllm venv (vllm 0.11.2 + openai 1.99.5) では
-`vllm serve` が import エラーで即死します。vllm 0.11.2 は
+llm-jp-eval-v2.1.3 の vllm venv は lock が openai 1.99.5 を固定しており、
+そのままでは `vllm serve` が import エラーで即死します。vllm 0.11.2 は
 `openai.types.chat.chat_completion_message_tool_call_param` の `Function` 型に
 依存していますが、この型は openai 1.99.2 の型再構成で削除されており、
 vllm の依存指定 (`openai>=1.99.1`) が上限を欠くためです。オフライン評価は
-サーバーを使わないため影響ありません。
+openai クライアントを使わないため影響ありません。
 
-対処: 既存 venv は変更せず、サーバー専用 venv を作成します
-(スコア互換性のため vllm / torch などは既存 venv と同一バージョンに揃える):
+llm-jp-eval-v2.1.3 のインストーラーは venv 同期後に `openai==1.99.1` を
+ピンし直すようになっています (2026-07-24 以降)。それ以前にインストールした
+環境では次の一行で修正できます (オフライン評価の挙動は変わりません):
 
 ```bash
-uv venv --python 3.11.13 $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2
-uv pip install --python $ENV_DIR/vllm-serve/serve-venv-vllm0.11.2/bin/python \
-  vllm==0.11.2 openai==1.99.1 flashinfer-python==0.5.2 \
-  xformers==0.0.33.post1 numpy==1.26.4 transformers==4.57.6
+uv pip install --python \
+  $ENV_DIR/llm-jp-eval-v2.1.3/environment/src/llm-jp-eval/llm-jp-eval-inference/inference-modules/vllm/.venv/bin/python \
+  "openai==1.99.1"
 ```
 
-`vllm-serve/serve-venv-*` は自動検出の最優先候補なので、作成後は
-`--serve-venv` の指定は不要です。
+(以前この節にあった「サーバー専用 venv (`vllm-serve/serve-venv-*`) を作る」
+回避策は不要になりました。専用 venv は自動検出の最優先候補となり他の
+利用者のサーバー venv 選択まで変えてしまうため、残っている場合は削除を
+推奨します。)
+
+### サーバープロセスの PATH には serve venv の bin が乗る
+
+サーバーは venv を activate せず `<venv>/bin/vllm` を直接起動するため、
+serve_common.sh が activate 相当 (`PATH` 先頭に `<venv>/bin`、`VIRTUAL_ENV`)
+を設定した上で起動します。これが無いと MoE モデル等のカーネル JIT が
+`ninja` を PATH から見つけられず `FileNotFoundError: 'ninja'` でエンジン
+初期化に失敗します (オフライン実行は venv を activate するため顕在化しない)。
 
 ## スコア互換性に関する注意
 

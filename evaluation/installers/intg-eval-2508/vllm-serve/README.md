@@ -155,3 +155,15 @@ serve_common.sh が activate 相当 (`PATH` 先頭に `<venv>/bin`、`VIRTUAL_EN
   - この検証で発見・修正済み: vllm 0.11.2 venv の `vllm serve` 起動不可
     (前節)、output_length がコンテキストを超えるデータセット (jhle=8192)
     での 400 エラー (リクエスト毎クランプで解決)
+- 追加検証 (2026-07-24, 同上の構成):
+  - swallow: `--client-concurrency` (256) + `logprobs=1` で loglikelihood が
+    53-58 req/s (オフライン同等)。logprobs=1 は loglikelihood スコアを
+    小数第4位まで変えない (logprobs=10 実行と同一値)。所要時間は
+    初期実装 190 分 → 約 65 分 (オフライン 79 分より短い; ロード 6 回 →
+    1 回の分)
+  - llm-jp-eval v1.4.1 (inference_openai_v1.py): end-to-end 完走。greedy
+    同士でオフライン (venv-vllm vllm 0.10.2) と AVG 0.1805 vs 0.1786、
+    52 メトリクス中 19 が完全一致、最大差 0.06 (jsick) はエンジン版差に
+    よる greedy 分岐の範囲
+  - evaluate モジュールの comparison 版混入 (Hub 取得失敗時の fallback) を
+    実地で確認し、run-swallow-serve.sh のオフライン解決ガードで再発防止

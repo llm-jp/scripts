@@ -1,0 +1,2 @@
+ValueError: --reasoning-parser is not yet implemented in the serve-mode client (inference_openai.py); use the offline mode.
+exit_code: 1

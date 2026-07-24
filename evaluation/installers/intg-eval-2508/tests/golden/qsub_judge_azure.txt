@@ -1,0 +1,74 @@
+#!/bin/sh
+#PBS -N 0195_intg_eval
+#PBS -P gcg51557
+#PBS -q R9920261000
+#PBS -v RTYPE=rt_HG
+#PBS -l select=1
+#PBS -l walltime=24:00:00
+#PBS -o /nonexistent/eval-out/logs/qsub.out
+#PBS -e /nonexistent/eval-out/logs/qsub.err
+
+
+set -ux
+
+# FIXME: Model name or **absolute path** to the model
+MODEL_NAME_OR_PATH="/models/dummy"
+# FIXME: **Absolute path** to the output directory
+OUTPUT_DIR="/nonexistent/eval-out"
+
+LOG_DIR="${OUTPUT_DIR}/logs"
+mkdir -p $LOG_DIR
+
+export HF_HOME="/groups/gcg51557/experiments/dummy/.cache/huggingface"
+export HF_TOKEN="dummy-hf-token"
+export OPENAI_API_KEY="dummy-openai-key"
+export AZURE_OPENAI_ENDPOINT="https://dummy.openai.azure.com/"
+export AZURE_OPENAI_API_KEY="dummy-azure-key"
+export OPENAI_API_VERSION="2025-04-01-preview"
+export NUM_GPU=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+export CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((NUM_GPU-1)))
+export NUMEXPR_MAX_THREADS=192
+
+pushd /groups/gcg51557/experiments/0230_intg_eval_2509/environment
+
+# Run swallow evaluation
+pushd swallow_v202411/
+bash run-eval.sh \
+    $MODEL_NAME_OR_PATH \
+    $OUTPUT_DIR/swallow \
+    0.9 \
+    1 \
+    1 \
+    > $LOG_DIR/swallow_eval.log 2> $LOG_DIR/swallow_eval.err
+popd
+
+
+# Run llm-jp-eval v1.4.1
+pushd llm-jp-eval-v1.4.1/
+mkdir -p $OUTPUT_DIR/llm-jp-eval/v1.4.1
+bash run_llm-jp-eval.sh \
+    $MODEL_NAME_OR_PATH \
+    $OUTPUT_DIR/llm-jp-eval/v1.4.1 \
+    100 > $LOG_DIR/llm-jp-eval-v1.4.1.log 2> $LOG_DIR/llm-jp-eval-v1.4.1.err
+popd
+
+# Run llm-jp-eval v2.1.0
+pushd llm-jp-eval-v2.1.0/
+mkdir -p $OUTPUT_DIR/llm-jp-eval/v2.1.0
+bash run_llm-jp-eval.sh \
+    $MODEL_NAME_OR_PATH \
+    $OUTPUT_DIR/llm-jp-eval/v2.1.0 \
+    100 > $LOG_DIR/llm-jp-eval-v2.1.0.log 2> $LOG_DIR/llm-jp-eval-v2.1.0.err
+popd
+
+
+# Run llm-jp-judge (LLM-as-a-Judge). Generation runs on a local vLLM server;
+# judging uses the configured judge client (see llm-jp-judge/README.md).
+pushd llm-jp-judge/
+LLM_JP_JUDGE_OPTS=(--judge-client azure --judge-model gpt-4o-2024-08-06 --tensor-parallel-size 1 --gpu-memory-utilization 0.9)
+bash run_llm-jp-judge.sh \
+    $MODEL_NAME_OR_PATH \
+    $OUTPUT_DIR/llm-jp-judge \
+    "${LLM_JP_JUDGE_OPTS[@]}" > $LOG_DIR/llm-jp-judge.log 2> $LOG_DIR/llm-jp-judge.err
+popd
+exit_code: 0

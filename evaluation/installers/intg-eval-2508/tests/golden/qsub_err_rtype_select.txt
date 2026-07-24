@@ -1,0 +1,2 @@
+ValueError: Invalid selection '2' for resource type 'rt_HG'. Only 1 GPU can be selected.
+exit_code: 1

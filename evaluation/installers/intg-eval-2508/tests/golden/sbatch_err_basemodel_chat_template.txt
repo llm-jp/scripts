@@ -1,0 +1,2 @@
+ValueError: --basemodel cannot be combined with --apply-chat-template / --chat-template-args.
+exit_code: 1

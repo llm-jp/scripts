@@ -1,0 +1,30 @@
+# Regression test cases: <name> <script> <args...>
+# Each case is run as: python3 ../scripts/<script> <args> --dry-run
+# Names must be unique; they name the snapshot files under golden/.
+
+# --- sbatch.py (Slurm / Sakura cluster) ---
+sbatch_default sbatch.py /models/dummy /nonexistent/eval-out
+sbatch_basemodel sbatch.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.5 --basemodel
+sbatch_chat_template_legacy sbatch.py /models/dummy /nonexistent/eval-out --llm-jp-eval-versions v2.1.5 --apply-chat-template --chat-template-args reasoning_effort=low --legacy-output
+sbatch_reasoning_parser sbatch.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.3 --reasoning-parser openai_gptoss --gpus 8 --tensor-parallel-size 8
+sbatch_serve_basemodel sbatch.py /models/dummy /nonexistent/eval-out --vllm-serve --llm-jp-eval-versions v2.1.5 --basemodel --max-model-len 4096 --client-concurrency 128
+sbatch_judge_only sbatch.py /models/dummy /nonexistent/eval-out --disable-swallow --disable-llm-jp-eval --llm-jp-judge --judge-benchmark-size 100 --disable-mt-bench
+sbatch_serve_judge sbatch.py /models/dummy /nonexistent/eval-out --vllm-serve --llm-jp-eval-versions v2.1.5 --llm-jp-judge --judge-client vllm --judge-model dummy/judge-model
+
+# --- sbatch.py validation errors ---
+sbatch_err_basemodel_version sbatch.py /models/dummy /nonexistent/eval-out --llm-jp-eval-versions v2.1.3 --basemodel
+sbatch_err_basemodel_chat_template sbatch.py /models/dummy /nonexistent/eval-out --llm-jp-eval-versions v2.1.5 --basemodel --apply-chat-template
+sbatch_err_judge_opts_without_judge sbatch.py /models/dummy /nonexistent/eval-out --judge-benchmark-size 10
+sbatch_err_serve_reasoning_parser sbatch.py /models/dummy /nonexistent/eval-out --vllm-serve --llm-jp-eval-versions v2.1.5 --reasoning-parser openai_gptoss
+
+# --- qsub.py (PBS / ABCI) ---
+qsub_default qsub.py /models/dummy /nonexistent/eval-out
+qsub_basemodel qsub.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.5 --basemodel
+qsub_legacy_output qsub.py /models/dummy /nonexistent/eval-out --legacy-output --llm-jp-eval-versions v1.4.1 v2.1.0
+qsub_serve_basemodel qsub.py /models/dummy /nonexistent/eval-out --vllm-serve --llm-jp-eval-versions v2.1.5 --basemodel
+qsub_judge_azure qsub.py /models/dummy /nonexistent/eval-out --llm-jp-judge --judge-client azure
+qsub_serve_judge qsub.py /models/dummy /nonexistent/eval-out --vllm-serve --disable-swallow --llm-jp-eval-versions v2.1.5 --llm-jp-judge --judge-benchmark-size 100
+
+# --- qsub.py validation errors ---
+qsub_err_basemodel_version qsub.py /models/dummy /nonexistent/eval-out --llm-jp-eval-versions v2.1.0 --basemodel
+qsub_err_rtype_select qsub.py /models/dummy /nonexistent/eval-out --rtype rt_HG --select 2

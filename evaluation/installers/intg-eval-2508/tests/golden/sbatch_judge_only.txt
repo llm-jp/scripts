@@ -1,0 +1,62 @@
+#!/bin/bash
+#SBATCH --job-name=0195_intg_eval
+#SBATCH --partition=gpu
+#SBATCH --nodes=1
+#SBATCH --gpus=1
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=180G
+#SBATCH --time=24:00:00
+#SBATCH --output=/nonexistent/eval-out/logs/sbatch.out
+#SBATCH --error=/nonexistent/eval-out/logs/sbatch.err
+
+
+set -ux
+
+# Wall-clock markers for run-time comparison (Slurm accounting is disabled on
+# this cluster, so elapsed time is not recoverable after the job otherwise).
+echo "[intg-eval] job start: $(date -Is) (job=${SLURM_JOB_ID:-?} node=$(hostname))"
+
+# Model name or **absolute path** to the model
+MODEL_NAME_OR_PATH="/models/dummy"
+# **Absolute path** to the output directory
+OUTPUT_DIR="/nonexistent/eval-out"
+
+LOG_DIR="${OUTPUT_DIR}/logs"
+mkdir -p $LOG_DIR
+
+export HF_HOME="/groups/gcg51557/experiments/dummy/.cache/huggingface"
+export HF_TOKEN="dummy-hf-token"
+export OPENAI_API_KEY="dummy-openai-key"
+export AZURE_OPENAI_ENDPOINT="https://dummy.openai.azure.com/"
+export AZURE_OPENAI_API_KEY="dummy-azure-key"
+export OPENAI_API_VERSION="2025-04-01-preview"
+# FlashInfer JIT (llm-jp-eval v2.1.3/v2.1.5) needs a CUDA toolkit; GPU nodes on
+# this cluster (Sakura Internet, JFY2026) have no /usr/local/cuda default.
+# Load the version matching torch.
+if [ -f /etc/profile.d/modules.sh ]; then
+    source /etc/profile.d/modules.sh
+    module load cuda/12.8.2 || true
+fi
+export NUM_GPU=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
+export CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((NUM_GPU-1)))
+export NUMEXPR_MAX_THREADS=${SLURM_CPUS_PER_TASK:-8}
+
+pushd /data/experiments/0219_dev_eval_script/environment
+
+
+
+
+
+# Run llm-jp-judge (LLM-as-a-Judge). Generation runs on a local vLLM server;
+# judging uses the configured judge client (see llm-jp-judge/README.md).
+pushd llm-jp-judge/
+LLM_JP_JUDGE_OPTS=(--judge-client openai --judge-model gpt-4o-2024-08-06 --tensor-parallel-size 1 --gpu-memory-utilization 0.9 --benchmark-size 100 --disable-mt-bench)
+bash run_llm-jp-judge.sh \
+    $MODEL_NAME_OR_PATH \
+    $OUTPUT_DIR/llm-jp-judge \
+    "${LLM_JP_JUDGE_OPTS[@]}" > $LOG_DIR/llm-jp-judge.log 2> $LOG_DIR/llm-jp-judge.err
+popd
+
+
+echo "[intg-eval] job end: $(date -Is)"
+exit_code: 0

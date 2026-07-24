@@ -1,0 +1,2 @@
+ValueError: --judge-base-url, --judge-benchmark-size and --disable-mt-bench require --llm-jp-judge.
+exit_code: 1

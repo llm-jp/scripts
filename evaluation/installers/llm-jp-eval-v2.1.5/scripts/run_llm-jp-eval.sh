@@ -11,7 +11,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER] [--tokenize_kwargs JSON]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER] [--tokenize_kwargs JSON] [--basemodel]"
     exit 1
 }
 
@@ -25,15 +25,26 @@ MAX_NUM_SAMPLES=100
 APPLY_CHAT_TEMPLATE=false
 REASONING_PARSER=""
 TOKENIZE_KWARGS=""
+BASEMODEL=false
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --apply_chat_template) APPLY_CHAT_TEMPLATE=true; shift ;;
         --reasoning_parser) REASONING_PARSER=$2; shift 2 ;;
         --tokenize_kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
+        --basemodel) BASEMODEL=true; shift ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
+
+# --basemodel fixes the prompt template (config_basemodel.yaml) and the
+# tokenization/sampling parameters (inference_config_basemodel.yaml:
+# add_special_tokens=False, temperature=0.0), and evaluates on the 4-shot
+# datasets only (eval_configs/only_4shots.yaml).
+if [ "${BASEMODEL}" = true ] && { [ "${APPLY_CHAT_TEMPLATE}" = true ] || [ -n "${TOKENIZE_KWARGS}" ]; }; then
+    >&2 echo "Error: --basemodel cannot be combined with --apply_chat_template / --tokenize_kwargs."
+    exit 1
+fi
 TP_SIZE=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 CUDA_VISIBLE_DEVICES=$(seq -s, 0 $((TP_SIZE-1)))
 
@@ -50,10 +61,21 @@ RESULT_DIR=${OUTPUT_DIR}/results
 LLM_JP_EVAL_DIR=${ENV_DIR}/src/llm-jp-eval
 DATASET_DIR=${ENV_DIR}/data/llm-jp-eval
 
+CONFIG_FILE=config_base.yaml
+INFERENCE_CONFIG_FILE=inference_config.yaml
+if [ "${BASEMODEL}" = true ]; then
+    CONFIG_FILE=config_basemodel.yaml
+    INFERENCE_CONFIG_FILE=inference_config_basemodel.yaml
+fi
+
 # Code-execution datasets (mbpp, jhumaneval) require the dify-sandbox container.
 # Skip them when no container runtime is available or DISABLE_CODE_EXEC=1 is set.
-EVAL_DATASET_CONFIG_PATH=${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml
-if command -v singularity >/dev/null 2>&1 && [ "${DISABLE_CODE_EXEC:-0}" != "1" ]; then
+if [ "${BASEMODEL}" = true ]; then
+    # only_4shots.yaml contains no code-execution datasets, so no sandbox is needed.
+    EVAL_DATASET_CONFIG_PATH=${LLM_JP_EVAL_DIR}/eval_configs/only_4shots.yaml
+    ENABLE_CODE_EXEC=false
+elif command -v singularity >/dev/null 2>&1 && [ "${DISABLE_CODE_EXEC:-0}" != "1" ]; then
+    EVAL_DATASET_CONFIG_PATH=${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml
     ENABLE_CODE_EXEC=true
 else
     ENABLE_CODE_EXEC=false
@@ -63,7 +85,7 @@ fi
 
 source ${LLM_JP_EVAL_DIR}/.venv/bin/activate
 
-if [ "${ENABLE_CODE_EXEC}" = false ]; then
+if [ "${ENABLE_CODE_EXEC}" = false ] && [ "${BASEMODEL}" = false ]; then
     python -c "
 import sys, yaml
 src, dst = sys.argv[1], sys.argv[2]
@@ -77,7 +99,7 @@ with open(dst, 'w') as f:
 fi
 
 DUMP_OPTS=(
-    --config=${CONFIG_DIR}/config_base.yaml
+    --config=${CONFIG_DIR}/${CONFIG_FILE}
     --output_dir=${DATASET_DIR}
     --eval_dataset_config_path=${EVAL_DATASET_CONFIG_PATH}
     --inference_input_dir=${PROMPT_OUTPUT_DIR}
@@ -91,7 +113,7 @@ python \
 deactivate
 
 INFERENCE_OPTS=(
-    --config=${CONFIG_DIR}/inference_config.yaml
+    --config=${CONFIG_DIR}/${INFERENCE_CONFIG_FILE}
     --output_base_dir=${OFFLINE_OUTPUT_DIR}
     --model.model=${MODEL_PATH}
     --model.tensor_parallel_size=${TP_SIZE}
@@ -154,7 +176,7 @@ fi
 # TODO: Specify the exact inference_result_dir for safety
 INFERENCE_RESULT_DIR=$(find "${OFFLINE_OUTPUT_DIR}" -mindepth 1 -maxdepth 1 -type d | head -n 1)
 EVAL_OPTS=(
-    --config=${CONFIG_DIR}/config_base.yaml
+    --config=${CONFIG_DIR}/${CONFIG_FILE}
     # NOTE: OUTPUT_DIRに出力したいが、一部のデータセットはなぜかeval時にdumpを実行する。
     #  その時、データセットの **読み込み先** として `output_dir` が参照されるため、
     #  `output_dir` にはデータセットの保存先 (DATASET_DIR) を指定しなければならない。

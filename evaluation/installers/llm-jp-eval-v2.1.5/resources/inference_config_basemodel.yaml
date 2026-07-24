@@ -1,0 +1,11 @@
+# 事前学習 (ベース) モデル評価用の推論設定。
+# upstream の configs/vllm_inference_basemodel.yaml (v2.1.5) と同様に
+# add_special_tokens と temperature を明示的に固定する。
+model:
+  max_model_len: 4096
+
+tokenize_kwargs:
+  add_special_tokens: false
+
+generation_config:
+  temperature: 0.0

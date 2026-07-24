@@ -1,0 +1,37 @@
+# 事前学習 (ベース) モデル評価用設定。
+# upstream の configs/config_basemodel.yaml (v2.1.5) からプロンプトテンプレートと
+# 回答抽出パターンを取り込み、exporters は config_base.yaml と揃えている。
+# データセット設定 (eval_configs/only_4shots.yaml) は run_llm-jp-eval.sh が
+# --eval_dataset_config_path で指定する。
+include_non_commercial: true
+max_num_samples: 100
+exporters:
+  local:
+    filename_format: 'result_{run_name}.json'
+    export_output_table: true
+    output_top_n: 5
+
+custom_prompt_template: |
+  以下は、タスクを説明する指示と、文脈のある入力の組み合わせです。要求を適切に満たす応答を書きなさい。
+
+  ### 指示:
+  {{ dataset_instruction }}
+  回答以外には何も含めないことを厳守してください。
+  {%- if few_shots %}
+  {%- for shot in few_shots %}
+
+  ### 入力:
+  {{ shot.input }}
+
+  ### 応答:
+  {{ shot.output }}
+
+  {%- endfor %}
+  {% endif %}
+  ### 入力:
+  {{ input }}
+
+  ### 応答:
+
+default_answer_extract_pattern: "(?s)^(.*?)(?=\\n\\n|\\Z)"
+output_length_delta: 0

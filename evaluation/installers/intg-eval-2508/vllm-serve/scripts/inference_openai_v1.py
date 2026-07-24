@@ -45,7 +45,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 ENCODE_KWARGS = {"add_special_tokens": False}  # pipeline_kwargs of the offline config
-GENERATOR_KWARGS = {"temperature": 0.0, "repetition_penalty": 1.0}
+# generator_kwargs of the offline config; parameters the OpenAI completions
+# API does not know natively (vLLM extensions) must go through extra_body.
+NATIVE_GENERATOR_KWARGS = {"temperature": 0.0}
+EXTRA_GENERATOR_KWARGS = {"repetition_penalty": 1.0}
 
 
 def parse_args():
@@ -88,7 +91,8 @@ def generate(client, cfg, target_data, tokenizer, max_model_len):
                     model=cfg.model,
                     prompt=tokens,
                     max_tokens=request_max_tokens,
-                    **GENERATOR_KWARGS,
+                    extra_body=EXTRA_GENERATOR_KWARGS,
+                    **NATIVE_GENERATOR_KWARGS,
                 )
                 return response.choices[0].text
             except (openai.APIConnectionError, openai.APIStatusError, openai.APITimeoutError) as e:
@@ -176,7 +180,11 @@ def main():
             "use_fast": True,
         },
         "pipeline_kwargs": dict(ENCODE_KWARGS),
-        "generator_kwargs": {"_target_": "vllm.SamplingParams", **GENERATOR_KWARGS},
+        "generator_kwargs": {
+            "_target_": "vllm.SamplingParams",
+            **NATIVE_GENERATOR_KWARGS,
+            **EXTRA_GENERATOR_KWARGS,
+        },
         "dump_prompts_config": dump_prompts_config,
         "time_profile": time_profile,
     }

@@ -46,6 +46,19 @@ VENV_DIR=${SWALLOW_ENV_DIR}/environment/venv-harness
 # The openai client requires this to be set even for keyless local servers.
 export OPENAI_API_KEY="${OPENAI_API_KEY:-EMPTY}"
 
+# evaluate.load("exact_match") can resolve to the *comparison* variant
+# (inputs predictions1/predictions2) when the Hub request for the metric
+# variant fails, poisoning the shared modules cache and breaking
+# process_results (observed on ABCI compute nodes, 2026-07-24). Drop a
+# poisoned copy if one snuck in, and force offline resolution whenever the
+# correct metric modules are already cached.
+EVALUATE_MODULES_DIR=${HF_HOME:-$HOME/.cache/huggingface}/modules/evaluate_modules/metrics
+rm -rf "${EVALUATE_MODULES_DIR}/evaluate-comparison--exact_match" \
+       "${EVALUATE_MODULES_DIR}/evaluate-comparison--exact_match.lock"
+if [ -d "${EVALUATE_MODULES_DIR}/evaluate-metric--exact_match" ]; then
+    export HF_EVALUATE_OFFLINE=1
+fi
+
 MODEL_ARGS="model=${MODEL},base_url=${BASE_URL},tokenizer=${MODEL},tokenizer_backend=huggingface,max_length=${MAX_LENGTH}"
 
 # Task groups below mirror scripts/evaluate_english-vllm.sh in the swallow

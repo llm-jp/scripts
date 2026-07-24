@@ -94,6 +94,8 @@ pushd {experiment_dir}/environment
 
 {llm_jp_eval_template}
 
+{llm_jp_judge_template}
+
 echo "[intg-eval] job end: $(date -Is)"
 """
 
@@ -146,6 +148,18 @@ bash {experiment_dir}/environment/vllm-serve/run_eval_serve.sh \\
 {serve_args}
 """
 
+LLM_JP_JUDGE_TEMPLATE = """\
+# Run llm-jp-judge (LLM-as-a-Judge). Generation runs on a local vLLM server;
+# judging uses the configured judge client (see llm-jp-judge/README.md).
+pushd llm-jp-judge/
+LLM_JP_JUDGE_OPTS=({judge_opts})
+bash run_llm-jp-judge.sh \\
+    $MODEL_NAME_OR_PATH \\
+    $OUTPUT_DIR/llm-jp-judge \\
+    "${{LLM_JP_JUDGE_OPTS[@]}}" > $LOG_DIR/llm-jp-judge.log 2> $LOG_DIR/llm-jp-judge.err
+popd
+"""
+
 # The same output subdirectory structure as qsub_nonbreaking.py
 LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
     "v1.4.1": "llm-jp-eval",
@@ -187,6 +201,9 @@ def eval_output_targets(args):
             else:
                 targets.append(f"llm-jp-eval/{version}")
         parts.append("llm-jp-eval-" + "-".join(args.llm_jp_eval_versions))
+    if args.llm_jp_judge:
+        targets.append("llm-jp-judge")
+        parts.append("llm-jp-judge")
     return targets, "+".join(parts) or "job"
 
 
@@ -228,6 +245,14 @@ def load_args():
     parser.add_argument("--chat-template-args", type=str, nargs="*", default=None, metavar="KEY=VALUE", help="Extra keyword arguments for chat template application (e.g. 'reasoning_effort=low'). Requires --apply-chat-template.")
     parser.add_argument("--basemodel", action="store_true", help="Base-model (pretrained checkpoint) evaluation: fixed prompt template (config_basemodel.yaml), add_special_tokens=False, temperature=0.0 and the 4-shot datasets only (only_4shots.yaml). llm-jp-eval v2.1.5+ only; incompatible with --apply-chat-template. JA/EN scores are reported separately via lang_scores in result.json.")
 
+    # llm-jp-judge (LLM-as-a-Judge)
+    parser.add_argument("--llm-jp-judge", action="store_true", help="Run llm-jp-judge after the other evaluations. Requires the llm-jp-judge environment installed under <experiment-dir>/environment/llm-jp-judge. With --vllm-serve, generation reuses the shared server and judging runs after it is stopped.")
+    parser.add_argument("--judge-client", type=str, default="openai", choices=["openai", "azure", "bedrock", "vllm"], help="Judge client for llm-jp-judge (default: openai). 'vllm' serves --judge-model locally (no external API; needed on clusters without outbound network access from compute nodes).")
+    parser.add_argument("--judge-model", type=str, default="gpt-4o-2024-08-06", help="Judge model name for llm-jp-judge (default: gpt-4o-2024-08-06).")
+    parser.add_argument("--judge-base-url", type=str, default=None, help="Base URL for --judge-client openai (e.g. an OpenAI-compatible endpoint).")
+    parser.add_argument("--judge-benchmark-size", type=int, default=None, help="Use only the first N samples of each llm-jp-judge benchmark (default: all samples).")
+    parser.add_argument("--disable-mt-bench", action="store_true", help="Skip mt_bench_en / mt_bench_ja in llm-jp-judge.")
+
     # vllm-serve mode (EXPERIMENTAL)
     parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
     parser.add_argument("--serve-venv", type=str, default=None, help="venv that provides `vllm serve` (only with --vllm-serve; default: auto-detect, see vllm-serve/README.md).")
@@ -256,6 +281,15 @@ def check_args(args):
                 "Sharing an output directory between jobs is only possible when their "
                 "evaluation targets do not overlap."
             )
+
+    if not args.llm_jp_judge:
+        if args.judge_base_url or args.judge_benchmark_size or args.disable_mt_bench:
+            raise ValueError("--judge-base-url, --judge-benchmark-size and --disable-mt-bench require --llm-jp-judge.")
+    else:
+        if args.judge_client == "openai" and not (os.environ.get("OPENAI_API_KEY") or args.judge_base_url):
+            logging.warning("OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
+        if args.judge_client == "azure" and not os.environ.get("AZURE_OPENAI_API_KEY"):
+            logging.warning("AZURE_OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
 
     if args.basemodel and not args.disable_llm_jp_eval:
         if args.apply_chat_template or args.chat_template_args:
@@ -305,6 +339,21 @@ def main():
 
     swallow_template = ""
     llm_jp_eval_template = ""
+    llm_jp_judge_template = ""
+    if args.llm_jp_judge and not args.vllm_serve:
+        judge_opts = [
+            f"--judge-client {args.judge_client}",
+            f"--judge-model {args.judge_model}",
+            f"--tensor-parallel-size {args.tensor_parallel_size}",
+            f"--gpu-memory-utilization {args.gpu_memory_utilization}",
+        ]
+        if args.judge_base_url:
+            judge_opts.append(f"--judge-base-url {args.judge_base_url}")
+        if args.judge_benchmark_size:
+            judge_opts.append(f"--benchmark-size {args.judge_benchmark_size}")
+        if args.disable_mt_bench:
+            judge_opts.append("--disable-mt-bench")
+        llm_jp_judge_template = LLM_JP_JUDGE_TEMPLATE.format(judge_opts=" ".join(judge_opts))
     if args.vllm_serve:
         serve_args = [f"--experiment-dir {args.experiment_dir}"]
         if args.serve_venv:
@@ -330,6 +379,14 @@ def main():
                 serve_args.append("--basemodel")
             if args.legacy_output:
                 serve_args.append("--legacy-output")
+        if args.llm_jp_judge:
+            serve_args.append(f"--llm-jp-judge --judge-client {args.judge_client} --judge-model {args.judge_model}")
+            if args.judge_base_url:
+                serve_args.append(f"--judge-base-url {args.judge_base_url}")
+            if args.judge_benchmark_size:
+                serve_args.append(f"--judge-benchmark-size {args.judge_benchmark_size}")
+            if args.disable_mt_bench:
+                serve_args.append("--disable-mt-bench")
         swallow_template = VLLM_SERVE_TEMPLATE.format(
             experiment_dir=args.experiment_dir,
             serve_args=" \\\n".join(f"    {a}" for a in serve_args),
@@ -396,6 +453,19 @@ def main():
         hf_token_line = ""
         logging.warning("HF_TOKEN is not set; gated models and datasets will not be accessible.")
 
+    # Forward judge API credentials into the job script (compute nodes do not
+    # inherit the submission environment).
+    if args.llm_jp_judge:
+        judge_env_vars = (
+            "OPENAI_API_KEY", "OPENAI_BASE_URL",
+            "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION",
+            "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION",
+        )
+        for name in judge_env_vars:
+            value = os.environ.get(name)
+            if value:
+                hf_token_line += f'\nexport {name}="{value}"'
+
     sbatch_script = TEMPLATE.format(
         job_name=args.job_name,
         partition=args.partition,
@@ -413,6 +483,7 @@ def main():
         cuda_module=args.cuda_module,
         swallow_template=swallow_template,
         llm_jp_eval_template=llm_jp_eval_template,
+        llm_jp_judge_template=llm_jp_judge_template,
     )
 
     if args.dry_run:

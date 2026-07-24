@@ -43,6 +43,18 @@
 #                             the 4-shot datasets only (v2.1.5+ only)
 #   --legacy-output           llm-jp-eval results under llm-jp-eval_<version>/
 #                             instead of llm-jp-eval/<version>/
+#   --llm-jp-judge            Run llm-jp-judge: generation against the shared
+#                             server, judging after the server is stopped (so
+#                             a local judge model can use the freed GPUs).
+#                             Requires the llm-jp-judge environment under
+#                             <experiment-dir>/environment/llm-jp-judge.
+#   --judge-client NAME       llm-jp-judge judge client (openai, azure,
+#                             bedrock, vllm; default: openai)
+#   --judge-model NAME        llm-jp-judge judge model (default:
+#                             gpt-4o-2024-08-06)
+#   --judge-base-url URL      base URL for --judge-client openai
+#   --judge-benchmark-size N  first N samples per llm-jp-judge benchmark
+#   --disable-mt-bench        skip mt_bench_en / mt_bench_ja in llm-jp-judge
 #
 # The server venv, swallow environment and llm-jp-eval environments must be
 # installed beforehand (see ../README.md). Existing environments are only
@@ -78,6 +90,12 @@ APPLY_CHAT_TEMPLATE=false
 TOKENIZE_KWARGS=""
 LEGACY_OUTPUT=false
 BASEMODEL=false
+RUN_LLM_JP_JUDGE=false
+JUDGE_CLIENT=openai
+JUDGE_MODEL=gpt-4o-2024-08-06
+JUDGE_BASE_URL=""
+JUDGE_BENCHMARK_SIZE=""
+DISABLE_MT_BENCH=false
 
 while [ $# -gt 0 ]; do
     case $1 in
@@ -98,6 +116,12 @@ while [ $# -gt 0 ]; do
         --tokenize-kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
         --legacy-output) LEGACY_OUTPUT=true; shift ;;
         --basemodel) BASEMODEL=true; shift ;;
+        --llm-jp-judge) RUN_LLM_JP_JUDGE=true; shift ;;
+        --judge-client) JUDGE_CLIENT=$2; shift 2 ;;
+        --judge-model) JUDGE_MODEL=$2; shift 2 ;;
+        --judge-base-url) JUDGE_BASE_URL=$2; shift 2 ;;
+        --judge-benchmark-size) JUDGE_BENCHMARK_SIZE=$2; shift 2 ;;
+        --disable-mt-bench) DISABLE_MT_BENCH=true; shift ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -155,6 +179,9 @@ if [ "$RUN_SWALLOW" = true ]; then
 fi
 if [ -n "${LLM_JP_EVAL_VERSIONS[*]+x}" ]; then
     LOG_SLUG="${LOG_SLUG:+${LOG_SLUG}+}llm-jp-eval-$(IFS=-; echo "${LLM_JP_EVAL_VERSIONS[*]}")"
+fi
+if [ "$RUN_LLM_JP_JUDGE" = true ]; then
+    LOG_SLUG="${LOG_SLUG:+${LOG_SLUG}+}llm-jp-judge"
 fi
 VLLM_SERVE_LOG=${LOG_DIR}/vllm_serve${LOG_SLUG:+_${LOG_SLUG}}.log
 
@@ -236,6 +263,46 @@ for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
         > "${LOG_DIR}/llm-jp-eval-${version}.log" 2> "${LOG_DIR}/llm-jp-eval-${version}.err"
 done
 
+# llm-jp-judge: generate against the shared server while it is still up, then
+# judge after the server is stopped so a local judge (--judge-client vllm) can
+# use the freed GPUs.
+if [ "$RUN_LLM_JP_JUDGE" = true ]; then
+    JUDGE_OPTS=(
+        --judge-client "$JUDGE_CLIENT"
+        --judge-model "$JUDGE_MODEL"
+        --tensor-parallel-size "$TP"
+        --gpu-memory-utilization "$GPU_MEM_UTIL"
+    )
+    if [ -n "$JUDGE_BASE_URL" ]; then
+        JUDGE_OPTS+=(--judge-base-url "$JUDGE_BASE_URL")
+    fi
+    if [ -n "$JUDGE_BENCHMARK_SIZE" ]; then
+        JUDGE_OPTS+=(--benchmark-size "$JUDGE_BENCHMARK_SIZE")
+    fi
+    if [ "$DISABLE_MT_BENCH" = true ]; then
+        JUDGE_OPTS+=(--disable-mt-bench)
+    fi
+    >&2 echo "== running llm-jp-judge generation against ${BASE_URL}"
+    bash "${ENV_DIR}/llm-jp-judge/run_llm-jp-judge.sh" \
+        "$MODEL" \
+        "${OUTPUT_DIR}/llm-jp-judge" \
+        --gen-base-url "$BASE_URL" \
+        --generation-only \
+        "${JUDGE_OPTS[@]}" \
+        > "${LOG_DIR}/llm-jp-judge.log" 2> "${LOG_DIR}/llm-jp-judge.err"
+fi
+
 stop_vllm_server
 trap - EXIT
+
+if [ "$RUN_LLM_JP_JUDGE" = true ]; then
+    >&2 echo "== running llm-jp-judge judging (${JUDGE_CLIENT}: ${JUDGE_MODEL})"
+    bash "${ENV_DIR}/llm-jp-judge/run_llm-jp-judge.sh" \
+        "$MODEL" \
+        "${OUTPUT_DIR}/llm-jp-judge" \
+        --judge-only \
+        "${JUDGE_OPTS[@]}" \
+        >> "${LOG_DIR}/llm-jp-judge.log" 2>> "${LOG_DIR}/llm-jp-judge.err"
+fi
+
 echo "Done"

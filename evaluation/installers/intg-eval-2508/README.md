@@ -1,6 +1,6 @@
 # 統合評価基盤インストーラ (v2508)
 
-llm-jp-evalとswallow英語評価を実行可能な統合基盤をインストールするスクリプトです。
+llm-jp-eval、swallow英語評価、llm-jp-judge (LLM-as-a-Judge) を実行可能な統合基盤をインストールするスクリプトです。
 
 ## セットアップ
 
@@ -91,6 +91,11 @@ export HF_HOME=/groups/gcg51557/experiments/<experiment_dir>/.cache/huggingface
 export HF_TOKEN=<HuggingFaceのアクセストークン>
 ```
 
+> [!NOTE]
+> llm-jp-judgeの安全性評価用データセット (AnswerCarefully) はgatedデータセットのため、
+> インストール時に利用申請の承認済みアカウントの `HF_TOKEN` が必要です。
+> 取得できない場合は該当ベンチマークをスキップしてインストールを継続します (詳細は `llm-jp-judge/README.md`)。
+
 ## 評価実行
 
 ### 実行
@@ -110,6 +115,7 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
   --experiment-dir <実験ディレクトリ> \
   [--llm-jp-eval-versions v1.4.1 v2.1.3 v2.1.5] \
   [--basemodel] \
+  [--llm-jp-judge] \
   [--partition gpu] \
   [--gpus 1] \
   [--dry-run]
@@ -138,6 +144,27 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
   - 推論パラメータ: `add_special_tokens: False`, `temperature: 0.0` を明示的に固定
 - 日本語・英語のスコアは `result.json` の `lang_scores` フィールドに言語別に出力されます (英語スコアはllm-jp-evalの英語ベンチマークで算出されるため、チェックポイント評価ではswallow評価を `--disable-swallow` で省略できます)。
 - `--vllm-serve` とも併用可能です。
+
+### llm-jp-judge (LLM-as-a-Judge) の実行
+
+```bash
+export OPENAI_API_KEY=<APIキー>  # ジャッジにOpenAI APIを使う場合
+
+python3 $INSTALL_DIR/scripts/sbatch.py \
+  <model_name_or_absolute_path> \
+  <output_dir_absolute_path> \
+  --experiment-dir <実験ディレクトリ> \
+  --llm-jp-judge \
+  [--judge-client {openai,azure,bedrock,vllm}] \
+  [--judge-model gpt-4o-2024-08-06] \
+  [--judge-benchmark-size N] \
+  [--disable-mt-bench]
+```
+
+- 生成はターゲットモデルをローカルvLLMサーバで起動して行い、採点はジャッジクライアント経由で行います。結果は `<output_dir>/llm-jp-judge/evaluation/score_table.json` に出力されます。
+- ジャッジのAPIクレデンシャル (`OPENAI_API_KEY` / `AZURE_OPENAI_*` / `AWS_*`) は投入時の環境変数からジョブスクリプトへ埋め込まれます。
+- 計算ノードから外部APIへ疎通できないクラスタでは `--judge-client vllm --judge-model <ジャッジ用モデル>` を指定するとジャッジもローカルvLLMサーバで実行します。
+- `--vllm-serve` と併用した場合、生成は共有vLLMサーバを利用し、ジャッジは共有サーバ停止後に実行されます (ローカルジャッジは解放されたGPUを使用)。詳細は `llm-jp-judge/README.md` を参照してください。
 
 > [!NOTE]
 > - singularity等のコンテナランタイムがないノードでは、llm-jp-eval v2系のコード実行系データセット (`mbpp`, `jhumaneval`) とCGカテゴリは自動的にスキップされます (`DISABLE_CODE_EXEC=1` で明示的な無効化も可能)。そのためAVGスコアはコード実行を含む環境での結果と直接比較できません。なおllm-jp-eval v1.4.1のmbppはインプロセスの`exec()`で評価されるため、コンテナランタイムなしでも実行されます。

@@ -65,4 +65,10 @@ bash install.sh $TARGET_DIR/swallow_v202411 \
   2> ../logs/install-swallow_v202411.err
 popd
 
+pushd ./llm-jp-judge/
+bash install.sh $TARGET_DIR/llm-jp-judge \
+  > ../logs/install-llm-jp-judge.out \
+  2> ../logs/install-llm-jp-judge.err
+popd
+
 cp -r scripts/ $TARGET_DIR

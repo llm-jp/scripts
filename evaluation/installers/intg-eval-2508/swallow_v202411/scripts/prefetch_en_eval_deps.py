@@ -6,8 +6,12 @@ cache and enables HF_DATASETS_OFFLINE / HF_EVALUATE_OFFLINE when it exists,
 so evaluation jobs do not depend on Hub access.
 """
 
+import os
+import shutil
 import sys
 import traceback
+
+from pathlib import Path
 
 import evaluate
 
@@ -17,6 +21,15 @@ import evaluate
 for module in ("exact_match", "squad_v2"):
     evaluate.load(module)
     print(f"prefetched evaluate module: {module}", flush=True)
+
+# Resolution can additionally cache *comparison* variants of the same module
+# names. lm_eval only ever wants the metric variants, and a comparison copy
+# in the cache is exactly the poisoning that broke process_results on ABCI
+# (2026-07-24), so drop them from the prefetched cache.
+metrics_dir = Path(os.environ["HF_MODULES_CACHE"]) / "evaluate_modules" / "metrics"
+for entry in metrics_dir.glob("evaluate-comparison--*"):
+    shutil.rmtree(entry, ignore_errors=True) if entry.is_dir() else entry.unlink(missing_ok=True)
+    print(f"removed comparison variant from the cache: {entry.name}", flush=True)
 
 from lm_eval.tasks import TaskManager, get_task_dict  # noqa: E402
 

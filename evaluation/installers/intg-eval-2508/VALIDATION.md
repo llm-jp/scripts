@@ -27,6 +27,8 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 07-23〜24 | さくら | serve vs オフライン (150m / 8b-base / gpt-oss-120b) | スコア一致、120b で 2.39 倍。障害 2 件を修正 |
 | 07-26 | さくら | gpt-oss-120b × vllm 0.19.1 サーバー | 0.11.2 の出力退化が解消。eval OOM を発見 |
 | 07-29 | さくら | eval フェーズ分割 (--phase) の検証 | OOM 恒久対策の動作確認 |
+| 07-29 | ABCI | llm-jp-judge 導入 + offline/serve テスト (8b-thinking) | serve 完走・スコア取得。thinking モデルの空応答問題を発見 → max-tokens/reasoning-parser 制御を追加 |
+| 07-29 | ABCI | swallow プリフェッチ適用 + オフライン読込確認 | 全10タスク取得 (545MB)、HF_HUB_OFFLINE=1 でも読込 OK |
 
 ---
 
@@ -170,3 +172,56 @@ python3 sbatch.py llm-jp/llm-jp-3-150m $PWD/results/phase-split-validation-20260
 
 ログ上で「inference ×2 → stopping vllm server → eval ×2」の順序を確認、
 両バージョンの result.json が正常に出力された (v1.4.1: 52 メトリクス、v2.1.3: 148)。
+
+## 2026-07-29 ABCI: llm-jp-judge 導入 + offline/serve 両モードテスト
+
+llm-jp-judge v2.0.0 サブインストーラを `environment/llm-jp-judge` に導入
+(AnswerCarefully は gated 未承認のためスキップ → quality_ja / culture_ja /
+safety_boundary_ja / MT-Bench ja+en の 5 ベンチマークで実施)。
+対象 llm-jp/llm-jp-4-8b-thinking、ジャッジは OpenAI 互換 API 経由の
+llm-jp-4-32b-a3b-thinking、各ベンチマーク 10 件、rt_HG (H100 1 枚)。
+
+```bash
+# offline (2079312.pbs1) / serve (2079314.pbs1)
+python3 qsub.py llm-jp/llm-jp-4-8b-thinking \
+  /groups/gcg51557/experiments/0230_intg_eval_2509/results/judge-{offline,serve}-20260729 \
+  --disable-swallow --disable-llm-jp-eval \
+  --llm-jp-judge --judge-model llm-jp-4-32b-a3b-thinking --judge-benchmark-size 10 \
+  --pbs-queue rt_HG --rtype rt_HG [--vllm-serve]
+```
+
+- **serve モード完走** (API エラー率 0%): quality_ja 総合 4.89/5、mt_bench_ja 8.21、
+  mt_bench_en 8.26、culture_ja 4.1 (許容 80%)、safety_boundary_ja 2.1
+- offline: ジャッジフェーズが一時的な `APIConnectionError` で失敗 → 生成済み出力に
+  対する `--judge-only` 再実行 (ログインノード、GPU 不要) で復旧。**リカバリ機能の実地確認**
+- **thinking モデルの空応答問題を発見**: offline の生成サーバ (judge venv =
+  vllm 0.15.1) は Harmony を自動パースするため、既定 max_tokens=1024 では analysis
+  チャネル途中で打ち切られ content が空 (10/10 件) → 全スコア ≈1 の無効な評価に。
+  serve (共有サーバ vllm 0.11.2) は生テキスト (analysis+final) を返すためスコアは
+  出るが、ジャッジが analysis 込みの応答を読む。**両モードのスコアは thinking
+  モデルでは非互換**
+- 対策 (コミット e379d7d / 5dae2e1): `--judge-gen-max-tokens` /
+  `--judge-gen-reasoning-parser` (serve では共有サーバへの
+  `--server-reasoning-parser`) / `--llm-jp-eval-max-tokens` /
+  `--llm-jp-eval-reasoning-content-length` を追加し、offline の `--max-model-len`
+  対応も実装。thinking モデルは
+  `--judge-gen-max-tokens 8192 --judge-gen-reasoning-parser openai_gptoss
+  --max-model-len 16384` 程度で「final のみ・十分な生成予算」に統一できる
+  (この設定での再テストは未実施)。ジャッジに読ませる応答範囲の方針は評価チームと要相談
+
+## 2026-07-29 ABCI: swallow データセットプリフェッチの適用
+
+コミット cae1342 / 0256357 のインストール時プリフェッチを既存の ABCI 環境に
+後付け適用 (`prefetch_en_eval_deps.py` を venv-harness で実行)。
+
+- 全 10 タスク (triviaqa / gsm8k / openbookqa / hellaswag / xwinograd_en /
+  squadv2 / mmlu / bbh_cot_fewshot / math_500 / **gpqa: gated、承認済みトークンで
+  取得成功**) + evaluate モジュール (exact_match / squad_v2) を
+  `swallow_v202411/environment/data/hf/` に取得、計 545MB
+- プリフェッチ中に comparison 版 exact_match がキャッシュに混入することを実地確認
+  (07-24 障害と同じ変種) → プリフェッチスクリプトが取得直後に自動削除するよう修正
+- サニティ: `HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 HF_EVALUATE_OFFLINE=1` の
+  完全オフラインで exact_match の計算と gsm8k (test 1319 件) の読込を確認
+- オフラインガード付き run-eval.sh / run-swallow-serve.sh をデプロイ済み。
+  以後、この環境の swallow 評価はデータセット/メトリクスの Hub アクセスなしで動作
+  (評価対象モデルの取得のみオンライン)

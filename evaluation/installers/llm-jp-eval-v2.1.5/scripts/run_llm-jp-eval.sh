@@ -11,7 +11,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER] [--tokenize_kwargs JSON] [--basemodel]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER] [--tokenize_kwargs JSON] [--basemodel] [--max_tokens N] [--reasoning_content_length N]"
     exit 1
 }
 
@@ -26,6 +26,8 @@ APPLY_CHAT_TEMPLATE=false
 REASONING_PARSER=""
 TOKENIZE_KWARGS=""
 BASEMODEL=false
+MAX_TOKENS=""
+REASONING_CONTENT_LENGTH=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
@@ -33,9 +35,21 @@ while [[ $# -gt 0 ]]; do
         --reasoning_parser) REASONING_PARSER=$2; shift 2 ;;
         --tokenize_kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
         --basemodel) BASEMODEL=true; shift ;;
+        # Global cap on generated tokens. Default (unset) keeps the upstream
+        # behavior: the per-dataset output_length decides max_tokens.
+        --max_tokens) MAX_TOKENS=$2; shift 2 ;;
+        # Extra token budget added to each dataset's output_length for the
+        # reasoning content of thinking models. Only meaningful together with
+        # --reasoning_parser (upstream ignores it otherwise).
+        --reasoning_content_length) REASONING_CONTENT_LENGTH=$2; shift 2 ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
+
+if [ -n "${REASONING_CONTENT_LENGTH}" ] && [ -z "${REASONING_PARSER}" ]; then
+    >&2 echo "Error: --reasoning_content_length requires --reasoning_parser."
+    exit 1
+fi
 
 # --basemodel fixes the prompt template (config_basemodel.yaml) and the
 # tokenization/sampling parameters (inference_config_basemodel.yaml:
@@ -129,6 +143,12 @@ if [ -n "${REASONING_PARSER}" ]; then
 fi
 if [ -n "${TOKENIZE_KWARGS}" ]; then
     INFERENCE_OPTS+=(--tokenize_kwargs "${TOKENIZE_KWARGS}")
+fi
+if [ -n "${MAX_TOKENS}" ]; then
+    INFERENCE_OPTS+=(--generation_config.max_tokens ${MAX_TOKENS})
+fi
+if [ -n "${REASONING_CONTENT_LENGTH}" ]; then
+    INFERENCE_OPTS+=(--reasoning_content_length ${REASONING_CONTENT_LENGTH})
 fi
 
 source ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/.venv/bin/activate

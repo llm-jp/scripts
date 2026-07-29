@@ -104,7 +104,7 @@ LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
 mkdir -p $OUTPUT_DIR/{llm_jp_eval_output_subdir}
-LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args}{basemodel})
+LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args}{basemodel}{max_tokens}{reasoning_content_length})
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/{llm_jp_eval_output_subdir} \\
@@ -155,6 +155,9 @@ LLM_JP_EVAL_SERVE_VERSIONS = ("v1.4.1", "v2.1.0", "v2.1.3", "v2.1.5")
 # Versions whose installer ships the base-model evaluation resources
 # (config_basemodel.yaml / inference_config_basemodel.yaml) used by --basemodel.
 LLM_JP_EVAL_BASEMODEL_VERSIONS = ("v2.1.5",)
+
+# Versions whose run script supports --max_tokens / --reasoning_content_length.
+LLM_JP_EVAL_MAX_TOKENS_VERSIONS = ("v2.1.5",)
 
 
 def eval_output_targets(args):
@@ -210,6 +213,8 @@ def load_args():
     parser.add_argument("--tensor-parallel-size", type=int, default=1, help="Number of tensor parallel groups.")
     parser.add_argument("--data-parallel-size", type=int, default=1, help="Number of data parallel groups.")
     parser.add_argument("--llm-jp-eval-max-num-samples", type=int, default=100, help="Maximum number of samples per dataset for llm-jp-eval. Set '-1' to use all samples.")
+    parser.add_argument("--llm-jp-eval-max-tokens", type=int, default=None, help="Global cap on generated tokens for llm-jp-eval (default: the per-dataset output_length decides). v2.1.5+ only.")
+    parser.add_argument("--llm-jp-eval-reasoning-content-length", type=int, default=None, help="Extra token budget added to each dataset's output_length for the reasoning content of thinking models. Requires --reasoning-parser; v2.1.5+ offline mode only.")
     parser.add_argument("--apply-chat-template", action="store_true", help="Apply chat template when running inference.")
     parser.add_argument("--reasoning-parser", type=str, default=None, help="Reasoning parser to extract final response (e.g. 'openai_gptoss').")
     parser.add_argument("--chat-template-args", type=str, nargs="*", default=None, metavar="KEY=VALUE", help="Extra keyword arguments for chat template application (e.g. 'reasoning_effort=low'). Requires --apply-chat-template.")
@@ -221,6 +226,8 @@ def load_args():
     parser.add_argument("--judge-model", type=str, default="gpt-4o-2024-08-06", help="Judge model name for llm-jp-judge (default: gpt-4o-2024-08-06).")
     parser.add_argument("--judge-base-url", type=str, default=None, help="Base URL for --judge-client openai (e.g. an OpenAI-compatible endpoint).")
     parser.add_argument("--judge-benchmark-size", type=int, default=None, help="Use only the first N samples of each llm-jp-judge benchmark (default: all samples).")
+    parser.add_argument("--judge-gen-max-tokens", type=int, default=None, help="Override every llm-jp-judge benchmark's generation sampling_params.max_tokens (default: llm-jp-judge's per-benchmark values, 1024). Thinking models usually need a larger budget.")
+    parser.add_argument("--judge-gen-reasoning-parser", type=str, default=None, help="vLLM reasoning parser for the llm-jp-judge generation server (e.g. 'openai_gptoss'), so the judge reads only the final channel of a thinking model. With --vllm-serve this is applied to the shared server (chat API only; llm-jp-eval/swallow use the completions API and are unaffected).")
     parser.add_argument("--disable-mt-bench", action="store_true", help="Skip mt_bench_en / mt_bench_ja in llm-jp-judge.")
 
     # vllm-serve mode (EXPERIMENTAL)
@@ -253,13 +260,24 @@ def check_args(args):
         raise ValueError(f"Invalid selection '{args.select}' for resource type '{args.rtype}'. Only 1 GPU can be selected.")
 
     if not args.llm_jp_judge:
-        if args.judge_base_url or args.judge_benchmark_size or args.disable_mt_bench:
-            raise ValueError("--judge-base-url, --judge-benchmark-size and --disable-mt-bench require --llm-jp-judge.")
+        if args.judge_base_url or args.judge_benchmark_size or args.disable_mt_bench or args.judge_gen_max_tokens or args.judge_gen_reasoning_parser:
+            raise ValueError("--judge-base-url, --judge-benchmark-size, --disable-mt-bench, --judge-gen-max-tokens and --judge-gen-reasoning-parser require --llm-jp-judge.")
     else:
         if args.judge_client == "openai" and not (os.environ.get("OPENAI_API_KEY") or args.judge_base_url):
             logging.warning("OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
         if args.judge_client == "azure" and not os.environ.get("AZURE_OPENAI_API_KEY"):
             logging.warning("AZURE_OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
+
+    if args.llm_jp_eval_reasoning_content_length:
+        if not args.reasoning_parser:
+            raise ValueError("--llm-jp-eval-reasoning-content-length requires --reasoning-parser.")
+    if (args.llm_jp_eval_max_tokens or args.llm_jp_eval_reasoning_content_length) and not args.disable_llm_jp_eval:
+        unsupported = [v for v in args.llm_jp_eval_versions if v not in LLM_JP_EVAL_MAX_TOKENS_VERSIONS]
+        if unsupported:
+            raise ValueError(
+                f"--llm-jp-eval-max-tokens / --llm-jp-eval-reasoning-content-length support llm-jp-eval versions "
+                f"{list(LLM_JP_EVAL_MAX_TOKENS_VERSIONS)} only, got {unsupported}."
+            )
 
     if args.basemodel and not args.disable_llm_jp_eval:
         if args.apply_chat_template or args.chat_template_args:
@@ -321,6 +339,10 @@ def main():
             judge_opts.append(f"--judge-base-url {args.judge_base_url}")
         if args.judge_benchmark_size:
             judge_opts.append(f"--benchmark-size {args.judge_benchmark_size}")
+        if args.judge_gen_max_tokens:
+            judge_opts.append(f"--gen-max-tokens {args.judge_gen_max_tokens}")
+        if args.judge_gen_reasoning_parser:
+            judge_opts.append(f"--gen-reasoning-parser {args.judge_gen_reasoning_parser}")
         if args.disable_mt_bench:
             judge_opts.append("--disable-mt-bench")
         llm_jp_judge_template = LLM_JP_JUDGE_TEMPLATE.format(judge_opts=" ".join(judge_opts))
@@ -341,6 +363,8 @@ def main():
         if args.llm_jp_eval_versions and not args.disable_llm_jp_eval:
             serve_args.append("--llm-jp-eval-versions " + " ".join(args.llm_jp_eval_versions))
             serve_args.append(f"--max-num-samples {args.llm_jp_eval_max_num_samples}")
+            if args.llm_jp_eval_max_tokens:
+                serve_args.append(f"--max-tokens {args.llm_jp_eval_max_tokens}")
             if args.apply_chat_template:
                 serve_args.append("--apply-chat-template")
             if tokenize_kwargs_json:
@@ -355,6 +379,10 @@ def main():
                 serve_args.append(f"--judge-base-url {args.judge_base_url}")
             if args.judge_benchmark_size:
                 serve_args.append(f"--judge-benchmark-size {args.judge_benchmark_size}")
+            if args.judge_gen_max_tokens:
+                serve_args.append(f"--judge-gen-max-tokens {args.judge_gen_max_tokens}")
+            if args.judge_gen_reasoning_parser:
+                serve_args.append(f"--server-reasoning-parser {args.judge_gen_reasoning_parser}")
             if args.disable_mt_bench:
                 serve_args.append("--disable-mt-bench")
         swallow_template = VLLM_SERVE_TEMPLATE.format(
@@ -373,6 +401,8 @@ def main():
         reasoning_parser_flag = f" --reasoning_parser {args.reasoning_parser}" if args.reasoning_parser else ""
         chat_template_args_flag = f" --tokenize_kwargs '{tokenize_kwargs_json}'" if tokenize_kwargs_json else ""
         basemodel_flag = " --basemodel" if args.basemodel else ""
+        max_tokens_flag = f" --max_tokens {args.llm_jp_eval_max_tokens}" if args.llm_jp_eval_max_tokens else ""
+        reasoning_content_length_flag = f" --reasoning_content_length {args.llm_jp_eval_reasoning_content_length}" if args.llm_jp_eval_reasoning_content_length else ""
         chunks = []
         for version in args.llm_jp_eval_versions:
             if args.legacy_output:
@@ -390,6 +420,8 @@ def main():
                     reasoning_parser=reasoning_parser_flag,
                     chat_template_args=chat_template_args_flag,
                     basemodel=basemodel_flag,
+                    max_tokens=max_tokens_flag,
+                    reasoning_content_length=reasoning_content_length_flag,
                 )
             else:
                 chunk = LLM_JP_EVAL_TEMPLATE_LEGACY.format(

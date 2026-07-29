@@ -28,6 +28,18 @@
 #   --benchmark-size N        Use only the first N samples of each benchmark
 #                             (default: all samples)
 #   --disable-mt-bench        Skip mt_bench_en / mt_bench_ja
+#   --gen-max-tokens N        Override sampling_params.max_tokens of every
+#                             benchmark for the generation phase (default:
+#                             llm-jp-judge's per-benchmark values, 1024).
+#                             Thinking models usually need a larger budget so
+#                             the final answer is reached.
+#   --gen-reasoning-parser P  --reasoning-parser for the locally launched
+#                             generation server (e.g. 'openai_gptoss'), so
+#                             only the final channel of a thinking model is
+#                             returned to the judge. Not applicable with
+#                             --gen-base-url (set the parser on that server
+#                             instead; see run_eval_serve.sh
+#                             --server-reasoning-parser).
 #   --gen-base-url URL        Generate against an already-running
 #                             OpenAI-compatible server (e.g. the shared server
 #                             of vllm-serve) instead of launching one here.
@@ -50,7 +62,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--judge-client {openai,azure,bedrock,vllm}] [--judge-model NAME] [--judge-base-url URL] [--judge-request-interval S] [--gen-request-interval S] [--tensor-parallel-size N] [--gpu-memory-utilization F] [--max-model-len N] [--benchmark-size N] [--disable-mt-bench] [--gen-base-url URL] [--generation-only] [--judge-only]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--judge-client {openai,azure,bedrock,vllm}] [--judge-model NAME] [--judge-base-url URL] [--judge-request-interval S] [--gen-request-interval S] [--tensor-parallel-size N] [--gpu-memory-utilization F] [--max-model-len N] [--benchmark-size N] [--disable-mt-bench] [--gen-max-tokens N] [--gen-reasoning-parser P] [--gen-base-url URL] [--generation-only] [--judge-only]"
     exit 1
 }
 
@@ -70,6 +82,8 @@ GPU_MEM_UTIL=0.9
 MAX_MODEL_LEN=""
 BENCHMARK_SIZE=""
 DISABLE_MT_BENCH=false
+GEN_MAX_TOKENS=""
+GEN_REASONING_PARSER=""
 GEN_BASE_URL=""
 GENERATION_ONLY=false
 JUDGE_ONLY=false
@@ -85,6 +99,8 @@ while [[ $# -gt 0 ]]; do
         --max-model-len) MAX_MODEL_LEN=$2; shift 2 ;;
         --benchmark-size) BENCHMARK_SIZE=$2; shift 2 ;;
         --disable-mt-bench) DISABLE_MT_BENCH=true; shift ;;
+        --gen-max-tokens) GEN_MAX_TOKENS=$2; shift 2 ;;
+        --gen-reasoning-parser) GEN_REASONING_PARSER=$2; shift 2 ;;
         --gen-base-url) GEN_BASE_URL=$2; shift 2 ;;
         --generation-only) GENERATION_ONLY=true; shift ;;
         --judge-only) JUDGE_ONLY=true; shift ;;
@@ -99,6 +115,11 @@ esac
 
 if [ "${GENERATION_ONLY}" = true ] && [ "${JUDGE_ONLY}" = true ]; then
     >&2 echo "Error: --generation-only and --judge-only are mutually exclusive."
+    exit 1
+fi
+
+if [ -n "${GEN_REASONING_PARSER}" ] && [ -n "${GEN_BASE_URL}" ]; then
+    >&2 echo "Error: --gen-reasoning-parser applies to the locally launched server; with --gen-base-url, set the reasoning parser on the external server instead."
     exit 1
 fi
 
@@ -124,13 +145,14 @@ find_open_port() {
 
 SERVER_PID=""
 
-# start_vllm_server MODEL PORT LOG_FILE
+# start_vllm_server MODEL PORT LOG_FILE [EXTRA_ARGS...]
 start_vllm_server() {
-    local server_args=(--port $2 --tensor-parallel-size ${TP_SIZE} --gpu-memory-utilization ${GPU_MEM_UTIL})
+    local model=$1 port=$2 log=$3; shift 3
+    local server_args=(--port ${port} --tensor-parallel-size ${TP_SIZE} --gpu-memory-utilization ${GPU_MEM_UTIL})
     if [ -n "${MAX_MODEL_LEN}" ]; then
         server_args+=(--max-model-len ${MAX_MODEL_LEN})
     fi
-    ${VENV}/bin/vllm serve "$1" "${server_args[@]}" > "$3" 2>&1 &
+    ${VENV}/bin/vllm serve "${model}" "${server_args[@]}" "$@" > "${log}" 2>&1 &
     SERVER_PID=$!
 }
 
@@ -167,8 +189,13 @@ trap stop_vllm_server EXIT
 if [ "${JUDGE_ONLY}" = false ]; then
 
 if [ -z "${GEN_BASE_URL}" ]; then
+    GEN_SERVER_ARGS=()
+    if [ -n "${GEN_REASONING_PARSER}" ]; then
+        GEN_SERVER_ARGS+=(--reasoning-parser ${GEN_REASONING_PARSER})
+    fi
     GEN_PORT=$(find_open_port)
-    start_vllm_server "${MODEL_PATH}" ${GEN_PORT} ${OUTPUT_DIR}/logs/vllm_serve_target.log
+    start_vllm_server "${MODEL_PATH}" ${GEN_PORT} ${OUTPUT_DIR}/logs/vllm_serve_target.log \
+        ${GEN_SERVER_ARGS[@]+"${GEN_SERVER_ARGS[@]}"}
     wait_vllm_server ${GEN_PORT}
     GEN_BASE_URL=http://127.0.0.1:${GEN_PORT}/v1
 fi
@@ -208,6 +235,12 @@ fi
 if [ -n "${BENCHMARK_SIZE}" ]; then
     for name in "${BENCHMARK_NAMES[@]}" mt_bench_en mt_bench_ja; do
         GEN_ARGS+=(benchmark.${name}.dataset.size=${BENCHMARK_SIZE})
+    done
+fi
+
+if [ -n "${GEN_MAX_TOKENS}" ]; then
+    for name in "${BENCHMARK_NAMES[@]}" mt_bench_en mt_bench_ja; do
+        GEN_ARGS+=(benchmark.${name}.sampling_params.max_tokens=${GEN_MAX_TOKENS})
     done
 fi
 

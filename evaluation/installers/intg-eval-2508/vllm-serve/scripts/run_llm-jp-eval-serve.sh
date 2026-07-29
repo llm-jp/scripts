@@ -35,7 +35,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON] [--basemodel]"
+    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON] [--basemodel] [--max_tokens N]"
     exit 1
 }
 
@@ -51,6 +51,7 @@ TOKENIZE_KWARGS=""
 CLIENT_CONCURRENCY=256
 BASEMODEL=false
 PHASE=all
+MAX_TOKENS=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
@@ -59,6 +60,8 @@ while [[ $# -gt 0 ]]; do
         --client-concurrency) CLIENT_CONCURRENCY=$2; shift 2 ;;
         --basemodel) BASEMODEL=true; shift ;;
         --phase) PHASE=$2; shift 2 ;;
+        # Global cap on generated tokens (default: per-dataset output_length).
+        --max_tokens) MAX_TOKENS=$2; shift 2 ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -155,9 +158,16 @@ EOF
         cat >> ${SERVE_CONFIG} <<EOF
 tokenize_kwargs:
   add_special_tokens: false
-generation_config:
-  temperature: 0.0
 EOF
+    fi
+    if [ "${BASEMODEL}" = true ] || [ -n "${MAX_TOKENS}" ]; then
+        echo "generation_config:" >> ${SERVE_CONFIG}
+        if [ "${BASEMODEL}" = true ]; then
+            echo "  temperature: 0.0" >> ${SERVE_CONFIG}
+        fi
+        if [ -n "${MAX_TOKENS}" ]; then
+            echo "  max_tokens: ${MAX_TOKENS}" >> ${SERVE_CONFIG}
+        fi
     fi
 
     INFERENCE_OPTS=(

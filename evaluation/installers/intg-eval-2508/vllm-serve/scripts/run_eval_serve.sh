@@ -17,6 +17,11 @@
 #   --gpu-memory-utilization F (default: 0.9)
 #   --max-model-len N         --max-model-len for the server (default: model config)
 #   --port N                  (default: random open port)
+#   --server-reasoning-parser P  --reasoning-parser for the shared server
+#                             (e.g. 'openai_gptoss'). Only affects the chat
+#                             API (llm-jp-judge generation); llm-jp-eval and
+#                             swallow use the completions API, which vLLM's
+#                             reasoning parsers do not touch.
 #   --swallow                 Run the swallow English evaluation
 #   --swallow-env NAME        swallow environment dir name (default: swallow_v202411-tf5)
 #   --swallow-max-length N    max_length for the harness client (default: the
@@ -35,6 +40,8 @@
 #                             run_llm-jp-eval-v1-serve.sh (no chat-template
 #                             support)
 #   --max-num-samples N       llm-jp-eval max_num_samples (default: 100)
+#   --max-tokens N            llm-jp-eval: global cap on generated tokens
+#                             (default: per-dataset output_length; v2.x only)
 #   --apply-chat-template     llm-jp-eval: apply chat template
 #   --tokenize-kwargs JSON    llm-jp-eval: tokenize_kwargs JSON
 #   --basemodel               llm-jp-eval: base-model (pretrained checkpoint)
@@ -54,6 +61,8 @@
 #                             gpt-4o-2024-08-06)
 #   --judge-base-url URL      base URL for --judge-client openai
 #   --judge-benchmark-size N  first N samples per llm-jp-judge benchmark
+#   --judge-gen-max-tokens N  llm-jp-judge: override every benchmark's
+#                             generation sampling_params.max_tokens
 #   --disable-mt-bench        skip mt_bench_en / mt_bench_ja in llm-jp-judge
 #
 # The server venv, swallow environment and llm-jp-eval environments must be
@@ -80,12 +89,14 @@ DP=1
 GPU_MEM_UTIL=0.9
 MAX_MODEL_LEN=""
 PORT=""
+SERVER_REASONING_PARSER=""
 RUN_SWALLOW=false
 SWALLOW_ENV=swallow_v202411-tf5
 SWALLOW_MAX_LENGTH=""
 CLIENT_CONCURRENCY=256
 LLM_JP_EVAL_VERSIONS=()
 MAX_NUM_SAMPLES=100
+MAX_TOKENS=""
 APPLY_CHAT_TEMPLATE=false
 TOKENIZE_KWARGS=""
 LEGACY_OUTPUT=false
@@ -95,6 +106,7 @@ JUDGE_CLIENT=openai
 JUDGE_MODEL=gpt-4o-2024-08-06
 JUDGE_BASE_URL=""
 JUDGE_BENCHMARK_SIZE=""
+JUDGE_GEN_MAX_TOKENS=""
 DISABLE_MT_BENCH=false
 
 while [ $# -gt 0 ]; do
@@ -106,12 +118,14 @@ while [ $# -gt 0 ]; do
         --gpu-memory-utilization) GPU_MEM_UTIL=$2; shift 2 ;;
         --max-model-len) MAX_MODEL_LEN=$2; shift 2 ;;
         --port) PORT=$2; shift 2 ;;
+        --server-reasoning-parser) SERVER_REASONING_PARSER=$2; shift 2 ;;
         --swallow) RUN_SWALLOW=true; shift ;;
         --swallow-env) SWALLOW_ENV=$2; shift 2 ;;
         --swallow-max-length) SWALLOW_MAX_LENGTH=$2; shift 2 ;;
         --client-concurrency) CLIENT_CONCURRENCY=$2; shift 2 ;;
         --llm-jp-eval-versions) shift; while [ $# -gt 0 ] && [[ $1 != --* ]]; do LLM_JP_EVAL_VERSIONS+=("$1"); shift; done ;;
         --max-num-samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
+        --max-tokens) MAX_TOKENS=$2; shift 2 ;;
         --apply-chat-template) APPLY_CHAT_TEMPLATE=true; shift ;;
         --tokenize-kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
         --legacy-output) LEGACY_OUTPUT=true; shift ;;
@@ -121,6 +135,7 @@ while [ $# -gt 0 ]; do
         --judge-model) JUDGE_MODEL=$2; shift 2 ;;
         --judge-base-url) JUDGE_BASE_URL=$2; shift 2 ;;
         --judge-benchmark-size) JUDGE_BENCHMARK_SIZE=$2; shift 2 ;;
+        --judge-gen-max-tokens) JUDGE_GEN_MAX_TOKENS=$2; shift 2 ;;
         --disable-mt-bench) DISABLE_MT_BENCH=true; shift ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
@@ -140,6 +155,10 @@ for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
         fi
         if [ "$BASEMODEL" = true ]; then
             >&2 echo "ERROR: --basemodel is not supported by llm-jp-eval ${version} (v2.1.5+ only)."
+            exit 1
+        fi
+        if [ -n "$MAX_TOKENS" ]; then
+            >&2 echo "ERROR: --max-tokens is not supported by llm-jp-eval ${version} (v2.x only)."
             exit 1
         fi
     fi
@@ -175,6 +194,9 @@ BASE_URL="http://127.0.0.1:${PORT}/v1"
 SERVER_ARGS=()
 if [ -n "$MAX_MODEL_LEN" ]; then
     SERVER_ARGS+=(--max-model-len "$MAX_MODEL_LEN")
+fi
+if [ -n "$SERVER_REASONING_PARSER" ]; then
+    SERVER_ARGS+=(--reasoning-parser "$SERVER_REASONING_PARSER")
 fi
 if [ "$DP" -gt 1 ]; then
     SERVER_ARGS+=(--data-parallel-size "$DP")
@@ -264,6 +286,9 @@ run_llm_jp_eval_version() {
         if [ "$BASEMODEL" = true ]; then
             opts+=(--basemodel)
         fi
+        if [ -n "$MAX_TOKENS" ]; then
+            opts+=(--max_tokens "$MAX_TOKENS")
+        fi
     fi
     bash "${SCRIPT_DIR}/${script}" \
         "$MODEL" \
@@ -294,6 +319,9 @@ if [ "$RUN_LLM_JP_JUDGE" = true ]; then
     fi
     if [ -n "$JUDGE_BENCHMARK_SIZE" ]; then
         JUDGE_OPTS+=(--benchmark-size "$JUDGE_BENCHMARK_SIZE")
+    fi
+    if [ -n "$JUDGE_GEN_MAX_TOKENS" ]; then
+        JUDGE_OPTS+=(--gen-max-tokens "$JUDGE_GEN_MAX_TOKENS")
     fi
     if [ "$DISABLE_MT_BENCH" = true ]; then
         JUDGE_OPTS+=(--disable-mt-bench)

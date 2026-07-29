@@ -32,6 +32,13 @@ vllm serve MODEL (GPU, 常駐)  ←  http://127.0.0.1:PORT/v1
   `offline_inference_vllm.py` の代替として同じ入出力形式で動く
   (greedy / chat template 非対応は offline 版と同じ)。dump / eval は
   v1.4.1 環境の venv-eval をそのまま使用
+- llm-jp-eval は 2 パス実行: dump + inference を全バージョン分サーバー稼働中に
+  行い、eval (BERTScore / COMET が GPU メモリを使う) は**サーバー停止後**に
+  まとめて実行する (`run_llm-jp-eval[-v1]-serve.sh --phase inference|eval`)。
+  vLLM 0.19.1 は `--gpu-memory-utilization 0.9` でも GPU をほぼ全量
+  (実測 98%) 確保するため、サーバー常駐のまま eval を走らせると CUDA OOM
+  になる (gpt-oss-120b TP4 で実測)。llm-jp-judge の generation/judging 分割と
+  同じ構成
 
 ## 使い方
 

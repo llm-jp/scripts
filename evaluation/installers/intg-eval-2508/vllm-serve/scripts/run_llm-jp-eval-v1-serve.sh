@@ -7,17 +7,22 @@
 #
 # Usage:
 #   run_llm-jp-eval-v1-serve.sh MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR \
-#       [--max_num_samples N] [--client-concurrency N]
+#       [--max_num_samples N] [--client-concurrency N] [--phase all|inference|eval]
 #
 #   MODEL           Served model name (must equal the server's model id)
 #   OUTPUT_DIR      Output directory
 #   BASE_URL        e.g. http://127.0.0.1:8000/v1
 #   VERSION_ENV_DIR Installed v1.4.x env (e.g. .../environment/llm-jp-eval-v1.4.1)
+#   --phase PHASE   Which part to run (default: all). 'inference' runs
+#       dump + inference (needs the server at BASE_URL) and stops; 'eval'
+#       evaluates previously produced inference results and needs no server
+#       (BASE_URL is accepted but unused). Lets the caller stop the vLLM
+#       server before the GPU-hungry eval phase (BERTScore / COMET).
 
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR [--max_num_samples N] [--client-concurrency N]"
+    >&2 echo "Usage: $0 MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR [--max_num_samples N] [--client-concurrency N] [--phase all|inference|eval]"
     exit 1
 }
 
@@ -29,13 +34,17 @@ VERSION_ENV_DIR=$(realpath $1); shift
 
 MAX_NUM_SAMPLES=100
 CLIENT_CONCURRENCY=256
+PHASE=all
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
         --client-concurrency) CLIENT_CONCURRENCY=$2; shift 2 ;;
+        --phase) PHASE=$2; shift 2 ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
+
+case $PHASE in all|inference|eval) ;; *) >&2 echo "Unknown --phase: $PHASE"; usage ;; esac
 
 SCRIPT_DIR=$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")
 
@@ -67,26 +76,33 @@ if [ -n "${HF_HOME:-}" ]; then
     )
 fi
 
-source ${ENV_DIR}/venv-eval/bin/activate
-python \
-    ${LLM_JP_EVAL_DIR}/scripts/dump_prompts.py \
-    -cp ${CONFIG_DIR} \
-    -cn config_base \
-    hydra.run.dir=${PROMPT_OUTPUT_DIR}/dump_prompts \
-    ${LLM_JP_EVAL_OVERRIDES[@]}
-deactivate
+if [ "${PHASE}" != eval ]; then
+    source ${ENV_DIR}/venv-eval/bin/activate
+    python \
+        ${LLM_JP_EVAL_DIR}/scripts/dump_prompts.py \
+        -cp ${CONFIG_DIR} \
+        -cn config_base \
+        hydra.run.dir=${PROMPT_OUTPUT_DIR}/dump_prompts \
+        ${LLM_JP_EVAL_OVERRIDES[@]}
+    deactivate
 
-# Inference via the shared vLLM server (no model load in this process).
-# venv-vllm provides the openai and transformers packages.
-source ${ENV_DIR}/venv-vllm/bin/activate
-python \
-    ${SCRIPT_DIR}/inference_openai_v1.py \
-    --base-url ${BASE_URL} \
-    --model ${MODEL_PATH} \
-    --prompt-json-path "${PROMPT_OUTPUT_DIR}/*.eval-prompt.json" \
-    --output-dir ${OFFLINE_OUTPUT_DIR} \
-    --num-concurrent ${CLIENT_CONCURRENCY}
-deactivate
+    # Inference via the shared vLLM server (no model load in this process).
+    # venv-vllm provides the openai and transformers packages.
+    source ${ENV_DIR}/venv-vllm/bin/activate
+    python \
+        ${SCRIPT_DIR}/inference_openai_v1.py \
+        --base-url ${BASE_URL} \
+        --model ${MODEL_PATH} \
+        --prompt-json-path "${PROMPT_OUTPUT_DIR}/*.eval-prompt.json" \
+        --output-dir ${OFFLINE_OUTPUT_DIR} \
+        --num-concurrent ${CLIENT_CONCURRENCY}
+    deactivate
+fi
+
+if [ "${PHASE}" = inference ]; then
+    echo "Done (inference phase; run again with --phase eval after stopping the server)"
+    exit 0
+fi
 
 source ${ENV_DIR}/venv-eval/bin/activate
 python \

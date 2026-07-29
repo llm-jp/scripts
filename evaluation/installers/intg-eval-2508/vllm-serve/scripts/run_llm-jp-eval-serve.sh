@@ -8,7 +8,7 @@
 # Usage:
 #   run_llm-jp-eval-serve.sh MODEL OUTPUT_DIR BASE_URL VERSION_ENV_DIR \
 #       [--max_num_samples N] [--apply_chat_template] [--tokenize_kwargs JSON] \
-#       [--client-concurrency N] [--basemodel]
+#       [--client-concurrency N] [--basemodel] [--phase all|inference|eval]
 #
 #   --client-concurrency N  Prompts kept in flight against the server
 #       (default: 256); becomes server.num_concurrent of inference_openai.py
@@ -17,6 +17,12 @@
 #       template (config_basemodel.yaml), add_special_tokens=False,
 #       temperature=0.0, and the 4-shot datasets only (only_4shots.yaml).
 #       Requires the basemodel resources of the llm-jp-eval v2.1.5 installer.
+#   --phase PHASE  Which part to run (default: all).
+#       'inference' runs dump + inference (needs the server at BASE_URL) and
+#       stops; 'eval' evaluates previously produced inference results and
+#       needs no server (BASE_URL is accepted but unused). Lets the caller
+#       stop the vLLM server before the GPU-hungry eval phase (BERTScore /
+#       COMET), which otherwise OOMs when the server holds most of the GPU.
 #
 #   MODEL           Served model name (must equal the server's model id)
 #   OUTPUT_DIR      Output directory
@@ -44,6 +50,7 @@ APPLY_CHAT_TEMPLATE=false
 TOKENIZE_KWARGS=""
 CLIENT_CONCURRENCY=256
 BASEMODEL=false
+PHASE=all
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
@@ -51,9 +58,12 @@ while [[ $# -gt 0 ]]; do
         --tokenize_kwargs) TOKENIZE_KWARGS=$2; shift 2 ;;
         --client-concurrency) CLIENT_CONCURRENCY=$2; shift 2 ;;
         --basemodel) BASEMODEL=true; shift ;;
+        --phase) PHASE=$2; shift 2 ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
+
+case $PHASE in all|inference|eval) ;; *) >&2 echo "Unknown --phase: $PHASE"; usage ;; esac
 
 if [ "${BASEMODEL}" = true ] && { [ "${APPLY_CHAT_TEMPLATE}" = true ] || [ -n "${TOKENIZE_KWARGS}" ]; }; then
     >&2 echo "Error: --basemodel cannot be combined with --apply_chat_template / --tokenize_kwargs."
@@ -112,23 +122,26 @@ with open(dst, 'w') as f:
 " ${LLM_JP_EVAL_DIR}/eval_configs/all_datasets.yaml ${EVAL_DATASET_CONFIG_PATH}
 fi
 
-DUMP_OPTS=(
-    --config=${CONFIG_DIR}/${CONFIG_FILE}
-    --output_dir=${DATASET_DIR}
-    --eval_dataset_config_path=${EVAL_DATASET_CONFIG_PATH}
-    --inference_input_dir=${PROMPT_OUTPUT_DIR}
-    --max_num_samples=${MAX_NUM_SAMPLES}
-)
+if [ "${PHASE}" != eval ]; then
+    DUMP_OPTS=(
+        --config=${CONFIG_DIR}/${CONFIG_FILE}
+        --output_dir=${DATASET_DIR}
+        --eval_dataset_config_path=${EVAL_DATASET_CONFIG_PATH}
+        --inference_input_dir=${PROMPT_OUTPUT_DIR}
+        --max_num_samples=${MAX_NUM_SAMPLES}
+    )
 
-python \
-    ${LLM_JP_EVAL_DIR}/scripts/evaluate_llm.py \
-    dump \
-    ${DUMP_OPTS[@]}
+    python \
+        ${LLM_JP_EVAL_DIR}/scripts/evaluate_llm.py \
+        dump \
+        ${DUMP_OPTS[@]}
+fi
 deactivate
 
-# Inference via the shared vLLM server (no model load in this process).
-SERVE_CONFIG=${OUTPUT_DIR}/inference_openai_config.yaml
-cat > ${SERVE_CONFIG} <<EOF
+if [ "${PHASE}" != eval ]; then
+    # Inference via the shared vLLM server (no model load in this process).
+    SERVE_CONFIG=${OUTPUT_DIR}/inference_openai_config.yaml
+    cat > ${SERVE_CONFIG} <<EOF
 server:
   base_url: ${BASE_URL}
   model: ${MODEL_PATH}
@@ -136,40 +149,42 @@ server:
 tokenizer:
   pretrained_model_name_or_path: ${MODEL_PATH}
 EOF
-if [ "${BASEMODEL}" = true ]; then
-    # Offline parity with inference_config_basemodel.yaml of the v2.1.5
-    # installer: fix add_special_tokens and temperature explicitly.
-    cat >> ${SERVE_CONFIG} <<EOF
+    if [ "${BASEMODEL}" = true ]; then
+        # Offline parity with inference_config_basemodel.yaml of the v2.1.5
+        # installer: fix add_special_tokens and temperature explicitly.
+        cat >> ${SERVE_CONFIG} <<EOF
 tokenize_kwargs:
   add_special_tokens: false
 generation_config:
   temperature: 0.0
 EOF
+    fi
+
+    INFERENCE_OPTS=(
+        --config=${SERVE_CONFIG}
+        --output_base_dir=${OFFLINE_OUTPUT_DIR}
+        # TODO: Specify the exact prompt_json_path for safety
+        --prompt_json_path=${PROMPT_OUTPUT_DIR}_*/*.eval-prompt.json
+    )
+    if [ "${APPLY_CHAT_TEMPLATE}" = true ]; then
+        INFERENCE_OPTS+=(--apply_chat_template)
+    fi
+    if [ -n "${TOKENIZE_KWARGS}" ]; then
+        INFERENCE_OPTS+=(--tokenize_kwargs "${TOKENIZE_KWARGS}")
+    fi
+
+    source ${VLLM_VENV}/bin/activate
+    python \
+        ${SCRIPT_DIR}/inference_openai.py \
+        inference \
+        "${INFERENCE_OPTS[@]}"
+    deactivate
 fi
 
-INFERENCE_OPTS=(
-    --config=${SERVE_CONFIG}
-    --output_base_dir=${OFFLINE_OUTPUT_DIR}
-    # TODO: Specify the exact prompt_json_path for safety
-    --prompt_json_path=${PROMPT_OUTPUT_DIR}_*/*.eval-prompt.json
-)
-if [ "${APPLY_CHAT_TEMPLATE}" = true ]; then
-    INFERENCE_OPTS+=(--apply_chat_template)
+if [ "${PHASE}" = inference ]; then
+    echo "Done (inference phase; run again with --phase eval after stopping the server)"
+    exit 0
 fi
-if [ -n "${TOKENIZE_KWARGS}" ]; then
-    INFERENCE_OPTS+=(--tokenize_kwargs "${TOKENIZE_KWARGS}")
-fi
-
-source ${VLLM_VENV}/bin/activate
-RUN_NAME=$(python \
-    ${SCRIPT_DIR}/inference_openai.py \
-    get_run_name \
-    "${INFERENCE_OPTS[@]}" | tail -n1)
-python \
-    ${SCRIPT_DIR}/inference_openai.py \
-    inference \
-    "${INFERENCE_OPTS[@]}"
-deactivate
 
 if [ "${ENABLE_CODE_EXEC}" = true ]; then
     TEMP_DIR=$(mktemp -d)
@@ -203,6 +218,10 @@ fi
 
 # TODO: Specify the exact inference_result_dir for safety
 INFERENCE_RESULT_DIR=$(find "${OFFLINE_OUTPUT_DIR}" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+# The inference phase (possibly a separate invocation with --phase inference)
+# named its output directory after the run name; the eval result file below
+# inherits the same name.
+RUN_NAME=$(basename "${INFERENCE_RESULT_DIR}")
 EVAL_OPTS=(
     --config=${CONFIG_DIR}/${CONFIG_FILE}
     # NOTE: OUTPUT_DIRに出力したいが、一部のデータセットはなぜかeval時にdumpを実行する。

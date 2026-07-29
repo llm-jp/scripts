@@ -130,6 +130,21 @@ ENV_DIR=${EXPERIMENT_DIR}/environment
 LOG_DIR=${OUTPUT_DIR}/logs
 mkdir -p "$LOG_DIR"
 
+# Fail fast on option combinations a requested version cannot run, before
+# any server is started.
+for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
+    if [[ $version == v1.* ]]; then
+        if [ "$APPLY_CHAT_TEMPLATE" = true ] || [ -n "$TOKENIZE_KWARGS" ]; then
+            >&2 echo "ERROR: --apply-chat-template / --tokenize-kwargs are not supported by llm-jp-eval ${version}."
+            exit 1
+        fi
+        if [ "$BASEMODEL" = true ]; then
+            >&2 echo "ERROR: --basemodel is not supported by llm-jp-eval ${version} (v2.1.5+ only)."
+            exit 1
+        fi
+    fi
+done
+
 # Auto-detect a venv that can serve the model. Preference order: a dedicated
 # serve venv (see README: needed e.g. for vllm 0.11.2, whose server breaks
 # with openai>=1.99.2), then the newest llm-jp-eval inference venv
@@ -211,9 +226,14 @@ if [ "$RUN_SWALLOW" = true ]; then
         > "${LOG_DIR}/swallow_eval.log" 2> "${LOG_DIR}/swallow_eval.err"
 fi
 
-for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
-    >&2 echo "== running llm-jp-eval ${version} against ${BASE_URL}"
-    LLM_JP_EVAL_OPTS=(--max_num_samples "$MAX_NUM_SAMPLES")
+# llm-jp-eval runs in two passes: dump + inference for every version while
+# the server is up, then the eval phase after the server has been stopped
+# (below) — the eval metrics (BERTScore / COMET) need GPU memory themselves
+# and can OOM next to a resident server (observed with vLLM 0.19.1, which
+# keeps ~98% of each GPU even at --gpu-memory-utilization 0.9).
+run_llm_jp_eval_version() {
+    local version=$1 phase=$2
+    local version_output_dir
     if [ "$LEGACY_OUTPUT" = true ]; then
         if [ "$version" = v1.4.1 ]; then
             version_output_dir=${OUTPUT_DIR}/llm-jp-eval
@@ -223,43 +243,39 @@ for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
     else
         version_output_dir=${OUTPUT_DIR}/llm-jp-eval/${version}
     fi
-    LLM_JP_EVAL_OPTS+=(--client-concurrency "$CLIENT_CONCURRENCY")
     mkdir -p "$version_output_dir"
+    local opts=(
+        --max_num_samples "$MAX_NUM_SAMPLES"
+        --client-concurrency "$CLIENT_CONCURRENCY"
+        --phase "$phase"
+    )
+    local script=run_llm-jp-eval-serve.sh
     if [[ $version == v1.* ]]; then
         # v1.4.x: same dump/inference/eval split, but hydra-based configs and
         # no chat-template support.
-        if [ "$APPLY_CHAT_TEMPLATE" = true ] || [ -n "$TOKENIZE_KWARGS" ]; then
-            >&2 echo "ERROR: --apply-chat-template / --tokenize-kwargs are not supported by llm-jp-eval ${version}."
-            exit 1
+        script=run_llm-jp-eval-v1-serve.sh
+    else
+        if [ "$APPLY_CHAT_TEMPLATE" = true ]; then
+            opts+=(--apply_chat_template)
+        fi
+        if [ -n "$TOKENIZE_KWARGS" ]; then
+            opts+=(--tokenize_kwargs "$TOKENIZE_KWARGS")
         fi
         if [ "$BASEMODEL" = true ]; then
-            >&2 echo "ERROR: --basemodel is not supported by llm-jp-eval ${version} (v2.1.5+ only)."
-            exit 1
+            opts+=(--basemodel)
         fi
-        bash "${SCRIPT_DIR}/run_llm-jp-eval-v1-serve.sh" \
-            "$MODEL" \
-            "$version_output_dir" \
-            "$BASE_URL" \
-            "${ENV_DIR}/llm-jp-eval-${version}" \
-            "${LLM_JP_EVAL_OPTS[@]}" \
-            > "${LOG_DIR}/llm-jp-eval-${version}.log" 2> "${LOG_DIR}/llm-jp-eval-${version}.err"
-        continue
     fi
-    if [ "$APPLY_CHAT_TEMPLATE" = true ]; then
-        LLM_JP_EVAL_OPTS+=(--apply_chat_template)
-    fi
-    if [ -n "$TOKENIZE_KWARGS" ]; then
-        LLM_JP_EVAL_OPTS+=(--tokenize_kwargs "$TOKENIZE_KWARGS")
-    fi
-    if [ "$BASEMODEL" = true ]; then
-        LLM_JP_EVAL_OPTS+=(--basemodel)
-    fi
-    bash "${SCRIPT_DIR}/run_llm-jp-eval-serve.sh" \
+    bash "${SCRIPT_DIR}/${script}" \
         "$MODEL" \
         "$version_output_dir" \
         "$BASE_URL" \
         "${ENV_DIR}/llm-jp-eval-${version}" \
-        "${LLM_JP_EVAL_OPTS[@]}" \
+        "${opts[@]}"
+}
+
+for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
+    >&2 echo "== running llm-jp-eval ${version} dump + inference against ${BASE_URL}"
+    run_llm_jp_eval_version "$version" inference \
         > "${LOG_DIR}/llm-jp-eval-${version}.log" 2> "${LOG_DIR}/llm-jp-eval-${version}.err"
 done
 
@@ -294,6 +310,14 @@ fi
 
 stop_vllm_server
 trap - EXIT
+
+# Eval phase: compute metrics over the inference results produced above.
+# Runs with the server stopped so BERTScore / COMET get the whole GPU.
+for version in ${LLM_JP_EVAL_VERSIONS[@]+"${LLM_JP_EVAL_VERSIONS[@]}"}; do
+    >&2 echo "== running llm-jp-eval ${version} eval (server stopped)"
+    run_llm_jp_eval_version "$version" eval \
+        >> "${LOG_DIR}/llm-jp-eval-${version}.log" 2>> "${LOG_DIR}/llm-jp-eval-${version}.err"
+done
 
 if [ "$RUN_LLM_JP_JUDGE" = true ]; then
     >&2 echo "== running llm-jp-judge judging (${JUDGE_CLIENT}: ${JUDGE_MODEL})"

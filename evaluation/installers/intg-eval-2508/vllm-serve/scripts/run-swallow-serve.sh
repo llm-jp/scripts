@@ -46,13 +46,24 @@ VENV_DIR=${SWALLOW_ENV_DIR}/environment/venv-harness
 # The openai client requires this to be set even for keyless local servers.
 export OPENAI_API_KEY="${OPENAI_API_KEY:-EMPTY}"
 
+# Use the environment-local HF cache prefetched at install time and avoid Hub
+# access for datasets / evaluate metric modules. Environments installed
+# before this prefetch step existed keep the previous online behavior.
+HF_PREFETCH_DIR=${SWALLOW_ENV_DIR}/environment/data/hf
+if [ -d "${HF_PREFETCH_DIR}/datasets" ]; then
+    export HF_DATASETS_CACHE=${HF_PREFETCH_DIR}/datasets
+    export HF_MODULES_CACHE=${HF_PREFETCH_DIR}/modules
+    export HF_DATASETS_OFFLINE=1
+    export HF_EVALUATE_OFFLINE=1
+fi
+
 # evaluate.load("exact_match") can resolve to the *comparison* variant
 # (inputs predictions1/predictions2) when the Hub request for the metric
 # variant fails, poisoning the shared modules cache and breaking
 # process_results (observed on ABCI compute nodes, 2026-07-24). Drop a
 # poisoned copy if one snuck in, and force offline resolution whenever the
 # correct metric modules are already cached.
-EVALUATE_MODULES_DIR=${HF_HOME:-$HOME/.cache/huggingface}/modules/evaluate_modules/metrics
+EVALUATE_MODULES_DIR=${HF_MODULES_CACHE:-${HF_HOME:-$HOME/.cache/huggingface}/modules}/evaluate_modules/metrics
 rm -rf "${EVALUATE_MODULES_DIR}/evaluate-comparison--exact_match" \
        "${EVALUATE_MODULES_DIR}/evaluate-comparison--exact_match.lock"
 if [ -d "${EVALUATE_MODULES_DIR}/evaluate-metric--exact_match" ]; then

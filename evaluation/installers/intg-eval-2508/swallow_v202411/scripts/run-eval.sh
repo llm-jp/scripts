@@ -13,6 +13,16 @@ set -eux -o pipefail
 ENV_DIR=environment
 source ${ENV_DIR}/scripts/environment.sh
 
+# Use the environment-local HF cache prefetched at install time and avoid Hub
+# access for datasets / evaluate metric modules. Environments installed
+# before this prefetch step existed keep the previous online behavior.
+if [ -d "${ENV_DIR}/data/hf/datasets" ]; then
+    export HF_DATASETS_CACHE=$(realpath ${ENV_DIR}/data/hf/datasets)
+    export HF_MODULES_CACHE=$(realpath ${ENV_DIR}/data/hf/modules)
+    export HF_DATASETS_OFFLINE=1
+    export HF_EVALUATE_OFFLINE=1
+fi
+
 if [[ $# -lt 2 || $# -gt 5 ]]; then
     >&2 echo "Usage: $0 MODEL OUTPUT_DIR [GPU_MEMORY_UTILIZATION] [TENSOR_PARALLEL_SIZE] [DATA_PARALLEL_SIZE]"
     >&2 echo "Defaults: GPU_MEMORY_UTILIZATION=0.9, TENSOR_PARALLEL_SIZE=1, DATA_PARALLEL_SIZE=1"

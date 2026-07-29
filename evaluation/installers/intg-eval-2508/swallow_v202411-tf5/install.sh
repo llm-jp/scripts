@@ -138,6 +138,17 @@ pip install vllm==0.19.1
 # decoding, which the swallow evaluation does not exercise.
 pip install transformers==5.6.2
 pip install datasets==2.21.0
+
+# Prefetch task datasets and evaluate metric modules into an
+# environment-local cache; run-eval.sh switches to it and enables offline
+# mode when present, so evaluation jobs do not need Hub access.
+# The GPQA dataset is gated: export HF_TOKEN of an account with an approved
+# access request to include it (skipped with a warning otherwise).
+mkdir -p ${ENV_DIR}/data/hf/datasets ${ENV_DIR}/data/hf/modules
+HF_DATASETS_CACHE=${ENV_DIR}/data/hf/datasets \
+HF_MODULES_CACHE=${ENV_DIR}/data/hf/modules \
+python ${BASE_INSTALLER_DIR}/scripts/prefetch_en_eval_deps.py
+
 deactivate
 popd # $ENV_DIR
 popd  # $TARGET_DIR

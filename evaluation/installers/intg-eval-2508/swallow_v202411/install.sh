@@ -119,6 +119,17 @@ pip install vllm==v0.10.2
 # with vllm's get_cached_tokenizer; re-pin to a known-good 4.x release
 pip install transformers==4.56.2
 pip install torch==2.8.0 --index-url https://download.pytorch.org/whl/cu121
+
+# Prefetch task datasets and evaluate metric modules into an
+# environment-local cache; run-eval.sh switches to it and enables offline
+# mode when present, so evaluation jobs do not need Hub access.
+# The GPQA dataset is gated: export HF_TOKEN of an account with an approved
+# access request to include it (skipped with a warning otherwise).
+mkdir -p ${ENV_DIR}/data/hf/datasets ${ENV_DIR}/data/hf/modules
+HF_DATASETS_CACHE=${ENV_DIR}/data/hf/datasets \
+HF_MODULES_CACHE=${ENV_DIR}/data/hf/modules \
+python ${INSTALLER_DIR}/scripts/prefetch_en_eval_deps.py
+
 deactivate
 popd # $ENV_DIR
 popd  # $TARGET_DIR

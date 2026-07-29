@@ -109,6 +109,19 @@ uv run python scripts/preprocess_dataset.py \
 # implicitly re-syncs the venv to the lockfile and would revert the override.
 uv pip install --python .venv/bin/python "torch==2.8.0"
 
+# Prefetch eval-phase metric resources so evaluation jobs avoid Hub access:
+# the COMET checkpoint goes to data/llm-jp-eval/cache (the evaluator caches
+# under <output_dir>/cache and the run scripts pass output_dir=data/llm-jp-eval),
+# BERTScore models and the COMET encoder go to the HF hub cache, and NLTK
+# punkt_tab (mifeval) to ~/nltk_data.
+# NOTE: use .venv/bin/python directly, not `uv run` (see the NOTE above).
+if [ -z "${HF_HOME:-}" ]; then
+  >&2 echo "WARNING: HF_HOME is not set; BERTScore/COMET encoder models are prefetched into ~/.cache/huggingface, which evaluation jobs may not use."
+fi
+if ! .venv/bin/python ${INSTALLER_DIR}/scripts/prefetch_metric_resources.py ${ENV_DIR}/data/llm-jp-eval/cache; then
+  >&2 echo "WARNING: metric resource prefetch failed; the eval phase will download the resources from the Hub at run time."
+fi
+
 popd  # llm-jp-eval
 popd  # src
 popd  # $ENV_DIR

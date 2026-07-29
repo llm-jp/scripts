@@ -100,6 +100,12 @@ export HF_TOKEN=<HuggingFaceのアクセストークン>
 > インストール時に利用申請の承認済みアカウントの `HF_TOKEN` が必要です。
 > 取得できない場合は該当ベンチマークをスキップしてインストールを継続します (詳細は `llm-jp-judge/README.md`)。
 
+> [!NOTE]
+> 評価用データセット類は**インストール時に**取得します:
+> - swallow: 全タスクのデータセットと evaluate メトリクスモジュールを環境内キャッシュ (`environment/data/hf/`) にプリフェッチし、評価時は `HF_DATASETS_OFFLINE=1` / `HF_EVALUATE_OFFLINE=1` でHubに接続しません (プリフェッチ済み環境のみ。GPQAはgatedのためインストール時に承認済み `HF_TOKEN` が必要)。
+> - llm-jp-eval v2.1.5: 評価フェーズで使うCOMETチェックポイントを環境内 (`data/llm-jp-eval/cache`) に、BERTScoreモデル等をHFキャッシュにプリフェッチします。**インストール時と評価時で同じ `HF_HOME` を使ってください。**
+> - 評価対象モデル自体のダウンロードは対象外です (未キャッシュのHubモデルを評価する場合は事前に取得しておくこと)。
+
 ## 評価実行
 
 ### 実行

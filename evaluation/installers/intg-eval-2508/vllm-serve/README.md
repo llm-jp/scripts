@@ -142,35 +142,15 @@ serve_common.sh が activate 相当 (`PATH` 先頭に `<venv>/bin`、`VIRTUAL_EN
 `openai_completions.py` は従来のオフライン評価フロー (`--model vllm`) では
 使用されないため、**既存の評価挙動には影響しません**。
 
-## 検証状況 (2026-07-23)
+## 検証状況
 
-- mock OpenAI サーバー (CPU, さくら) に対して:
-  - `lm_eval local-completions`: hellaswag (loglikelihood) + gsm8k (生成) 完走
-  - `inference_openai.py`: jamp 100 サンプル (v2.1.5 の実 venv 使用) 完走
-- **実 GPU end-to-end + スコア一致性検証済み** (ABCI H100 1枚,
-  llm-jp/llm-jp-3-150m, swallow_v202411 + llm-jp-eval v2.1.3,
-  サーバー venv は vllm 0.11.2 の専用 venv):
-  - `echo=True + max_tokens=0 + logprobs` の prompt logprobs 取得、トークン
-    ID 配列プロンプト、`truncate_prompt_tokens` (extra_body) すべて動作
-  - swallow: オフライン (venv-harness vllm 0.10.2) とサーバー経由 (0.11.2)
-    でエンジン版が異なる前提で、全メトリクス |diff| ≤ 0.006
-    (hellaswag 0.0002, mmlu 0.0016, bbh_cot 0.0041)
-  - llm-jp-eval v2.1.3: 同一 vllm 0.11.2 同士で AVG 0.1060 (offline) vs
-    0.1083 (serve)。temperature=1.0 / seed=None サンプリングのため個別
-    タスク (各100サンプル) はノイズ幅 (±0.03-0.13) の差があるが、集計値に
-    系統差なし
-  - この検証で発見・修正済み: vllm 0.11.2 venv の `vllm serve` 起動不可
-    (前節)、output_length がコンテキストを超えるデータセット (jhle=8192)
-    での 400 エラー (リクエスト毎クランプで解決)
-- 追加検証 (2026-07-24, 同上の構成):
-  - swallow: `--client-concurrency` (256) + `logprobs=1` で loglikelihood が
-    53-58 req/s (オフライン同等)。logprobs=1 は loglikelihood スコアを
-    小数第4位まで変えない (logprobs=10 実行と同一値)。所要時間は
-    初期実装 190 分 → 約 65 分 (オフライン 79 分より短い; ロード 6 回 →
-    1 回の分)
-  - llm-jp-eval v1.4.1 (inference_openai_v1.py): end-to-end 完走。greedy
-    同士でオフライン (venv-vllm vllm 0.10.2) と AVG 0.1805 vs 0.1786、
-    52 メトリクス中 19 が完全一致、最大差 0.06 (jsick) はエンジン版差に
-    よる greedy 分岐の範囲
-  - evaluate モジュールの comparison 版混入 (Hub 取得失敗時の fallback) を
-    実地で確認し、run-swallow-serve.sh のオフライン解決ガードで再発防止
+実クラスタ (ABCI / さくら) での検証記録は [../VALIDATION.md](../VALIDATION.md)
+に集約している。要点:
+
+- **スコア一致性は ABCI (H100) とさくら (B200) の両方で確認済み**
+  (swallow / llm-jp-eval v1.4.1 / v2.1.3 / v2.1.5)
+- 所要時間はモデルロード削減 + `--client-concurrency` により、
+  gpt-oss-120b (TP4, swallow + v2.1.3) 実測でオフライン比 **2.4 倍**
+- gpt-oss 等の MXFP4 MoE は vllm 0.11.2 だと生成品質が劣化する
+  (serve 経由では `!!!!` への出力退化)。サーバーもオフラインも
+  v2.1.5 環境 (vllm 0.19.1) を使うこと

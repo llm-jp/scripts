@@ -2,6 +2,10 @@
 
 llm-jp-eval、swallow英語評価、llm-jp-judge (LLM-as-a-Judge) を実行可能な統合基盤をインストールするスクリプトです。
 
+- 利用者向けの変更履歴: [CHANGELOG.md](./CHANGELOG.md)
+- 実クラスタ (ABCI / さくら) での検証記録 — どのクラスタ・環境でどのコマンドを実行し
+  何を確認したか: [VALIDATION.md](./VALIDATION.md)
+
 ## セットアップ
 
 ### インストール手順 (ローカル)

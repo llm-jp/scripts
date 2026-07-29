@@ -15,7 +15,11 @@
 #   --tensor-parallel-size N  (default: number of visible GPUs / data-parallel-size)
 #   --data-parallel-size N    --data-parallel-size for the server (default: 1)
 #   --gpu-memory-utilization F (default: 0.9)
-#   --max-model-len N         --max-model-len for the server (default: model config)
+#   --max-model-len N         --max-model-len for the server (default: model
+#                             config). Also forwarded to the llm-jp-eval v2
+#                             client (whose offline-parity truncation would
+#                             otherwise stay at its 4096 default) and to the
+#                             local judge server of --judge-client vllm.
 #   --port N                  (default: random open port)
 #   --server-reasoning-parser P  --reasoning-parser for the shared server
 #                             (e.g. 'openai_gptoss'). Only affects the chat
@@ -289,6 +293,9 @@ run_llm_jp_eval_version() {
         if [ -n "$MAX_TOKENS" ]; then
             opts+=(--max_tokens "$MAX_TOKENS")
         fi
+        if [ -n "$MAX_MODEL_LEN" ]; then
+            opts+=(--max_model_len "$MAX_MODEL_LEN")
+        fi
     fi
     bash "${SCRIPT_DIR}/${script}" \
         "$MODEL" \
@@ -322,6 +329,9 @@ if [ "$RUN_LLM_JP_JUDGE" = true ]; then
     fi
     if [ -n "$JUDGE_GEN_MAX_TOKENS" ]; then
         JUDGE_OPTS+=(--gen-max-tokens "$JUDGE_GEN_MAX_TOKENS")
+    fi
+    if [ -n "$MAX_MODEL_LEN" ]; then
+        JUDGE_OPTS+=(--max-model-len "$MAX_MODEL_LEN")
     fi
     if [ "$DISABLE_MT_BENCH" = true ]; then
         JUDGE_OPTS+=(--disable-mt-bench)

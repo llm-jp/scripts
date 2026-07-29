@@ -129,7 +129,7 @@ LLM_JP_EVAL_TEMPLATE = """\
 # Run llm-jp-eval {llm_jp_eval_version}
 pushd llm-jp-eval-{llm_jp_eval_version}/
 mkdir -p $OUTPUT_DIR/{llm_jp_eval_output_subdir}
-LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args}{basemodel}{max_tokens}{reasoning_content_length})
+LLM_JP_EVAL_OPTS=(--max_num_samples {max_num_samples}{apply_chat_template}{reasoning_parser}{chat_template_args}{basemodel}{max_tokens}{reasoning_content_length}{max_model_len})
 bash run_llm-jp-eval.sh \\
     $MODEL_NAME_OR_PATH \\
     $OUTPUT_DIR/{llm_jp_eval_output_subdir} \\
@@ -263,7 +263,7 @@ def load_args():
     # vllm-serve mode (EXPERIMENTAL)
     parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
     parser.add_argument("--serve-venv", type=str, default=None, help="venv that provides `vllm serve` (only with --vllm-serve; default: auto-detect, see vllm-serve/README.md).")
-    parser.add_argument("--max-model-len", type=int, default=None, help="--max-model-len for the vLLM server (only with --vllm-serve; default: model config).")
+    parser.add_argument("--max-model-len", type=int, default=None, help="Context length cap. With --vllm-serve: --max-model-len of the shared server (default: model config), also applied to the llm-jp-eval client and a local judge server. Offline: applied to llm-jp-eval v2.1.5 (default: 4096 from inference_config*.yaml) and llm-jp-judge's local servers; the offline swallow evaluation ignores it (model config).")
     parser.add_argument("--client-concurrency", type=int, default=None, help="Prompts each evaluation client keeps in flight against the shared vLLM server (only with --vllm-serve; default: 256, on the order of vLLM's default max_num_seqs). Each client translates this into its own request shape, so the saturation target is framework-independent.")
 
     # Logging configuration
@@ -301,12 +301,13 @@ def check_args(args):
     if args.llm_jp_eval_reasoning_content_length:
         if not args.reasoning_parser:
             raise ValueError("--llm-jp-eval-reasoning-content-length requires --reasoning-parser.")
-    if (args.llm_jp_eval_max_tokens or args.llm_jp_eval_reasoning_content_length) and not args.disable_llm_jp_eval:
+    offline_max_model_len = args.max_model_len and not args.vllm_serve
+    if (args.llm_jp_eval_max_tokens or args.llm_jp_eval_reasoning_content_length or offline_max_model_len) and not args.disable_llm_jp_eval:
         unsupported = [v for v in args.llm_jp_eval_versions if v not in LLM_JP_EVAL_MAX_TOKENS_VERSIONS]
         if unsupported:
             raise ValueError(
-                f"--llm-jp-eval-max-tokens / --llm-jp-eval-reasoning-content-length support llm-jp-eval versions "
-                f"{list(LLM_JP_EVAL_MAX_TOKENS_VERSIONS)} only, got {unsupported}."
+                f"--llm-jp-eval-max-tokens / --llm-jp-eval-reasoning-content-length / offline --max-model-len "
+                f"support llm-jp-eval versions {list(LLM_JP_EVAL_MAX_TOKENS_VERSIONS)} only, got {unsupported}."
             )
 
     if args.basemodel and not args.disable_llm_jp_eval:
@@ -337,8 +338,8 @@ def check_args(args):
                 "--reasoning-parser is not yet implemented in the serve-mode client "
                 "(inference_openai.py); use the offline mode."
             )
-    elif args.serve_venv or args.max_model_len or args.client_concurrency:
-        raise ValueError("--serve-venv, --max-model-len and --client-concurrency require --vllm-serve.")
+    elif args.serve_venv or args.client_concurrency:
+        raise ValueError("--serve-venv and --client-concurrency require --vllm-serve.")
 
 
 def main():
@@ -373,6 +374,8 @@ def main():
             judge_opts.append(f"--gen-max-tokens {args.judge_gen_max_tokens}")
         if args.judge_gen_reasoning_parser:
             judge_opts.append(f"--gen-reasoning-parser {args.judge_gen_reasoning_parser}")
+        if args.max_model_len:
+            judge_opts.append(f"--max-model-len {args.max_model_len}")
         if args.disable_mt_bench:
             judge_opts.append("--disable-mt-bench")
         llm_jp_judge_template = LLM_JP_JUDGE_TEMPLATE.format(judge_opts=" ".join(judge_opts))
@@ -433,6 +436,7 @@ def main():
         basemodel_flag = " --basemodel" if args.basemodel else ""
         max_tokens_flag = f" --max_tokens {args.llm_jp_eval_max_tokens}" if args.llm_jp_eval_max_tokens else ""
         reasoning_content_length_flag = f" --reasoning_content_length {args.llm_jp_eval_reasoning_content_length}" if args.llm_jp_eval_reasoning_content_length else ""
+        max_model_len_flag = f" --max_model_len {args.max_model_len}" if args.max_model_len else ""
         chunks = []
         for version in args.llm_jp_eval_versions:
             if args.legacy_output:
@@ -452,6 +456,7 @@ def main():
                     basemodel=basemodel_flag,
                     max_tokens=max_tokens_flag,
                     reasoning_content_length=reasoning_content_length_flag,
+                    max_model_len=max_model_len_flag,
                 )
             else:
                 chunk = LLM_JP_EVAL_TEMPLATE_LEGACY.format(

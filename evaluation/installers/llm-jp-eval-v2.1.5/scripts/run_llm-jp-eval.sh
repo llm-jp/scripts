@@ -11,7 +11,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER] [--tokenize_kwargs JSON] [--basemodel] [--max_tokens N] [--reasoning_content_length N]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--max_num_samples N] [--apply_chat_template] [--reasoning_parser PARSER] [--tokenize_kwargs JSON] [--basemodel] [--max_tokens N] [--reasoning_content_length N] [--max_model_len N]"
     exit 1
 }
 
@@ -28,6 +28,7 @@ TOKENIZE_KWARGS=""
 BASEMODEL=false
 MAX_TOKENS=""
 REASONING_CONTENT_LENGTH=""
+MAX_MODEL_LEN=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --max_num_samples) MAX_NUM_SAMPLES=$2; shift 2 ;;
@@ -42,6 +43,9 @@ while [[ $# -gt 0 ]]; do
         # reasoning content of thinking models. Only meaningful together with
         # --reasoning_parser (upstream ignores it otherwise).
         --reasoning_content_length) REASONING_CONTENT_LENGTH=$2; shift 2 ;;
+        # Context length cap for inference. Default (unset) keeps the value
+        # in resources/inference_config*.yaml (4096).
+        --max_model_len) MAX_MODEL_LEN=$2; shift 2 ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
 done
@@ -149,6 +153,9 @@ if [ -n "${MAX_TOKENS}" ]; then
 fi
 if [ -n "${REASONING_CONTENT_LENGTH}" ]; then
     INFERENCE_OPTS+=(--reasoning_content_length ${REASONING_CONTENT_LENGTH})
+fi
+if [ -n "${MAX_MODEL_LEN}" ]; then
+    INFERENCE_OPTS+=(--model.max_model_len ${MAX_MODEL_LEN})
 fi
 
 source ${LLM_JP_EVAL_DIR}/llm-jp-eval-inference/inference-modules/vllm/.venv/bin/activate

@@ -6,6 +6,33 @@
 
 ## 2026-07-29
 
+- **追加**: 生成長・reasoning の制御フラグ (デフォルトはすべて従来挙動):
+  `--llm-jp-eval-max-tokens` (生成トークン数の全体上書き; 既定はデータセット毎の
+  output_length)、`--llm-jp-eval-reasoning-content-length` (thinking モデル用の
+  加算予算、`--reasoning-parser` 必須)、`--judge-gen-max-tokens` (llm-jp-judge
+  全ベンチマークの生成上限上書き; 既定 1024)、`--judge-gen-reasoning-parser`
+  (生成サーバーの reasoning parser; serve モードでは共有サーバーへの
+  `--server-reasoning-parser` になり、completions API を使う llm-jp-eval /
+  swallow には影響しない)
+- **運用ノート (重要)**: **thinking モデル (llm-jp-4 系等) を llm-jp-judge に
+  かける場合は上記フラグが必須**。既定の max_tokens=1024 では reasoning の途中で
+  打ち切られ、vLLM 0.15+ (Harmony 自動パース) では応答が空になり全スコア ≈1 の
+  無効な評価になる (vLLM 0.11.2 は analysis 込み生テキストを読む)。目安:
+  `--judge-gen-max-tokens 8192 --judge-gen-reasoning-parser openai_gptoss
+  --max-model-len 16384`。詳細は VALIDATION.md の 07-29 ABCI ラウンド参照
+- **変更**: `--max-model-len` が **オフラインモードでも有効に** (従来は
+  `--vllm-serve` 専用)。オフラインでは llm-jp-eval v2.1.5 の
+  `model.max_model_len` (既定 4096 のまま) と llm-jp-judge のローカルサーバーに
+  適用。serve モードでは llm-jp-eval クライアント側の切り詰めエミュレーション
+  (従来 4096 固定) とローカルジャッジサーバーにも追従
+- **追加**: 評価依存物の**インストール時プリフェッチ + ランタイムオフライン化**。
+  swallow は全タスクデータセット + evaluate モジュールを環境内キャッシュ
+  (`environment/data/hf/`) に取得し、評価時は `HF_DATASETS_OFFLINE=1` /
+  `HF_EVALUATE_OFFLINE=1` で Hub 非接続 (プリフェッチ前の既存環境は従来挙動。
+  後付けは `swallow_v202411/scripts/prefetch_en_eval_deps.py` を venv-harness で
+  実行)。llm-jp-eval v2.1.5 は COMET / BERTScore / NLTK をインストール時に取得
+  (インストール時と評価時の HF_HOME を揃えること)。GPQA / AnswerCarefully は
+  gated のためインストール時に承認済み HF_TOKEN が必要
 - **変更 (vllm-serve)**: llm-jp-eval の eval フェーズ (BERTScore / COMET) を
   **サーバー停止後**に実行するよう再構成。vLLM 0.19.1 サーバーは
   `--gpu-memory-utilization 0.9` でも GPU をほぼ全量確保するため、従来構成では

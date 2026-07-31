@@ -193,7 +193,7 @@ def load_args():
     parser.add_argument("--experiment-dir", type=str, default="/groups/gcg51557/experiments/0230_intg_eval_2509", help="Directory where the evaluation environment is located. Default is '/groups/gcg51557/experiments/0230_intg_eval_2509'.")
 
     # Evaluator versions
-    parser.add_argument("--swallow-version", type=str, default="v202411", choices=["v202411", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run.")
+    parser.add_argument("--swallow-version", type=str, default="v202411", choices=["v202411", "v202411-tf5", ""], help="Version of the swallow environment. If not specified, no swallow evaluation will be run. 'v202411-tf5' is an experimental transformers-5.x variant (same evaluation code; for models requiring transformers>=5.6).")
     parser.add_argument("--disable-swallow", action="store_true", help="Disable the swallow evaluation even if swallow_version is specified.")
     parser.add_argument("--llm-jp-eval-versions", type=str, nargs="+", default=["v1.4.1", "v2.1.0"], choices=["v1.4.1", "v2.1.0", "v2.1.3", "v2.1.5"], help="Versions of the llm-jp-eval environment to run.")
     parser.add_argument("--disable-llm-jp-eval", action="store_true", help="Disable the llm-jp-eval evaluation even if versions are specified.")

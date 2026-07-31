@@ -1,0 +1,16 @@
+diff --git a/src/llm_jp_judge/client/remote.py b/src/llm_jp_judge/client/remote.py
+index 10dd063..7644fdc 100644
+--- a/src/llm_jp_judge/client/remote.py
++++ b/src/llm_jp_judge/client/remote.py
+@@ -80,6 +80,11 @@ class OpenAI(BaseClient):
+     ) -> str | None:
+         if sampling_params is None:
+             sampling_params = {}
++        # Drop unset (None) sampling params instead of sending them as JSON
++        # null: OpenAI-compatible servers can choke on explicit nulls (e.g.
++        # vLLM >=0.15 renders gpt-oss prompts with reasoning_effort and fails
++        # on None concatenation with a 400).
++        sampling_params = {k: v for k, v in sampling_params.items() if v is not None}
+ 
+         messages = await asyncio.to_thread(self.get_messages, prompt, response, system_prompt=system_prompt)
+ 

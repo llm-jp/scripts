@@ -79,6 +79,16 @@ pushd llm-jp-judge
 git fetch origin tag ${LLM_JP_JUDGE_TAG}
 git checkout ${LLM_JP_JUDGE_TAG}
 
+# Drop None-valued sampling params before sending requests: the OpenAI
+# client otherwise serializes them as JSON null, and vLLM >=0.15 fails with
+# a 400 when rendering gpt-oss prompts with reasoning_effort=null.
+PATCH_FILE=${INSTALLER_DIR}/patches/drop-none-sampling-params.patch
+if git apply --reverse --check $PATCH_FILE 2>/dev/null; then
+  echo "Patch already applied; skipping."
+else
+  git apply $PATCH_FILE
+fi
+
 # The vllm extra provides `vllm serve`, used by run_llm-jp-judge.sh to host
 # the generation target model (and optionally a local judge model).
 uv sync --locked --extra vllm

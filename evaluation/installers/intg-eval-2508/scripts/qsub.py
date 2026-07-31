@@ -228,6 +228,7 @@ def load_args():
     parser.add_argument("--judge-benchmark-size", type=int, default=None, help="Use only the first N samples of each llm-jp-judge benchmark (default: all samples).")
     parser.add_argument("--judge-gen-max-tokens", type=int, default=None, help="Override every llm-jp-judge benchmark's generation sampling_params.max_tokens (default: llm-jp-judge's per-benchmark values, 1024). Thinking models usually need a larger budget.")
     parser.add_argument("--judge-gen-reasoning-effort", type=str, default=None, choices=["low", "medium", "high"], help="Explicit reasoning_effort sent with every llm-jp-judge generation request. Required for gpt-oss-style thinking models on vLLM 0.15.x generation servers, which unconditionally inject the request's reasoning_effort into the chat template and fail with a 400 when it is unset.")
+    parser.add_argument("--judge-gen-extract-final", action="store_true", help="Strip Harmony reasoning from llm-jp-judge generations client-side (keep only the text after the last 'assistant final' channel marker). The recommended way to make the judge read only the final answer of gpt-oss-style thinking models: vLLM's openai_gptoss reasoning parser rejects non-streaming chat requests on all current versions (0.11.2/0.15.1/0.19.1).")
     parser.add_argument("--judge-gen-reasoning-parser", type=str, default=None, help="vLLM reasoning parser for the llm-jp-judge generation server (e.g. 'openai_gptoss'), so the judge reads only the final channel of a thinking model. With --vllm-serve this is applied to the shared server (chat API only; llm-jp-eval/swallow use the completions API and are unaffected).")
     parser.add_argument("--disable-mt-bench", action="store_true", help="Skip mt_bench_en / mt_bench_ja in llm-jp-judge.")
 
@@ -261,8 +262,8 @@ def check_args(args):
         raise ValueError(f"Invalid selection '{args.select}' for resource type '{args.rtype}'. Only 1 GPU can be selected.")
 
     if not args.llm_jp_judge:
-        if args.judge_base_url or args.judge_benchmark_size or args.disable_mt_bench or args.judge_gen_max_tokens or args.judge_gen_reasoning_parser or args.judge_gen_reasoning_effort:
-            raise ValueError("--judge-base-url, --judge-benchmark-size, --disable-mt-bench, --judge-gen-max-tokens, --judge-gen-reasoning-parser and --judge-gen-reasoning-effort require --llm-jp-judge.")
+        if args.judge_base_url or args.judge_benchmark_size or args.disable_mt_bench or args.judge_gen_max_tokens or args.judge_gen_reasoning_parser or args.judge_gen_reasoning_effort or args.judge_gen_extract_final:
+            raise ValueError("--judge-base-url, --judge-benchmark-size, --disable-mt-bench, --judge-gen-max-tokens, --judge-gen-reasoning-parser, --judge-gen-reasoning-effort and --judge-gen-extract-final require --llm-jp-judge.")
     else:
         if args.judge_client == "openai" and not (os.environ.get("OPENAI_API_KEY") or args.judge_base_url):
             logging.warning("OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
@@ -345,6 +346,8 @@ def main():
             judge_opts.append(f"--gen-max-tokens {args.judge_gen_max_tokens}")
         if args.judge_gen_reasoning_effort:
             judge_opts.append(f"--gen-reasoning-effort {args.judge_gen_reasoning_effort}")
+        if args.judge_gen_extract_final:
+            judge_opts.append("--gen-extract-final")
         if args.judge_gen_reasoning_parser:
             judge_opts.append(f"--gen-reasoning-parser {args.judge_gen_reasoning_parser}")
         if args.max_model_len:
@@ -389,6 +392,8 @@ def main():
                 serve_args.append(f"--judge-gen-max-tokens {args.judge_gen_max_tokens}")
             if args.judge_gen_reasoning_effort:
                 serve_args.append(f"--judge-gen-reasoning-effort {args.judge_gen_reasoning_effort}")
+            if args.judge_gen_extract_final:
+                serve_args.append("--judge-gen-extract-final")
             if args.judge_gen_reasoning_parser:
                 serve_args.append(f"--server-reasoning-parser {args.judge_gen_reasoning_parser}")
             if args.disable_mt_bench:

@@ -1,5 +1,5 @@
 diff --git a/src/llm_jp_judge/client/remote.py b/src/llm_jp_judge/client/remote.py
-index 10dd063..7644fdc 100644
+index 10dd063..3a1a017 100644
 --- a/src/llm_jp_judge/client/remote.py
 +++ b/src/llm_jp_judge/client/remote.py
 @@ -80,6 +80,11 @@ class OpenAI(BaseClient):
@@ -14,3 +14,23 @@ index 10dd063..7644fdc 100644
  
          messages = await asyncio.to_thread(self.get_messages, prompt, response, system_prompt=system_prompt)
  
+@@ -89,7 +94,18 @@ class OpenAI(BaseClient):
+             messages=messages,
+             **sampling_params,
+         )
+-        return client_response.choices[0].message.content
++        choices = getattr(client_response, "choices", None)
++        if not choices:
++            # vLLM can return 200 responses without choices for some
++            # model/parser combinations; log the raw payload for diagnosis
++            # instead of crashing the whole generation run.
++            try:
++                raw = client_response.model_dump_json()
++            except Exception:
++                raw = repr(client_response)
++            logging.warning(f"response without choices: {raw[:2000]}")
++            return None
++        return choices[0].message.content
+ 
+     async def process_data(
+         self,

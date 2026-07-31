@@ -67,6 +67,9 @@
 #   --judge-benchmark-size N  first N samples per llm-jp-judge benchmark
 #   --judge-gen-max-tokens N  llm-jp-judge: override every benchmark's
 #                             generation sampling_params.max_tokens
+#   --judge-gen-extract-final llm-jp-judge: strip Harmony reasoning from the
+#                             generated responses client-side (keep only the
+#                             text after the last 'assistant final' marker)
 #   --judge-gen-reasoning-effort E  llm-jp-judge: explicit reasoning_effort
 #                             for generation (required for gpt-oss-style
 #                             thinking models on vLLM 0.15.x servers)
@@ -115,6 +118,7 @@ JUDGE_BASE_URL=""
 JUDGE_BENCHMARK_SIZE=""
 JUDGE_GEN_MAX_TOKENS=""
 JUDGE_GEN_REASONING_EFFORT=""
+JUDGE_GEN_EXTRACT_FINAL=false
 DISABLE_MT_BENCH=false
 
 while [ $# -gt 0 ]; do
@@ -145,6 +149,7 @@ while [ $# -gt 0 ]; do
         --judge-benchmark-size) JUDGE_BENCHMARK_SIZE=$2; shift 2 ;;
         --judge-gen-max-tokens) JUDGE_GEN_MAX_TOKENS=$2; shift 2 ;;
         --judge-gen-reasoning-effort) JUDGE_GEN_REASONING_EFFORT=$2; shift 2 ;;
+        --judge-gen-extract-final) JUDGE_GEN_EXTRACT_FINAL=true; shift ;;
         --disable-mt-bench) DISABLE_MT_BENCH=true; shift ;;
         *) >&2 echo "Unknown option: $1"; usage ;;
     esac
@@ -337,6 +342,9 @@ if [ "$RUN_LLM_JP_JUDGE" = true ]; then
     fi
     if [ -n "$JUDGE_GEN_REASONING_EFFORT" ]; then
         JUDGE_OPTS+=(--gen-reasoning-effort "$JUDGE_GEN_REASONING_EFFORT")
+    fi
+    if [ "$JUDGE_GEN_EXTRACT_FINAL" = true ]; then
+        JUDGE_OPTS+=(--gen-extract-final)
     fi
     if [ -n "$MAX_MODEL_LEN" ]; then
         JUDGE_OPTS+=(--max-model-len "$MAX_MODEL_LEN")

@@ -149,6 +149,17 @@ HF_DATASETS_CACHE=${ENV_DIR}/data/hf/datasets \
 HF_MODULES_CACHE=${ENV_DIR}/data/hf/modules \
 python ${BASE_INSTALLER_DIR}/scripts/prefetch_en_eval_deps.py
 
+# The huggingface_hub pulled in by this venv (transformers 5.x / vllm 0.19.x)
+# rejects hf:// URIs of canonical datasets without a namespace (e.g. plain
+# 'gsm8k'), so most prefetch downloads fail here. The cache format is
+# identical to the base swallow environment's (same datasets==2.21.0), so
+# reuse its prefetched copy when installed next to this one; offline loading
+# from the cache never touches the Hub, sidestepping the URI issue.
+BASE_ENV_HF=${TARGET_DIR}/../swallow_v202411/environment/data/hf
+if [ -d "${BASE_ENV_HF}/datasets" ]; then
+  rsync -a --ignore-existing ${BASE_ENV_HF}/datasets/ ${ENV_DIR}/data/hf/datasets/
+fi
+
 deactivate
 popd # $ENV_DIR
 popd  # $TARGET_DIR

@@ -42,12 +42,22 @@
 #                             template as None and every request fails with
 #                             a 400 TypeError.
 #   --gen-reasoning-parser P  --reasoning-parser for the locally launched
-#                             generation server (e.g. 'openai_gptoss'), so
-#                             only the final channel of a thinking model is
-#                             returned to the judge. Not applicable with
+#                             generation server. Not applicable with
 #                             --gen-base-url (set the parser on that server
 #                             instead; see run_eval_serve.sh
-#                             --server-reasoning-parser).
+#                             --server-reasoning-parser). NOTE: for
+#                             gpt-oss-style models this does NOT work with
+#                             any current vLLM (0.11.2/0.15.1/0.19.1 all
+#                             reject non-streaming chat requests when the
+#                             openai_gptoss parser is active); use
+#                             --gen-extract-final instead.
+#   --gen-extract-final       After generation, strip the Harmony reasoning
+#                             from each response client-side: keep only the
+#                             text after the last 'assistant final' channel
+#                             marker (responses without the marker are kept
+#                             as-is). The recommended way to make the judge
+#                             read only the final answer of gpt-oss-style
+#                             thinking models.
 #   --gen-base-url URL        Generate against an already-running
 #                             OpenAI-compatible server (e.g. the shared server
 #                             of vllm-serve) instead of launching one here.
@@ -70,7 +80,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--judge-client {openai,azure,bedrock,vllm}] [--judge-model NAME] [--judge-base-url URL] [--judge-request-interval S] [--gen-request-interval S] [--tensor-parallel-size N] [--gpu-memory-utilization F] [--max-model-len N] [--benchmark-size N] [--disable-mt-bench] [--gen-max-tokens N] [--gen-reasoning-effort E] [--gen-reasoning-parser P] [--gen-base-url URL] [--generation-only] [--judge-only]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--judge-client {openai,azure,bedrock,vllm}] [--judge-model NAME] [--judge-base-url URL] [--judge-request-interval S] [--gen-request-interval S] [--tensor-parallel-size N] [--gpu-memory-utilization F] [--max-model-len N] [--benchmark-size N] [--disable-mt-bench] [--gen-max-tokens N] [--gen-reasoning-effort E] [--gen-reasoning-parser P] [--gen-extract-final] [--gen-base-url URL] [--generation-only] [--judge-only]"
     exit 1
 }
 
@@ -93,6 +103,7 @@ DISABLE_MT_BENCH=false
 GEN_MAX_TOKENS=""
 GEN_REASONING_PARSER=""
 GEN_REASONING_EFFORT=""
+GEN_EXTRACT_FINAL=false
 GEN_BASE_URL=""
 GENERATION_ONLY=false
 JUDGE_ONLY=false
@@ -111,6 +122,7 @@ while [[ $# -gt 0 ]]; do
         --gen-max-tokens) GEN_MAX_TOKENS=$2; shift 2 ;;
         --gen-reasoning-effort) GEN_REASONING_EFFORT=$2; shift 2 ;;
         --gen-reasoning-parser) GEN_REASONING_PARSER=$2; shift 2 ;;
+        --gen-extract-final) GEN_EXTRACT_FINAL=true; shift ;;
         --gen-base-url) GEN_BASE_URL=$2; shift 2 ;;
         --generation-only) GENERATION_ONLY=true; shift ;;
         --judge-only) JUDGE_ONLY=true; shift ;;
@@ -264,6 +276,37 @@ ${VENV}/bin/python -m src.llm_jp_judge.generate "${GEN_ARGS[@]}" \
     > ${OUTPUT_DIR}/logs/generate.log 2> ${OUTPUT_DIR}/logs/generate.err
 
 stop_vllm_server
+
+if [ "${GEN_EXTRACT_FINAL}" = true ]; then
+    # Strip Harmony reasoning client-side: keep only the text after the
+    # last 'assistant final' channel marker of each response. Responses
+    # without the marker (non-thinking models, generations truncated inside
+    # the reasoning) are kept as-is.
+    ${VENV}/bin/python - ${OUTPUT_DIR}/generation <<'PYEOF'
+import glob
+import json
+import re
+import sys
+
+pattern = re.compile(r"\bassistant\s*final\b")
+for path in sorted(glob.glob(sys.argv[1] + "/*.jsonl")):
+    rows = [json.loads(line) for line in open(path)]
+    rewritten = 0
+    for row in rows:
+        responses = row.get("response") or []
+        for i, text in enumerate(responses):
+            if not isinstance(text, str):
+                continue
+            matches = list(pattern.finditer(text))
+            if matches:
+                responses[i] = text[matches[-1].end():].lstrip()
+                rewritten += 1
+    with open(path, "w") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    print(f"extract-final: {path.rsplit('/', 1)[-1]}: rewrote {rewritten} responses", flush=True)
+PYEOF
+fi
 
 fi  # JUDGE_ONLY
 

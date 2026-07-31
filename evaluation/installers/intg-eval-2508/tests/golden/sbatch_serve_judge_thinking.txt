@@ -59,6 +59,7 @@ bash /data/experiments/0219_dev_eval_script/environment/vllm-serve/run_eval_serv
     --max-tokens 8192 \
     --llm-jp-judge --judge-client openai --judge-model gpt-4o-2024-08-06 \
     --judge-gen-max-tokens 8192 \
+    --judge-gen-reasoning-effort medium \
     --server-reasoning-parser openai_gptoss
 
 

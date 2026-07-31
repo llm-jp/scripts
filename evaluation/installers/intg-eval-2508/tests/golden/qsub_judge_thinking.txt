@@ -47,7 +47,7 @@ popd
 # Run llm-jp-judge (LLM-as-a-Judge). Generation runs on a local vLLM server;
 # judging uses the configured judge client (see llm-jp-judge/README.md).
 pushd llm-jp-judge/
-LLM_JP_JUDGE_OPTS=(--judge-client openai --judge-model gpt-4o-2024-08-06 --tensor-parallel-size 1 --gpu-memory-utilization 0.9 --gen-max-tokens 8192 --gen-reasoning-parser openai_gptoss)
+LLM_JP_JUDGE_OPTS=(--judge-client openai --judge-model gpt-4o-2024-08-06 --tensor-parallel-size 1 --gpu-memory-utilization 0.9 --gen-max-tokens 8192 --gen-reasoning-effort medium --gen-reasoning-parser openai_gptoss)
 bash run_llm-jp-judge.sh \
     $MODEL_NAME_OR_PATH \
     $OUTPUT_DIR/llm-jp-judge \

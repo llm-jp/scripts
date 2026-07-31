@@ -1,2 +1,2 @@
-ValueError: --judge-base-url, --judge-benchmark-size, --disable-mt-bench, --judge-gen-max-tokens and --judge-gen-reasoning-parser require --llm-jp-judge.
+ValueError: --judge-base-url, --judge-benchmark-size, --disable-mt-bench, --judge-gen-max-tokens, --judge-gen-reasoning-parser and --judge-gen-reasoning-effort require --llm-jp-judge.
 exit_code: 1

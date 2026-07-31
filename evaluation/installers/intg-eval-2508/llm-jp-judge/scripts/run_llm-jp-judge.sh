@@ -33,6 +33,14 @@
 #                             llm-jp-judge's per-benchmark values, 1024).
 #                             Thinking models usually need a larger budget so
 #                             the final answer is reached.
+#   --gen-reasoning-effort E  Send an explicit reasoning_effort (low/medium/
+#                             high) with every generation request. REQUIRED
+#                             for gpt-oss-style thinking models on vLLM
+#                             0.15.x servers: the server unconditionally
+#                             injects the request's reasoning_effort into the
+#                             chat template, so an unset value reaches the
+#                             template as None and every request fails with
+#                             a 400 TypeError.
 #   --gen-reasoning-parser P  --reasoning-parser for the locally launched
 #                             generation server (e.g. 'openai_gptoss'), so
 #                             only the final channel of a thinking model is
@@ -62,7 +70,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--judge-client {openai,azure,bedrock,vllm}] [--judge-model NAME] [--judge-base-url URL] [--judge-request-interval S] [--gen-request-interval S] [--tensor-parallel-size N] [--gpu-memory-utilization F] [--max-model-len N] [--benchmark-size N] [--disable-mt-bench] [--gen-max-tokens N] [--gen-reasoning-parser P] [--gen-base-url URL] [--generation-only] [--judge-only]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--judge-client {openai,azure,bedrock,vllm}] [--judge-model NAME] [--judge-base-url URL] [--judge-request-interval S] [--gen-request-interval S] [--tensor-parallel-size N] [--gpu-memory-utilization F] [--max-model-len N] [--benchmark-size N] [--disable-mt-bench] [--gen-max-tokens N] [--gen-reasoning-effort E] [--gen-reasoning-parser P] [--gen-base-url URL] [--generation-only] [--judge-only]"
     exit 1
 }
 
@@ -84,6 +92,7 @@ BENCHMARK_SIZE=""
 DISABLE_MT_BENCH=false
 GEN_MAX_TOKENS=""
 GEN_REASONING_PARSER=""
+GEN_REASONING_EFFORT=""
 GEN_BASE_URL=""
 GENERATION_ONLY=false
 JUDGE_ONLY=false
@@ -100,6 +109,7 @@ while [[ $# -gt 0 ]]; do
         --benchmark-size) BENCHMARK_SIZE=$2; shift 2 ;;
         --disable-mt-bench) DISABLE_MT_BENCH=true; shift ;;
         --gen-max-tokens) GEN_MAX_TOKENS=$2; shift 2 ;;
+        --gen-reasoning-effort) GEN_REASONING_EFFORT=$2; shift 2 ;;
         --gen-reasoning-parser) GEN_REASONING_PARSER=$2; shift 2 ;;
         --gen-base-url) GEN_BASE_URL=$2; shift 2 ;;
         --generation-only) GENERATION_ONLY=true; shift ;;
@@ -241,6 +251,12 @@ fi
 if [ -n "${GEN_MAX_TOKENS}" ]; then
     for name in "${BENCHMARK_NAMES[@]}" mt_bench_en mt_bench_ja; do
         GEN_ARGS+=(benchmark.${name}.sampling_params.max_tokens=${GEN_MAX_TOKENS})
+    done
+fi
+
+if [ -n "${GEN_REASONING_EFFORT}" ]; then
+    for name in "${BENCHMARK_NAMES[@]}" mt_bench_en mt_bench_ja; do
+        GEN_ARGS+=(benchmark.${name}.sampling_params.reasoning_effort=${GEN_REASONING_EFFORT})
     done
 fi
 

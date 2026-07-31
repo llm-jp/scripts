@@ -30,9 +30,9 @@ qsub_err_basemodel_version qsub.py /models/dummy /nonexistent/eval-out --llm-jp-
 qsub_err_rtype_select qsub.py /models/dummy /nonexistent/eval-out --rtype rt_HG --select 2
 # --- max_tokens / reasoning parser control ---
 sbatch_max_tokens_rcl sbatch.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.5 --llm-jp-eval-max-tokens 8192 --reasoning-parser openai_gptoss --llm-jp-eval-reasoning-content-length 4096
-sbatch_serve_judge_thinking sbatch.py /models/dummy /nonexistent/eval-out --vllm-serve --llm-jp-eval-versions v2.1.5 --llm-jp-eval-max-tokens 8192 --llm-jp-judge --judge-gen-max-tokens 8192 --judge-gen-reasoning-parser openai_gptoss
+sbatch_serve_judge_thinking sbatch.py /models/dummy /nonexistent/eval-out --vllm-serve --llm-jp-eval-versions v2.1.5 --llm-jp-eval-max-tokens 8192 --llm-jp-judge --judge-gen-max-tokens 8192 --judge-gen-reasoning-parser openai_gptoss --judge-gen-reasoning-effort medium
 sbatch_err_max_tokens_version sbatch.py /models/dummy /nonexistent/eval-out --llm-jp-eval-versions v2.1.3 --llm-jp-eval-max-tokens 8192
-qsub_judge_thinking qsub.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.5 --llm-jp-judge --judge-gen-max-tokens 8192 --judge-gen-reasoning-parser openai_gptoss
+qsub_judge_thinking qsub.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.5 --llm-jp-judge --judge-gen-max-tokens 8192 --judge-gen-reasoning-parser openai_gptoss --judge-gen-reasoning-effort medium
 qsub_err_rcl_without_parser qsub.py /models/dummy /nonexistent/eval-out --llm-jp-eval-versions v2.1.5 --llm-jp-eval-reasoning-content-length 4096
 sbatch_offline_max_model_len sbatch.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.5 --max-model-len 8192 --llm-jp-judge
 qsub_err_max_model_len_version qsub.py /models/dummy /nonexistent/eval-out --disable-swallow --llm-jp-eval-versions v2.1.3 --max-model-len 8192

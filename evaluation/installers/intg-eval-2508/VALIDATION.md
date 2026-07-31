@@ -27,6 +27,7 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 07-23〜24 | さくら | serve vs オフライン (150m / 8b-base / gpt-oss-120b) | スコア一致、120b で 2.39 倍。障害 2 件を修正 |
 | 07-26 | さくら | gpt-oss-120b × vllm 0.19.1 サーバー | 0.11.2 の出力退化が解消。eval OOM を発見 |
 | 07-29 | さくら | eval フェーズ分割 (--phase) の検証 | OOM 恒久対策の動作確認 |
+| 07-29 | さくら | eval 出力先 / キャッシュ事前取得 (v2.1.5・v2.1.3, 150m, offline + serve) | 共有 install へ書き込みゼロ・完走を確認 |
 | 07-29 | ABCI | llm-jp-judge 導入 + offline/serve テスト (8b-thinking) | serve 完走・スコア取得。thinking モデルの空応答問題を発見 → max-tokens/reasoning-parser 制御を追加 |
 | 07-29 | ABCI | swallow プリフェッチ適用 + オフライン読込確認 | 全10タスク取得 (545MB)、HF_HUB_OFFLINE=1 でも読込 OK |
 | 07-31 | ABCI | v2.1.5 / swallow-tf5 導入 + --basemodel 実機テスト | basemodel AVG 0.583 (さくらと一致)。計算ノードは外部ネットワーク不可と判明 |
@@ -174,6 +175,67 @@ python3 sbatch.py llm-jp/llm-jp-3-150m $PWD/results/phase-split-validation-20260
 
 ログ上で「inference ×2 → stopping vllm server → eval ×2」の順序を確認、
 両バージョンの result.json が正常に出力された (v1.4.1: 52 メトリクス、v2.1.3: 148)。
+
+## 2026-07-29 さくら: eval 出力先の分離 + eval キャッシュの事前取得 (v2.x, offline + serve)
+
+eval が共有インストールディレクトリへ書き込むことによる他ユーザーの
+パーミッション問題を解消する変更の検証。変更点は 2 つ:
+(1) run スクリプトを `--output_dir=${OUTPUT_DIR}` とし、読み込み専用の
+`datasets` / `cache` を `OUTPUT_DIR` に symlink、(2) インストーラーが eval 時
+ダウンロード物 (COMET / BERTScore エンコーダ / nltk) を共有キャッシュに事前取得し
+(全 v2.x 共通のため `installers/_common/prefetch_eval_caches.py` に一本化)、
+eval を `HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1` で read-only 参照。
+offline (`run_llm-jp-eval.sh`) と serve (`run_llm-jp-eval-serve.sh`) の両方、
+v2.1.0 / v2.1.3 / v2.1.5 に適用。
+
+**インストーラーの prefetch を確認** (再インストール後): 共有 `data/llm-jp-eval/`
+配下に `cache/models--Unbabel--wmt22-comet-da`、`hf/hub/{roberta-large,
+xlm-roberta-large,bert-base-multilingual-cased}` (xlm-roberta-large は COMET の
+`load_from_checkpoint` が牽引)、`nltk/tokenizers/{punkt,punkt_tab}` が生成。
+torch は 2.8.0 のまま (prefetch の `uv run` は torch 上書きの前に置いたので
+巻き戻らない)。
+
+### ラウンド1: offline (throwaway 環境で機構を先行検証)
+
+既存環境を壊さないよう新インストーラーで別ディレクトリに新規インストールし、
+offline eval を実行 (150m, max_num_samples=2)。
+
+- eval 完走 (6.5 分)、result.json に 163 スコア + lang_scores、COMET/BERTScore も算出
+- **共有 install への書き込みゼロ (決定的証拠)**: eval 後、共有 install の
+  `data/llm-jp-eval/results` は存在せず、`cache/`・`hf/`・`nltk/` の mtime は
+  全てインストール時刻で eval 時間帯の更新ゼロ。結果・prompts・yaml は全て
+  `OUTPUT_DIR` 配下、`datasets`/`cache` は共有 install への symlink
+
+### ラウンド2: canonical 再インストール + serve
+
+canonical パス (`environment/llm-jp-eval-v2.1.5`・`-v2.1.3`) を新インストーラーで
+**in-place 再インストール** (既存 clone は clean・BUG_FIX 空なので git checkout は
+noop、破壊的操作を回避)。両環境とも torch 2.8.0 / prefetch キャッシュ / 修正済み
+run スクリプトを確認。その後 serve 経路を検証:
+
+```bash
+# canonical 再インストール (jobs 2300=v2.1.5 / 2301=v2.1.3, cpu, in-place)
+cd installers/llm-jp-eval-v2.1.5   # および v2.1.3
+sbatch --partition=cpu --export=ALL,AQUA_GLOBAL_CONFIG=$HOME/aqua.yaml \
+  install.sh /data/experiments/0219_dev_eval_script/environment/llm-jp-eval-v2.1.5
+
+# serve 検証 (job 2302, gpu): 共有サーバー1本で v2.1.5 + v2.1.3 を serve 経路実行
+bash environment/vllm-serve/run_eval_serve.sh llm-jp/llm-jp-3-150m <OUTPUT_DIR> \
+  --experiment-dir /data/experiments/0219_dev_eval_script \
+  --tensor-parallel-size 1 --gpu-memory-utilization 0.9 \
+  --llm-jp-eval-versions v2.1.5 v2.1.3 --max-num-samples 2
+```
+
+- serve 完走 (11 分)。ログ順序も想定どおり「v2.1.5 inference → v2.1.3 inference →
+  サーバー停止 → v2.1.5 eval → v2.1.3 eval」
+- 結果は `OUTPUT_DIR/llm-jp-eval/{v2.1.5,v2.1.3}/results/result.json` に出力
+  (v2.1.5: 163 スコア、v2.1.3: 148 スコア、両者 COMET/BERTScore 算出)
+- **両 canonical install への書き込みゼロ**: eval 時間帯 (10:48–10:59) に
+  `data/llm-jp-eval/` 配下の更新なし (最新ファイルは再インストール時刻 10:43–10:44)。
+  旧環境の空 `results/` ディレクトリ (pre-fix の遺物) は掃除済み
+- 補足: この検証で従来の未解決事項「他ユーザーでの実測未実施 (llm-jp グループ
+  限定)」の根本原因 (共有 install への eval 書き込み) が offline / serve とも解消。
+  **v2.1.0 はコード修正のみ** (B200 非対応で CLI 除外のため実行検証は不可)
 
 ## 2026-07-29 ABCI: llm-jp-judge 導入 + offline/serve 両モードテスト
 

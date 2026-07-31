@@ -119,6 +119,18 @@ uv run python scripts/preprocess_dataset.py \
   --output-dir ${ENV_DIR}/data/llm-jp-eval \
   --version-name 2.0.0
 
+# Prefetch eval-time model/tokenizer caches into data/llm-jp-eval so the eval
+# phase needs neither network nor writes to this shared install (COMET -> cache/,
+# HF encoders -> hf/, nltk -> nltk/; read at run time via output_dir/cache
+# symlink, HF_HOME and NLTK_DATA). Shared across v2.x installers. Must run
+# BEFORE the torch override (uv run re-syncs the venv to the lockfile).
+DATA_DIR=${ENV_DIR}/data/llm-jp-eval
+export HF_HOME=${DATA_DIR}/hf
+export NLTK_DATA=${DATA_DIR}/nltk
+mkdir -p "${HF_HOME}" "${NLTK_DATA}" "${DATA_DIR}/cache"
+CUDA_VISIBLE_DEVICES="" uv run python \
+  "${INSTALLER_DIR}/../_common/prefetch_eval_caches.py" "${DATA_DIR}/cache"
+
 # The locked torch (2.6.0/cu124) has no Blackwell (sm_100) kernels; BERTScore
 # and COMET in the eval phase need a cu128 build on B200.
 # NOTE: This must come AFTER the last `uv run` in this project: `uv run`

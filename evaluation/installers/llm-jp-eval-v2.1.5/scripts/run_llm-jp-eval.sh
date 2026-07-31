@@ -79,6 +79,24 @@ RESULT_DIR=${OUTPUT_DIR}/results
 LLM_JP_EVAL_DIR=${ENV_DIR}/src/llm-jp-eval
 DATASET_DIR=${ENV_DIR}/data/llm-jp-eval
 
+# evaluate_llm.py derives three paths from a single --output_dir: the dataset
+# READ root (output_dir/datasets/<ver>/...), the metric cache (output_dir/cache,
+# where the COMET checkpoint lives), and the results WRITE root
+# (output_dir/results). We want results under the user's OUTPUT_DIR while still
+# reading the datasets and COMET checkpoint that were installed (once) into the
+# shared DATASET_DIR. So point --output_dir at OUTPUT_DIR and symlink the two
+# read-only inputs back to the shared install. This removes any write into the
+# shared installation directory (previously a cross-user permission hazard).
+ln -sfnT ${DATASET_DIR}/datasets ${OUTPUT_DIR}/datasets
+ln -sfnT ${DATASET_DIR}/cache    ${OUTPUT_DIR}/cache
+# Shared caches prefetched by install.sh; read-only at eval time.
+EVAL_ENV=(
+    HF_HOME=${DATASET_DIR}/hf
+    NLTK_DATA=${DATASET_DIR}/nltk
+    HF_HUB_OFFLINE=1
+    TRANSFORMERS_OFFLINE=1
+)
+
 CONFIG_FILE=config_base.yaml
 INFERENCE_CONFIG_FILE=inference_config.yaml
 if [ "${BASEMODEL}" = true ]; then
@@ -118,7 +136,7 @@ fi
 
 DUMP_OPTS=(
     --config=${CONFIG_DIR}/${CONFIG_FILE}
-    --output_dir=${DATASET_DIR}
+    --output_dir=${OUTPUT_DIR}
     --eval_dataset_config_path=${EVAL_DATASET_CONFIG_PATH}
     --inference_input_dir=${PROMPT_OUTPUT_DIR}
     --max_num_samples=${MAX_NUM_SAMPLES}
@@ -204,27 +222,23 @@ fi
 INFERENCE_RESULT_DIR=$(find "${OFFLINE_OUTPUT_DIR}" -mindepth 1 -maxdepth 1 -type d | head -n 1)
 EVAL_OPTS=(
     --config=${CONFIG_DIR}/${CONFIG_FILE}
-    # NOTE: OUTPUT_DIRに出力したいが、一部のデータセットはなぜかeval時にdumpを実行する。
-    #  その時、データセットの **読み込み先** として `output_dir` が参照されるため、
-    #  `output_dir` にはデータセットの保存先 (DATASET_DIR) を指定しなければならない。
-    #  それによりevalの結果 (`result.json`) もDATASET_DIRに出力されるので、
-    #  eval結果を最後にOUTPUT_DIRに移動する必要がある。
-    --output_dir=${DATASET_DIR}
+    # output_dir/datasets and output_dir/cache are symlinks to the shared
+    # install (see above), so eval reads the datasets and COMET checkpoint from
+    # there while writing result_${RUN_NAME}.json into ${OUTPUT_DIR}/results.
+    --output_dir=${OUTPUT_DIR}
     --eval_dataset_config_path=${EVAL_DATASET_CONFIG_PATH}
     --inference_result_dir=${INFERENCE_RESULT_DIR}
 )
 
 source ${LLM_JP_EVAL_DIR}/.venv/bin/activate
-python \
+env "${EVAL_ENV[@]}" python \
     ${LLM_JP_EVAL_DIR}/scripts/evaluate_llm.py \
     eval \
     ${EVAL_OPTS[@]}
 deactivate
 
-# Move results to OUTPUT_DIR
-mkdir ${OUTPUT_DIR}/results
-cp ${DATASET_DIR}/results/result_${RUN_NAME}.json ${OUTPUT_DIR}/results/result.json
-rm ${DATASET_DIR}/results/result_${RUN_NAME}.json
+# Normalize the result filename (result_${RUN_NAME}.json -> result.json).
+mv ${RESULT_DIR}/result_${RUN_NAME}.json ${RESULT_DIR}/result.json
 
 # Update result JSON structure
 python3 ${ENV_DIR}/scripts/update_result_json.py ${RESULT_DIR}/result.json

@@ -58,9 +58,29 @@
   (`environment/data/hf/`) に取得し、評価時は `HF_DATASETS_OFFLINE=1` /
   `HF_EVALUATE_OFFLINE=1` で Hub 非接続 (プリフェッチ前の既存環境は従来挙動。
   後付けは `swallow_v202411/scripts/prefetch_en_eval_deps.py` を venv-harness で
-  実行)。llm-jp-eval v2.1.5 は COMET / BERTScore / NLTK をインストール時に取得
-  (インストール時と評価時の HF_HOME を揃えること)。GPQA / AnswerCarefully は
+  実行)。llm-jp-eval v2.x の COMET / BERTScore / NLTK は次項「修正 (重要)」の
+  とおりインストール時に共有キャッシュへ取得する。GPQA / AnswerCarefully は
   gated のためインストール時に承認済み HF_TOKEN が必要
+- **修正 (重要, llm-jp-eval v2.x = v2.1.0 / v2.1.3 / v2.1.5)**: eval の出力先を
+  共有インストール先からユーザーの `OUTPUT_DIR` に変更し、**評価実行中に共有
+  インストールディレクトリへ一切書き込まない**ようにした。従来は
+  `evaluate_llm.py` の `--output_dir` がデータセット読み込み元・メトリクス
+  キャッシュ・結果出力先を兼ねる仕様のため、結果 (`result.json`) と COMET
+  チェックポイントを共有 install の `data/llm-jp-eval/` 配下に書き出しており、
+  インストールした本人以外 (別ユーザー・`llm-jp` グループ非所属) が実行すると
+  パーミッションで失敗し得た。対応として (1) run スクリプトは
+  `--output_dir=${OUTPUT_DIR}` とし、読み込み専用の `datasets` / `cache` だけを
+  `OUTPUT_DIR` に symlink、(2) **インストーラーが eval 時ダウンロード物 (COMET
+  `wmt22-comet-da`、BERTScore の `roberta-large` / `bert-base-multilingual-cased`、
+  nltk `punkt`/`punkt_tab`) を共有キャッシュに事前取得**し、eval フェーズは
+  `HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1` で共有キャッシュを read-only
+  参照する。これによりオフラインノード・グループ非所属ユーザーでも動作する。
+  prefetch ロジックは全 v2.x 共通のため `installers/_common/prefetch_eval_caches.py`
+  に一本化 (バージョン追加時のコピー削減)。offline の `run_llm-jp-eval.sh` と
+  serve の `run_llm-jp-eval-serve.sh` の両方に適用。**反映には該当バージョンの
+  再インストールが必要** (既存環境には prefetch 済みキャッシュ `hf/`・`nltk/` が
+  無いため)。さくら B200 で v2.1.5 / v2.1.3 を offline・serve とも検証済み
+  (v2.1.0 はコード修正のみ; B200 非対応で CLI 除外のため未実行)
 - **変更 (vllm-serve)**: llm-jp-eval の eval フェーズ (BERTScore / COMET) を
   **サーバー停止後**に実行するよう再構成。vLLM 0.19.1 サーバーは
   `--gpu-memory-utilization 0.9` でも GPU をほぼ全量確保するため、従来構成では

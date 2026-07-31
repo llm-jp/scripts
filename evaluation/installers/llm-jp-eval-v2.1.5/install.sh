@@ -103,24 +103,26 @@ uv run python scripts/preprocess_dataset.py \
   --output-dir ${ENV_DIR}/data/llm-jp-eval \
   --version-name ${LLM_JP_EVAL_TAG}
 
+# Prefetch every model/tokenizer the eval phase would otherwise download at
+# runtime, into shared caches under data/llm-jp-eval so that the eval phase
+# needs neither network access nor writes to this installation directory
+# (COMET checkpoint -> cache/, HF encoders -> hf/, nltk data -> nltk/; read at
+# run time via output_dir/cache symlink, HF_HOME and NLTK_DATA respectively).
+# Shared across all v2.x installers; see _common/prefetch_eval_caches.py.
+# Must run BEFORE the torch override below: this uses `uv run`, which re-syncs
+# the venv to the lockfile. CUDA hidden so it works on the GPU-less install node.
+DATA_DIR=${ENV_DIR}/data/llm-jp-eval
+export HF_HOME=${DATA_DIR}/hf
+export NLTK_DATA=${DATA_DIR}/nltk
+mkdir -p "${HF_HOME}" "${NLTK_DATA}" "${DATA_DIR}/cache"
+CUDA_VISIBLE_DEVICES="" uv run python \
+  "${INSTALLER_DIR}/../_common/prefetch_eval_caches.py" "${DATA_DIR}/cache"
+
 # The locked torch (2.6.0/cu124) has no Blackwell (sm_100) kernels; BERTScore
 # and COMET in the eval phase need a cu128 build on B200.
 # NOTE: This must come AFTER the last `uv run` in this project: `uv run`
 # implicitly re-syncs the venv to the lockfile and would revert the override.
 uv pip install --python .venv/bin/python "torch==2.8.0"
-
-# Prefetch eval-phase metric resources so evaluation jobs avoid Hub access:
-# the COMET checkpoint goes to data/llm-jp-eval/cache (the evaluator caches
-# under <output_dir>/cache and the run scripts pass output_dir=data/llm-jp-eval),
-# BERTScore models and the COMET encoder go to the HF hub cache, and NLTK
-# punkt_tab (mifeval) to ~/nltk_data.
-# NOTE: use .venv/bin/python directly, not `uv run` (see the NOTE above).
-if [ -z "${HF_HOME:-}" ]; then
-  >&2 echo "WARNING: HF_HOME is not set; BERTScore/COMET encoder models are prefetched into ~/.cache/huggingface, which evaluation jobs may not use."
-fi
-if ! .venv/bin/python ${INSTALLER_DIR}/scripts/prefetch_metric_resources.py ${ENV_DIR}/data/llm-jp-eval/cache; then
-  >&2 echo "WARNING: metric resource prefetch failed; the eval phase will download the resources from the Hub at run time."
-fi
 
 popd  # llm-jp-eval
 popd  # src

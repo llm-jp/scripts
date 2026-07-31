@@ -4,6 +4,34 @@
 [VALIDATION.md](./VALIDATION.md) を、vllm-serve モードの設計は
 [vllm-serve/README.md](./vllm-serve/README.md) を参照。
 
+## 2026-07-31
+
+- **追加**: `--judge-gen-reasoning-effort {low,medium,high}`。llm-jp-judge の
+  生成リクエストに reasoning_effort を明示的に載せる。**gpt-oss 系 thinking
+  モデルを vLLM 0.15.x でサーブする場合は必須** (サーバーが request の
+  reasoning_effort を無条件にチャットテンプレートへ注入するため、未指定だと
+  None 連結の TypeError で全リクエストが 400 になる)
+- **追加**: `--judge-gen-extract-final`。llm-jp-judge の生成応答から Harmony の
+  reasoning をクライアント側で除去 (最後の 'assistant final' マーカー以降のみ
+  残す)。**thinking モデルの final のみをジャッジに読ませる推奨手段**。
+  vLLM の openai_gptoss reasoning parser は非ストリーミング chat を全バージョン
+  (0.11.2 / 0.15.1 / 0.19.1) で拒否するため、サーバー側パースは使えない
+- **修正**: llm-jp-judge インストーラに upstream クライアントへのパッチを追加:
+  None 値の sampling params を送信前に除去 (JSON null が上記 vLLM バグを誘発)、
+  choices を含まない 200 応答で全体をクラッシュさせず該当サンプルのみ None 扱い
+- **修正 (tf5)**: swallow-tf5 インストーラのデータセットプリフェッチが、隣に
+  ベース swallow 環境があればそのキャッシュを流用するように (tf5 venv の新しい
+  huggingface_hub は `gsm8k` 等の名前空間なしデータセット ID を拒否するため、
+  自前ダウンロードが失敗する)
+- **運用ノート (重要・thinking モデルの llm-jp-judge 推奨設定)**:
+  `--judge-gen-max-tokens 8192 --judge-gen-reasoning-effort medium
+  --judge-gen-extract-final --max-model-len 16384`。
+  この構成で offline / serve ともスコアが成立・整合することを ABCI で確認済み
+  (VALIDATION.md 07-31)。生の Harmony テキストを読ませた場合とはスコアが
+  変わるため、応答範囲を揃えずに比較しないこと
+- **運用ノート (ABCI)**: 計算ノードは外部ネットワーク不可 (github / HF に
+  届かない)。インストールとプリフェッチは必ずログインノードで行うこと
+
 ## 2026-07-29
 
 - **追加**: 生成長・reasoning の制御フラグ (デフォルトはすべて従来挙動):

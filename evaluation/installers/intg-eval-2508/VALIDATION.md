@@ -29,6 +29,8 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 07-29 | さくら | eval フェーズ分割 (--phase) の検証 | OOM 恒久対策の動作確認 |
 | 07-29 | ABCI | llm-jp-judge 導入 + offline/serve テスト (8b-thinking) | serve 完走・スコア取得。thinking モデルの空応答問題を発見 → max-tokens/reasoning-parser 制御を追加 |
 | 07-29 | ABCI | swallow プリフェッチ適用 + オフライン読込確認 | 全10タスク取得 (545MB)、HF_HUB_OFFLINE=1 でも読込 OK |
+| 07-31 | ABCI | v2.1.5 / swallow-tf5 導入 + --basemodel 実機テスト | basemodel AVG 0.583 (さくらと一致)。計算ノードは外部ネットワーク不可と判明 |
+| 07-31 | ABCI | thinking モデル × llm-jp-judge の完動設定確立 | 障害3件を切り分け。effort 明示 + final 抽出で offline/serve ともスコア成立・整合 |
 
 ---
 
@@ -194,20 +196,19 @@ python3 qsub.py llm-jp/llm-jp-4-8b-thinking \
   mt_bench_en 8.26、culture_ja 4.1 (許容 80%)、safety_boundary_ja 2.1
 - offline: ジャッジフェーズが一時的な `APIConnectionError` で失敗 → 生成済み出力に
   対する `--judge-only` 再実行 (ログインノード、GPU 不要) で復旧。**リカバリ機能の実地確認**
-- **thinking モデルの空応答問題を発見**: offline の生成サーバ (judge venv =
-  vllm 0.15.1) は Harmony を自動パースするため、既定 max_tokens=1024 では analysis
-  チャネル途中で打ち切られ content が空 (10/10 件) → 全スコア ≈1 の無効な評価に。
-  serve (共有サーバ vllm 0.11.2) は生テキスト (analysis+final) を返すためスコアは
-  出るが、ジャッジが analysis 込みの応答を読む。**両モードのスコアは thinking
-  モデルでは非互換**
+- **thinking モデルの空応答問題を発見**: offline (judge venv = vllm 0.15.1) の
+  生成応答が 10/10 件空になり全スコア ≈1 の無効な評価に。serve (共有サーバ
+  vllm 0.11.2) は生テキスト (analysis+final) を返すためスコアは出るが、ジャッジが
+  analysis 込みの応答を読む。**両モードのスコアは thinking モデルでは非互換**
+- **【訂正 (07-31)】** 当初この空応答を「max_tokens=1024 で final 到達前に打ち切り」
+  と診断したが誤り。真因は vLLM 0.15.1 が request の reasoning_effort を無条件で
+  チャットテンプレート変数に注入するため、未指定 (None) だと llm-jp-4 系
+  テンプレートの `"Reasoning: " + reasoning_effort` が TypeError → 全リクエスト
+  400 (応答は None)。07-31 ラウンド参照
 - 対策 (コミット e379d7d / 5dae2e1): `--judge-gen-max-tokens` /
-  `--judge-gen-reasoning-parser` (serve では共有サーバへの
-  `--server-reasoning-parser`) / `--llm-jp-eval-max-tokens` /
-  `--llm-jp-eval-reasoning-content-length` を追加し、offline の `--max-model-len`
-  対応も実装。thinking モデルは
-  `--judge-gen-max-tokens 8192 --judge-gen-reasoning-parser openai_gptoss
-  --max-model-len 16384` 程度で「final のみ・十分な生成予算」に統一できる
-  (この設定での再テストは未実施)。ジャッジに読ませる応答範囲の方針は評価チームと要相談
+  `--llm-jp-eval-max-tokens` / `--llm-jp-eval-reasoning-content-length` を追加し、
+  offline の `--max-model-len` 対応も実装。thinking モデルの完動設定は
+  07-31 ラウンドで確立 (reasoning parser はサーバ側では使えないと判明)
 
 ## 2026-07-29 ABCI: swallow データセットプリフェッチの適用
 
@@ -225,3 +226,75 @@ python3 qsub.py llm-jp/llm-jp-4-8b-thinking \
 - オフラインガード付き run-eval.sh / run-swallow-serve.sh をデプロイ済み。
   以後、この環境の swallow 評価はデータセット/メトリクスの Hub アクセスなしで動作
   (評価対象モデルの取得のみオンライン)
+
+## 2026-07-31 ABCI: llm-jp-eval v2.1.5 / swallow-tf5 導入 + --basemodel 実機テスト
+
+保留だった ABCI 側への v2.1.5 / swallow-tf5 導入と、ベースモデル評価モードの
+実機テスト。インストールで得たインフラ知見も記録する。
+
+- **インフラ知見**:
+  - **ABCI 計算ノードは外部ネットワーク不可** (github.com / HF の DNS 解決不能)。
+    インストール・プリフェッチは必ずログインノードで行うこと。ジャッジ API
+    (OPENAI_BASE_URL) は内部エンドポイントのため計算ノードから到達可能
+  - この日のログインノードは DNS が断続的に不安定 (数分おきに瞬断)。
+    インストーラは再実行で前進する (ダウンロード済み分は再利用) ため、
+    リトライループで凌げる
+  - PBS ジョブでは ~/.bashrc が読まれず aqua シム経由の uv が解決できない
+    (実体バイナリを PATH に入れれば動くが、上記の通り計算ノードでは無意味)
+  - **tf5 venv の新しい huggingface_hub は名前空間なしデータセット ID
+    (`gsm8k` 等) の hf:// URI を拒否**するためプリフェッチが失敗する →
+    ベース swallow 環境のキャッシュ流用で解決 (同じ datasets==2.21.0 なので
+    形式互換。インストーラにフォールバックとして組み込み済み)
+- **--basemodel 実機テスト** (llm-jp-4-8b-base, v2.1.5, offline, H100 1枚):
+
+  ```bash
+  python3 qsub.py llm-jp/llm-jp-4-8b-base $RESULTS/basemodel-8b-base-20260731 \
+    --disable-swallow --llm-jp-eval-versions v2.1.5 --basemodel \
+    --pbs-queue rt_HG --rtype rt_HG
+  ```
+
+  **AVG 0.5831** — さくらの serve モード検証 (07-24, 0.583) と一致し、
+  クラスタ間整合を確認。lang_scores の JA/EN 分離出力も確認。
+  メトリクスプリフェッチ済みのため所要 ~7 分
+
+## 2026-07-31 ABCI: thinking モデル × llm-jp-judge の完動設定確立
+
+07-29 に発見した空応答問題の根本解決。障害は 3 件の複合だった:
+
+1. **llm-jp-judge が未設定 sampling params を JSON null で送信**
+   (`reasoning_effort: null`) → インストーラパッチで None 値を送信前に除去
+2. **vLLM 0.15.1 のバグ**: request の reasoning_effort を**無条件で**チャット
+   テンプレート変数に注入 (chat_completion/serving.py) → 未指定だと None が
+   テンプレートの `is not defined` ガードを素通りし `"Reasoning: " + None` の
+   TypeError で全リクエスト 400。**07-29 の offline 空応答の真因はこれ**
+   (max_tokens 打ち切り説は誤診断)。対策: `--gen-reasoning-effort` で明示送信
+3. **vLLM の openai_gptoss reasoning parser は非ストリーミング chat 全滅**:
+   0.11.2 = 500、0.15.1 = HTTP 200 にエラー body (choices=null)、0.19.1 = 501。
+   サーバ側での final 抽出は不可 → `--gen-extract-final` (生成 jsonl の各応答を
+   最後の 'assistant final' マーカー以降に切り詰めるクライアント側後処理) を実装
+
+**完動設定** (llm-jp-4-8b-thinking, ジャッジ llm-jp-4-32b-a3b-thinking, 各10件,
+AnswerCarefully 取得済みで全7ベンチマーク):
+
+```bash
+python3 qsub.py llm-jp/llm-jp-4-8b-thinking $RESULTS/judge-thinking-{offline,serve}-20260731e \
+  --disable-swallow --disable-llm-jp-eval \
+  --llm-jp-judge --judge-model llm-jp-4-32b-a3b-thinking --judge-benchmark-size 10 \
+  --judge-gen-max-tokens 8192 --judge-gen-reasoning-effort medium \
+  --judge-gen-extract-final --max-model-len 16384 \
+  --pbs-queue rt_HG --rtype rt_HG [--vllm-serve]
+```
+
+- 生成成功率 100% (offline = judge venv vllm 0.15.1 / serve = 共有サーバ 0.11.2)。
+  extract-final 後の応答をジャッジが採点
+- **offline vs serve スコア** (生成・ジャッジとも temperature ありのため n=10 では
+  ノイズ幅あり): quality 総合 4.8 / 5.0、mt_bench_ja 9.63 / 9.42、
+  mt_bench_en 7.8 / 7.7、safety_ja 4.7 (違反10%) / 4.7 (違反10%)、
+  safety_boundary 1.9 / 1.9、culture 3.3 / 2.6 → **両モード整合**
+- 参考: 07-29 serve (生 Harmony テキストをジャッジが読んだ場合) は
+  mt_bench_ja 8.21 / quality 4.89 → **final のみを読ませるとスコアが変わる**。
+  比較には応答範囲の統一が必須 (llm-jp-judge のクライアントは
+  message.content しか読まないため、upstream の想定は final のみ)
+- serve ジョブのジャッジフェーズは内部 API への一時的な疎通断で失敗 →
+  ログインノードから `--judge-only` で再実行 (07-29 に続き 2 回目。
+  リカバリ手順として定着)

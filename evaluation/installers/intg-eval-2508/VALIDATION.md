@@ -32,6 +32,9 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 07-29 | ABCI | swallow プリフェッチ適用 + オフライン読込確認 | 全10タスク取得 (545MB)、HF_HUB_OFFLINE=1 でも読込 OK |
 | 07-31 | ABCI | v2.1.5 / swallow-tf5 導入 + --basemodel 実機テスト | basemodel AVG 0.583 (さくらと一致)。計算ノードは外部ネットワーク不可と判明 |
 | 07-31 | ABCI | thinking モデル × llm-jp-judge の完動設定確立 | 障害3件を切り分け。effort 明示 + final 抽出で offline/serve ともスコア成立・整合 |
+| 08-05 | ABCI | eval 出力先 / キャッシュ事前取得 (bc6b95a) の v2.1.5 再インストール + 検証 | prefetch・オフライン eval は成立。**共有 install への書き込みが残存**していることを発見 (eval 時 dump が `datasets/` symlink 経由で書く) |
+| 08-05 | ABCI | 上記の原因特定と修正 (EVAL_OPTS に `--inference_input_dir` / `--max_num_samples`) | eval のみ A/B でスコア 163 個完全一致・書き込み 63→0 件。e2e も 0 件 |
+| 08-07 | ABCI | serve 経路の検証 + vllm-serve 再デプロイ (v2.1.5) | serve も書き込み 0 件で完走。**serve は駆動先バージョンの再インストールを要求する**ことが判明 |
 
 ---
 
@@ -360,3 +363,167 @@ python3 qsub.py llm-jp/llm-jp-4-8b-thinking $RESULTS/judge-thinking-{offline,ser
 - serve ジョブのジャッジフェーズは内部 API への一時的な疎通断で失敗 →
   ログインノードから `--judge-only` で再実行 (07-29 に続き 2 回目。
   リカバリ手順として定着)
+
+## 2026-08-05 ABCI: eval 出力先 / キャッシュ事前取得 (bc6b95a) の再インストール検証
+
+さくらで実施した bc6b95a (eval の出力先を `OUTPUT_DIR` に分離 + eval 時
+ダウンロード物のインストール時プリフェッチ) を ABCI に反映するため、
+v2.1.5 を **in-place 再インストール** して検証した (v2.1.3 は今回対象外。
+ABCI の v2.1.3 は旧 prefetch 未適用で env 内の run スクリプトも旧版のまま
+整合しているため、そのまま動作する)。
+
+```bash
+# 再インストール (ログインノード。計算ノードは外部ネットワーク不可)
+cd installers/llm-jp-eval-v2.1.5
+export HF_HOME=/groups/gcg51557/experiments/0219_dev_eval_script/.cache/huggingface
+export HF_TOKEN=$(grep -m1 '^HF_TOKEN=' ~/.bashrc | cut -d= -f2-)
+bash install.sh /groups/gcg51557/experiments/0230_intg_eval_2509/environment/llm-jp-eval-v2.1.5
+
+# 検証 (PBS rt_HG, H200×1)。results/outputdir-fix-20260805/qsub.sh
+#   A: llm-jp-4-8b-base --basemodel --max_num_samples 100  (07-31 と同一条件)
+#   B: llm-jp-3-150m --max_num_samples 2  (full config, DISABLE_CODE_EXEC=1)
+#   C: A の再実行 (run-to-run 変動の測定)
+```
+
+- **prefetch は期待どおり生成** (~4.3GB): `cache/models--Unbabel--wmt22-comet-da`
+  (ckpt 2.3GB)、`hf/hub/{roberta-large,bert-base-multilingual-cased,xlm-roberta-large}`
+  (2.1GB)、`nltk/tokenizers/{punkt,punkt_tab}` (64MB)。torch は 2.8.0+cu128 のまま
+  (prefetch の `uv run` を torch 上書きより前に置いた効果を確認)。env 内の
+  `run_llm-jp-eval.sh` はリポジトリと完全一致
+- **eval フェーズは完全オフラインで成立**: A/B/C とも exit 0。ログ上 COMET ckpt は
+  `OUTPUT_DIR/cache` symlink 経由でロード、nltk punkt_tab は
+  「already up-to-date」、`HF_HUB_OFFLINE=1` / `TRANSFORMERS_OFFLINE=1` 下で
+  Hub アクセス・接続エラーはゼロ。COMET / BERTScore も算出
+  (B: 163 スコア、`{alt,wikicorpus}-{e-to-j,j-to-e}_comet_wmt22`・
+  `xlsum_ja_bert_score_ja_f1` など)。結果は `OUTPUT_DIR/results/result.json`
+- **発見 (重要): 共有 install への書き込みはゼロになっていない** (原因特定と修正は
+  次節。以下は発見時点の記録)。
+  eval 時 dump が `output_dir/datasets/<ver>/evaluation/test/prompts_<hash>/` に
+  書くが、`OUTPUT_DIR/datasets` は共有 install への symlink なので書き込みが
+  そのまま貫通する。run B で共有 install 配下に 61 ファイル
+  (`data/llm-jp-eval/datasets/2.1.5/evaluation/test/prompts_purSfVDUEf5jut0K2Qzx-A==/`)
+  が新規作成された。当該ディレクトリは `drwxr-s---` でグループ書き込み不可
+  なので、**インストールした本人以外は従来どおり EACCES で失敗し得る**
+  (bc6b95a が解消しようとした問題そのもの)。run A で書き込みが出なかったのは
+  同一 prompt ハッシュのディレクトリが 07-31 の実行で既に存在したためで、
+  ハッシュが変わる (バージョン・config・データセット構成が異なる) 実行では必ず発生する。
+  さくらの 07-29 検証は `results/`・`cache/`・`hf/`・`nltk/` の mtime のみ確認して
+  おり `datasets/` を見ていなかったため取りこぼした
+- **スコア再現性**: v2.1.5 の 8b-base --basemodel AVG は
+  07-31 = 0.58310 / 08-05 run A = 0.58487 / 08-05 run C = 0.58345。
+  A と C は**同一環境・同一設定・同日**でも 77 スコア中 19 個が異なり
+  AVG が 0.0014 動く (`gsm8k`/`mawps`/`mgsm` などで 100 サンプル中 1 件の反転)。
+  よって 07-31→08-05 の +0.0018 は再インストールによる退行ではなく、
+  このパイプライン固有の run-to-run 変動 (vLLM の prefix caching / バッチ依存の
+  数値差、`seed=None`) の範囲内。**AVG の比較は ±0.002 程度を同値とみなすこと**
+- 補足: ABCI 計算ノードは dify-sandbox イメージを pull できないため
+  run B は `DISABLE_CODE_EXEC=1` (mbpp / jhumaneval と CG カテゴリを除外)
+
+## 2026-08-05 ABCI: eval 時 dump による共有 install 書き込みの解消
+
+前節で見つかった書き込みの原因を llm-jp-eval 本体まで追って修正した。
+
+**原因**: `evaluate()` は 1 行目で dump サブコマンドと同じ
+`load_dataset_and_construct_prompt_template(cfg)` を呼ぶ (`evaluator.py:281`)。
+つまり **eval は毎回フルのプロンプト dump を実行する** (旧コメントの
+「一部のデータセットがなぜか eval 時に dump を実行する」は誤り)。dump 先は
+`EvaluationConfig.inference_input_path` で決まり (`schemas.py:200-202`)、
+
+```python
+if self.inference_input_dir is not None:
+    return Path(self.inference_input_dir + f"_{hash_str}")
+return Path(self.target_dataset_dir / f"prompts_{hash_str}")   # ← フォールバック
+```
+
+`target_dataset_dir` は `output_dir/datasets/<ver>/evaluation/<split>`
+(`schemas.py:184`)。run スクリプトは dump フェーズにだけ
+`--inference_input_dir` を渡し eval フェーズには渡していなかったため、
+eval の dump 先が `datasets` symlink 経由で共有 install に落ちていた。
+さらにハッシュ種には `max_num_samples` が含まれる (`schemas.py:190-198`) が
+EVAL_OPTS はこれも渡しておらず、config の既定値 (100) が使われていた。
+`--max_num_samples 100` の run では偶然ハッシュが一致して既存ディレクトリを
+再利用し書き込みが出ず、`2` を指定した run では不一致で新規作成された、という
+挙動の説明もこれで付く。
+
+**修正**: EVAL_OPTS に `--inference_input_dir=${PROMPT_OUTPUT_DIR}` と
+`--max_num_samples=${MAX_NUM_SAMPLES}` を追加 (dump フェーズと同一の値)。
+これで eval は dump 済みの `*.eval-prompt.json` を見つけて
+`prompt_dump_path.exists()` 分岐で再生成をスキップする (`evaluator.py:47-51`)。
+v2.1.0 / v2.1.3 / v2.1.5 の `run_llm-jp-eval.sh` と
+`vllm-serve/scripts/run_llm-jp-eval-serve.sh` の 4 本に適用。
+
+**検証1: eval のみの A/B (`qsub-evalonly.sh`)**。前節 run B の推論結果を流用して
+eval だけを旧 EVAL_OPTS / 新 EVAL_OPTS で実行。生成を伴わないので
+`result.json` を厳密比較できる (生成を含めると後述の run-to-run 変動が乗る)。
+各変種の実行前に共有側の `prompts_purSfVDUEf5jut0K2Qzx-A==` を削除して前提を揃えた。
+
+- **共有 install への書き込み: 旧 63 件 → 新 0 件**
+- **スコアは完全一致**: `scores` 163 個・`lang_scores` とも一致、`records` も一致。
+  差分は `time_profile` (実測時間) と `export_timestamp`、および意図した
+  `config` の項目 (`inference_input_dir`, `inference_input_path`,
+  `max_num_samples` 100→2) のみ。**`--max_num_samples` を eval に渡しても
+  スコアは変わらない**ことの実測確認になる (オフライン評価のサンプルは推論結果
+  ファイル `target_data["samples"]` 由来のため; `evaluator.py:341-343`)
+
+**検証2: 再インストール + e2e (`qsub-e2e.sh`)**。修正版スクリプトを
+canonical 環境に再インストールし (env 内スクリプトはリポジトリと一致確認)、
+pre-fix の遺物 `prompts_kkD0PNH5iF_gPb3O0tj5ow==` も共有側から削除した上で、
+dump→推論→eval のフルパイプラインを 2 構成で実行:
+
+```bash
+bash run_llm-jp-eval.sh llm-jp/llm-jp-3-150m     $OUT/e2e-full-150m --max_num_samples 2
+bash run_llm-jp-eval.sh llm-jp/llm-jp-4-8b-base  $OUT/e2e-basemodel-8b-base --max_num_samples 100 --basemodel
+```
+
+- 両方 exit 0、**共有 install への書き込み 0 件**
+- **eval が dump を再利用していることをログで確認**: dump フェーズで
+  `eval-prompt.json generated` が 61 件、**eval フェーズでは 0 件**。
+  eval の `inference_input_path` は `OUTPUT_DIR/prompts_0x-o3IlYSCB5GqzucObd_g==`
+  (従来は共有側の `datasets/.../prompts_<別ハッシュ>`)
+- 8b-base --basemodel の AVG は 0.58230。同条件 4 回の実測は
+  0.58230 / 0.58310 / 0.58345 / 0.58487 で**幅 0.00257**。修正はこの範囲内で、
+  かつ検証1 でスコア同一性は厳密に示せているため退行なし
+- 注: 150m は `--max_num_samples 2` (1 データセット 2 サンプル) なので 1 件の
+  反転が 50% 動く。生成を含む比較の分解能は低いので、スコア同一性の確認は
+  検証1 の eval-only A/B で行うのが正しい
+
+**未実施**: serve 経路 (`run_llm-jp-eval-serve.sh`) は同じ EVAL_OPTS 構造なので
+同じ修正を入れたが、ABCI では未デプロイ・未実行 (ABCI の
+`environment/vllm-serve` は 07-29 時点の pre-fix 版のままで自己整合している)。
+v2.1.0 / v2.1.3 も同様にコード修正のみ。
+
+## 2026-08-07 ABCI: serve 経路の検証 + vllm-serve 再デプロイ
+
+08-05 の修正は serve の `run_llm-jp-eval-serve.sh` にも入れたが、どのクラスタでも
+serve 経路は未実行だったため ABCI で検証した。ABCI の `environment/vllm-serve` は
+07-29 時点の pre-bc6b95a 版だったので、**先にリポジトリのスクリプトを
+`--experiment-dir` 指定で直接実行して検証し、通ってからデプロイ**した
+(共有環境を壊さない順序)。
+
+```bash
+# 検証 (job 2116105)。results/serve-outputdir-fix-20260807/qsub.sh
+bash <repo>/vllm-serve/scripts/run_eval_serve.sh llm-jp/llm-jp-3-150m $OUT \
+  --experiment-dir /groups/gcg51557/experiments/0230_intg_eval_2509 \
+  --serve-venv <v2.1.5 の vllm venv> --tensor-parallel-size 1 \
+  --gpu-memory-utilization 0.9 --llm-jp-eval-versions v2.1.5 --max-num-samples 2
+
+# デプロイ
+bash <repo>/vllm-serve/install.sh /groups/gcg51557/experiments/0230_intg_eval_2509/environment
+```
+
+- serve 完走 (exit 0)、**共有 install への書き込み 0 件**
+- **eval は dump を再利用**: dump フェーズ 61 件生成 / eval フェーズ 0 件。
+  `inference_input_path` は `OUTPUT_DIR/llm-jp-eval/v2.1.5/prompts_0x-o3IlY...`
+- 結果は `OUTPUT_DIR/llm-jp-eval/v2.1.5/results/result.json` に 163 スコア、
+  COMET / BERTScore も算出 (AVG 0.1192)
+- デプロイ後、`environment/vllm-serve/` の 8 ファイルがリポジトリと一致することを確認
+
+**重要な制約 (この検証で判明)**: `run_llm-jp-eval-serve.sh` はバージョン非依存で、
+`HF_HOME` / `NLTK_DATA` を渡された `VERSION_ENV_DIR` から導出し
+`HF_HUB_OFFLINE=1` で eval する。したがって **新しい serve スクリプトで駆動できる
+のは prefetch 済み (= 07-29 以降のインストーラで再インストールした) バージョンだけ**。
+ABCI 現況では v2.1.5 のみ。v2.1.0 / v2.1.3 を serve 経由で回すと eval フェーズが
+COMET / BERTScore のロードで失敗する (offline 経路は各バージョンの env 内スクリプトを
+使うので影響なし)。v1.4.1 は別スクリプト
+(`run_llm-jp-eval-v1-serve.sh`、COMET/BERTScore を使わない) なので無関係。
+

@@ -4,6 +4,44 @@
 [VALIDATION.md](./VALIDATION.md) を、vllm-serve モードの設計は
 [vllm-serve/README.md](./vllm-serve/README.md) を参照。
 
+## 2026-08-07
+
+- **運用ノート (重要, vllm-serve)**: serve の `run_llm-jp-eval-serve.sh` は
+  バージョン非依存で、`HF_HOME` / `NLTK_DATA` を駆動先の llm-jp-eval 環境から
+  導出し `HF_HUB_OFFLINE=1` で eval する。**07-29 以降のインストーラで
+  再インストールした (= prefetch キャッシュ `hf/`・`nltk/` を持つ) バージョン
+  でないと、serve 経由の eval が COMET / BERTScore のロードで失敗する**。
+  新しい vllm-serve をデプロイしたら、serve で回したい v2.x は再インストール
+  しておくこと (offline 経路は各バージョンの env 内スクリプトを使うため無関係。
+  v1.4.1 は別スクリプトで COMET / BERTScore を使わないため無関係)。
+  ABCI で v2.1.5 の serve 経路を検証済み (書き込み 0 件、VALIDATION.md 08-07)
+
+## 2026-08-05
+
+- **修正 (重要, llm-jp-eval v2.x = v2.1.0 / v2.1.3 / v2.1.5)**: 07-29 の
+  「eval の出力先を `OUTPUT_DIR` に変更」で取り切れていなかった、**eval 時
+  プロンプト dump による共有インストールディレクトリへの書き込みを解消**。
+  `evaluate()` は dump サブコマンドと同じ
+  `load_dataset_and_construct_prompt_template()` を呼ぶため eval も毎回
+  プロンプトを dump するが、EVAL_OPTS に `--inference_input_dir` が無いと
+  dump 先が `output_dir/datasets/<ver>/evaluation/<split>/prompts_<hash>`
+  (= 共有 install への symlink) にフォールバックしていた。対応として
+  EVAL_OPTS に **`--inference_input_dir=${PROMPT_OUTPUT_DIR}` と
+  `--max_num_samples=${MAX_NUM_SAMPLES}`** を追加 (後者は prompt ハッシュの
+  構成要素なので dump と揃える必要がある)。これで eval は dump 済みの
+  プロンプトを再利用し、共有 install への書き込みが完全にゼロになる
+  (無駄な再 dump も無くなる)。v2.1.0 / v2.1.3 / v2.1.5 の
+  `run_llm-jp-eval.sh` と serve の `run_llm-jp-eval-serve.sh` に適用。
+  **反映には該当バージョンの再インストールが必要** (env 内の run スクリプトを
+  差し替えるため)。ABCI で v2.1.5 を再インストールし、eval のみの A/B
+  (スコア 163 個完全一致・書き込み 63→0 件) と e2e (書き込み 0 件) を検証済み。
+  詳細は VALIDATION.md 2026-08-05 の項
+- **運用ノート (スコア比較)**: 同一環境・同一設定でも生成が run-to-run で
+  変動する (vLLM の prefix caching / バッチ依存の数値差、`seed=None`)。
+  8b-base `--basemodel` を 4 回実行した AVG は 0.58230〜0.58487 で**幅 0.0026**。
+  スコアの厳密比較が必要な場合は、既存の推論結果に対して eval のみを
+  再実行して比べること
+
 ## 2026-07-31
 
 - **追加**: `--judge-gen-reasoning-effort {low,medium,high}`。llm-jp-judge の
@@ -62,8 +100,9 @@
   とおりインストール時に共有キャッシュへ取得する。GPQA / AnswerCarefully は
   gated のためインストール時に承認済み HF_TOKEN が必要
 - **修正 (重要, llm-jp-eval v2.x = v2.1.0 / v2.1.3 / v2.1.5)**: eval の出力先を
-  共有インストール先からユーザーの `OUTPUT_DIR` に変更し、**評価実行中に共有
-  インストールディレクトリへ一切書き込まない**ようにした。従来は
+  共有インストール先からユーザーの `OUTPUT_DIR` に変更し、**結果とメトリクス
+  キャッシュを共有インストールディレクトリへ書き込まない**ようにした
+  (この時点では eval 時 dump による書き込みが残っていた。2026-08-05 の項で解消)。従来は
   `evaluate_llm.py` の `--output_dir` がデータセット読み込み元・メトリクス
   キャッシュ・結果出力先を兼ねる仕様のため、結果 (`result.json`) と COMET
   チェックポイントを共有 install の `data/llm-jp-eval/` 配下に書き出しており、
@@ -80,7 +119,7 @@
   serve の `run_llm-jp-eval-serve.sh` の両方に適用。**反映には該当バージョンの
   再インストールが必要** (既存環境には prefetch 済みキャッシュ `hf/`・`nltk/` が
   無いため)。さくら B200 で v2.1.5 / v2.1.3 を offline・serve とも検証済み
-  (v2.1.0 はコード修正のみ; B200 非対応で CLI 除外のため未実行)
+  (v2.1.0 はコード修正のみ; B200 非対応で CLI 除外のため未実行)。
 - **変更 (vllm-serve)**: llm-jp-eval の eval フェーズ (BERTScore / COMET) を
   **サーバー停止後**に実行するよう再構成。vLLM 0.19.1 サーバーは
   `--gpu-memory-utilization 0.9` でも GPU をほぼ全量確保するため、従来構成では

@@ -153,6 +153,16 @@ EVAL_OPTS=(
     # there while writing result_${RUN_NAME}.json into ${OUTPUT_DIR}/results.
     --output_dir=${OUTPUT_DIR}
     --eval_dataset_config_path=${EVAL_DATASET_CONFIG_PATH}
+    # evaluate() starts by calling the same load_dataset_and_construct_prompt_template()
+    # that the dump phase uses, so eval re-dumps the prompts unless it is told where
+    # the dump phase already put them. Without --inference_input_dir the dump target
+    # falls back to output_dir/datasets/<ver>/evaluation/<split>/prompts_<hash>, which
+    # is the symlink to the shared install -- i.e. eval would write in there after all.
+    # --max_num_samples must match the dump phase too: it is part of the prompt hash,
+    # so omitting it makes eval look under a different hash, miss the existing dump and
+    # regenerate it. With both, eval finds every *.eval-prompt.json and writes nothing.
+    --inference_input_dir=${PROMPT_OUTPUT_DIR}
+    --max_num_samples=${MAX_NUM_SAMPLES}
     --inference_result_dir=${INFERENCE_RESULT_DIR}
 )
 

@@ -22,14 +22,18 @@ swallow 英語評価にかけるための環境です。
 `vllm_causallms-vllm010-compat.patch` は `../swallow_v202411` から
 そのままコピーして使用します (単一ソース維持のため本ディレクトリには置きません)。
 
-## 検証状況 (2026-07-20)
+## 検証状況 (2026-08-12)
 
 - CPU (hf バックエンド, `--limit` 付き) で完走確認済み:
   hellaswag / gsm8k / openbookqa / xwinograd_en / squadv2 / triviaqa
-- `lm_eval.models.vllm_causallms` (パッチ適用済み) の vllm 0.19.1 に対する
-  import 互換性確認済み
-- **GPU (vllm バックエンド) は未検証** — 特にパッチの data parallel (mp) 経路と
-  TokensPrompt API は vllm 0.10 向けに書かれており、0.19 での動作確認が必要
+- **GPU (vllm バックエンド, TP=1/DP=1) は ABCI H200 で実機検証済み**
+  (llm-jp-3-150m、EN 全 15 列取得、VALIDATION.md 08-12)。共有パッチの vllm 0.19
+  非互換 2 件 (死にコードの `import ray`、`get_open_port` の移動) はこの検証で
+  発見し修正済み
+- **data parallel (multiprocessing 経路) も TP=1/DP=8 で実機検証済み**
+  (同上、DP=1 とスコア一致 |diff| ≤ 0.001)。vllm 0.19 が拒否する `VLLM_DP_*`
+  方式から、ワーカーごとの独立エンジン (CUDA_VISIBLE_DEVICES スライス) に
+  書き換えた上での検証
 - 既知のメタデータ衝突: xgrammar 0.2.4 が transformers<5 を要求 (`pip check` で
   警告)。xgrammar は guided decoding 用で swallow 評価では使用されないため実行時
   影響はない見込み

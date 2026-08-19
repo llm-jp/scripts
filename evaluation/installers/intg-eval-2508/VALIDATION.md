@@ -9,7 +9,7 @@
 | 呼称 | クラスタ | 環境 (インストール先) | ジョブ投入 |
 |---|---|---|---|
 | さくら | さくらインターネット (Slurm, B200×8/ノード, sm_100, コンテナランタイムなし) | `/data/experiments/0219_dev_eval_script/environment` | `scripts/sbatch.py` |
-| ABCI | ABCI (PBS, H100) | `/groups/gcg51557/experiments/0230_intg_eval_2509/environment` | `scripts/qsub.py` |
+| ABCI | ABCI (PBS, H200) | `/groups/gcg51557/experiments/0230_intg_eval_2509/environment` | `scripts/qsub.py` |
 
 スコア・所要時間の比較には `vllm-serve/compare_results.py` を使用する
 (2 つの出力ディレクトリを渡すと llm-jp-eval / swallow のスコア差分と
@@ -35,6 +35,8 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 08-05 | ABCI | eval 出力先 / キャッシュ事前取得 (bc6b95a) の v2.1.5 再インストール + 検証 | prefetch・オフライン eval は成立。**共有 install への書き込みが残存**していることを発見 (eval 時 dump が `datasets/` symlink 経由で書く) |
 | 08-05 | ABCI | 上記の原因特定と修正 (EVAL_OPTS に `--inference_input_dir` / `--max_num_samples`) | eval のみ A/B でスコア 163 個完全一致・書き込み 63→0 件。e2e も 0 件 |
 | 08-07 | ABCI | serve 経路の検証 + vllm-serve 再デプロイ (v2.1.5) | serve も書き込み 0 件で完走。**serve は駆動先バージョンの再インストールを要求する**ことが判明 |
+| 08-12 | ABCI | qsub.py 配備更新 + swallow-tf5 の GPU (vllm 0.19) 初検証 | パッチの import 非互換 2 件を修正して完走 (150m、EN 15 列取得、68 分) |
+| 08-12 | ABCI | swallow-tf5 の DP>1 (mp 経路) 初検証 | vllm 0.19 の DP モード拒否を独立エンジン方式に書き換えて完走。DP=8 と DP=1 のスコア差 \|diff\| ≤ 0.001 |
 
 ---
 
@@ -73,7 +75,7 @@ python3 sbatch.py llm-jp/llm-jp-3-150m $PWD/results/smoke-test-swallow-tf5-20260
 
 ## 2026-07-23 ABCI: vllm-serve 実 GPU 検証
 
-H100 1 枚、llm-jp/llm-jp-3-150m、swallow_v202411 + llm-jp-eval v2.1.3、
+H200 1 枚、llm-jp/llm-jp-3-150m、swallow_v202411 + llm-jp-eval v2.1.3、
 サーバー venv は vllm 0.11.2 の専用 venv。セットアップと手順は
 `vllm-serve/HANDOFF-ABCI.md` を参照。
 
@@ -246,7 +248,7 @@ llm-jp-judge v2.0.0 サブインストーラを `environment/llm-jp-judge` に�
 (AnswerCarefully は gated 未承認のためスキップ → quality_ja / culture_ja /
 safety_boundary_ja / MT-Bench ja+en の 5 ベンチマークで実施)。
 対象 llm-jp/llm-jp-4-8b-thinking、ジャッジは OpenAI 互換 API 経由の
-llm-jp-4-32b-a3b-thinking、各ベンチマーク 10 件、rt_HG (H100 1 枚)。
+llm-jp-4-32b-a3b-thinking、各ベンチマーク 10 件、rt_HG (H200 1 枚)。
 
 ```bash
 # offline (2079312.pbs1) / serve (2079314.pbs1)
@@ -310,7 +312,7 @@ python3 qsub.py llm-jp/llm-jp-4-8b-thinking \
     (`gsm8k` 等) の hf:// URI を拒否**するためプリフェッチが失敗する →
     ベース swallow 環境のキャッシュ流用で解決 (同じ datasets==2.21.0 なので
     形式互換。インストーラにフォールバックとして組み込み済み)
-- **--basemodel 実機テスト** (llm-jp-4-8b-base, v2.1.5, offline, H100 1枚):
+- **--basemodel 実機テスト** (llm-jp-4-8b-base, v2.1.5, offline, H200 1枚):
 
   ```bash
   python3 qsub.py llm-jp/llm-jp-4-8b-base $RESULTS/basemodel-8b-base-20260731 \
@@ -527,3 +529,78 @@ COMET / BERTScore のロードで失敗する (offline 経路は各バージョ�
 使うので影響なし)。v1.4.1 は別スクリプト
 (`run_llm-jp-eval-v1-serve.sh`、COMET/BERTScore を使わない) なので無関係。
 
+
+## 2026-08-12 ABCI: qsub.py 配備更新 + swallow-tf5 の GPU (vllm バックエンド) 初検証
+
+`--swallow-version v202411-tf5` を ABCI の qsub.py から使えるようにする作業。
+tf5 環境自体は 07-31 に導入済みだったが、(1) 配備側
+`environment/scripts/qsub.py` が旧版 (tf5 choices なし・environment3 参照) の
+ままで、(2) README (tf5) が明記していた通り **GPU (vllm バックエンド) は未検証**
+だった。
+
+- **配備更新**: `environment/scripts/qsub.py` をリポジトリ版に同期 (tf5 choices・
+  vllm-serve・llm-jp-judge 対応が入った現行版)。`qsub_nonbreaking.py` も予約
+  キュー名のみ旧世代 (R9920251000) だったため同期した
+- **1 回目の検証ジョブ (2129450, llm-jp-3-150m, EN ハーネス) は全タスク即死**
+  (result.json 全列 -1.0)。原因は `vllm_causallms-vllm010-compat.patch` が
+  vllm 0.19 で残していた import 非互換 2 件:
+  1. **`import ray` が死にコード**: パッチで ray ベース DP は multiprocessing に
+     置換済みだが import ガード先頭の `import ray` が残存。vllm 0.10 は ray を
+     必須依存で連れてくるため base 環境では顕在化しなかったが、vllm 0.19 は
+     ray 依存を持たないため tf5 venv では ModuleNotFoundError → ガードが
+     握りつぶして実行時 `NameError: name 'LLM' is not defined` になる。
+     07-20 さくらの CPU スモークは hf バックエンドのため素通りしていた
+     (「import 互換性確認済み」も例外が握りつぶされるため検出できていなかった)
+  2. **`vllm.utils.get_open_port` の移動**: vllm 0.19 では
+     `vllm.utils.network_utils` に移動。1 を直すと今度はこれが ImportError で
+     顕在化する (ModuleNotFoundError でないためガードを突き抜けてクラッシュ)
+- **修正**: 共有パッチから `import ray` を削除し、`get_open_port` は旧パス →
+  ImportError なら新パスのフォールバック import に変更 (vllm 0.10 / 0.19 両対応。
+  base 環境のインストール済みファイルは旧世代パッチ由来のため触っていない)。
+  配備済み tf5 の `vllm_causallms.py` には pristine + 新パッチの結果を反映し、
+  venv-harness で import ブロックの解決を確認してから再投入
+- **2 回目 (2129477) は完走** (exit 0、走行 68 分、Traceback 0 件):
+
+  ```bash
+  python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/swallow-tf5-150m-20260812b \
+    --swallow-version v202411-tf5 --disable-llm-jp-eval \
+    --pbs-queue rt_HG --rtype rt_HG
+  ```
+
+  EN 15 列すべて取得: mmlu 0.260 / hellaswag 0.289 / xwinograd_en 0.602 /
+  bbh_cot 0.108 / gsm8k 0.0 / math_500 0.006 / gpqa 0.0 など、150m として
+  妥当な値 (mmlu はチャンスレベル)。JA 列が -1.0 なのは tf5 変種の仕様
+  (EN ハーネスのみ実行)。DP > 1 の multiprocessing 経路は今回未検証 (DP=1)
+
+## 2026-08-12 ABCI: swallow-tf5 の data parallel (mp 経路) 初検証
+
+同日の DP=1 検証に続き、パッチが ray から置換した multiprocessing data parallel
+経路の初の実機検証。rt_HF (H200 ×8)、llm-jp-3-150m、TP=1 / DP=8。
+
+```bash
+python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/swallow-tf5-150m-dp8-20260812c \
+  --swallow-version v202411-tf5 --disable-llm-jp-eval --data-parallel-size 8 \
+  --pbs-queue rt_HF --rtype rt_HF --select 1
+```
+
+3 ジョブを要した (障害 2 件を発見・修正):
+
+1. **vllm 0.19 は dense モデルのオフライン DP モードを拒否** (1 回目 2129845):
+   mp ワーカーは vllm の `VLLM_DP_*` 環境変数方式 (公式 data_parallel.py 例由来)
+   を使っていたが、0.19 は ParallelConfig の検証で
+   `Offline data parallel mode is not supported/useful for dense models` を
+   投げる (この協調は MoE の expert parallel 同期用)。→ **各ワーカーが自分の
+   ランクに対応する `CUDA_VISIBLE_DEVICES` の TP サイズ分スライスを確保して
+   独立エンジンを立てる方式に書き換え** (upstream の旧 ray 実装と同じ考え方。
+   dense / MoE を問わず動き、`get_open_port` も不要になったため 08-12 に
+   入れたフォールバック import ごと削除)
+2. **エンジン再起動時の GPU メモリ解放待ち競合** (2 回目 2129872):
+   lm_eval はリクエストグループごとにエンジンを作り直すが、直前ラウンドの
+   エンジンプロセスの GPU メモリ解放が完了する前に次の初期化が走ると、
+   gpu_memory_utilization=0.9 分の空き確保に失敗して WorkerProc init が死ぬ
+   (最初のタスクは 3 ラウンド成功後の 4 ラウンド目で失敗 → 残骸で後続も連鎖)。
+   → **ワーカーのエンジン初期化に 15 秒間隔 ×3 のリトライを追加**
+3. **3 回目 (2129953) は完走** (exit 0、44 分 vs DP=1 の 68 分)。リトライは
+   実際に 1 回発火して初期化競合を吸収 (ハード失敗 0 件)。**EN 全 15 列で
+   DP=1 と一致**: loglikelihood 系は完全一致が多数、生成系含め最大 |diff|
+   0.001 (mmlu_stem +0.0010)

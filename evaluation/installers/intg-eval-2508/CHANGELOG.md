@@ -4,6 +4,28 @@
 [VALIDATION.md](./VALIDATION.md) を、vllm-serve モードの設計は
 [vllm-serve/README.md](./vllm-serve/README.md) を参照。
 
+## 2026-08-12
+
+- **修正 (swallow_v202411-tf5)**: `vllm_causallms-vllm010-compat.patch` が
+  vllm 0.19 の venv で import に失敗し、**vllm バックエンドの全タスクが
+  `NameError: name 'LLM' is not defined` で即死する問題を解消** (スコアは
+  全列 -1.0 になる)。原因は 2 件: (1) ray ベース DP の置換後も import ガード
+  に残っていた死にコードの `import ray` (vllm 0.19 は ray を依存に持たないため
+  ModuleNotFoundError → ガードが握りつぶし)、(2) vllm 0.19 で
+  `vllm.utils.network_utils` に移動した `get_open_port`。パッチから
+  `import ray` を削除し、`get_open_port` はフォールバック付き import に変更
+  (vllm 0.10 を使う base swallow_v202411 とパッチ共有のまま両対応)。
+  ABCI の配備済み tf5 環境には適用済みで、GPU (vllm バックエンド) の実機検証も
+  今回が初 (llm-jp-3-150m で EN 全 15 列取得、VALIDATION.md 08-12)
+- **修正 (swallow_v202411-tf5, data parallel)**: 同パッチの multiprocessing DP
+  経路が vllm 0.19 で `Offline data parallel mode is not supported/useful for
+  dense models` により全滅する問題を解消。vllm の `VLLM_DP_*` 環境変数方式を
+  やめ、**各ワーカーが `CUDA_VISIBLE_DEVICES` の自ランク分スライスで独立
+  エンジンを立てる方式**に変更 (dense / MoE を問わず動く)。あわせてエンジン
+  再起動時の GPU メモリ解放待ち競合で WorkerProc init が死ぬ問題に初期化
+  リトライ (15s ×3) を追加。DP=8 で完走し DP=1 とスコア一致
+  (|diff| ≤ 0.001、VALIDATION.md 08-12)
+
 ## 2026-08-07
 
 - **運用ノート (重要, vllm-serve)**: serve の `run_llm-jp-eval-serve.sh` は

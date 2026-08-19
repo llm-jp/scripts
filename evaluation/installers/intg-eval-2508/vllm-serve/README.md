@@ -147,7 +147,7 @@ serve_common.sh が activate 相当 (`PATH` 先頭に `<venv>/bin`、`VIRTUAL_EN
 実クラスタ (ABCI / さくら) での検証記録は [../VALIDATION.md](../VALIDATION.md)
 に集約している。要点:
 
-- **スコア一致性は ABCI (H100) とさくら (B200) の両方で確認済み**
+- **スコア一致性は ABCI (H200) とさくら (B200) の両方で確認済み**
   (swallow / llm-jp-eval v1.4.1 / v2.1.3 / v2.1.5)
 - 所要時間はモデルロード削減 + `--client-concurrency` により、
   gpt-oss-120b (TP4, swallow + v2.1.3) 実測でオフライン比 **2.4 倍**

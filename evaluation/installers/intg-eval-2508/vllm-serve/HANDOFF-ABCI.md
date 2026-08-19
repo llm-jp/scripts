@@ -30,7 +30,7 @@ CPU + mock サーバーでのプラミング検証は完了済み。未検証な
   swallow v202411 だが、ABCI には v2.1.5 / tf5 は無い想定。`--serve-venv` で
   明示指定するのが確実
 - ジョブ投入: PBS。`qsub -P gcg51557 -q R9920261000 -v RTYPE=rt_HG -l select=1`
-  (rt_HG = H100 1枚)。インタラクティブは `-I`
+  (rt_HG = H200 1枚)。インタラクティブは `-I`
 - `HF_HOME` は `/groups/gcg51557/experiments/<experiment_dir>/.cache/huggingface`
   配下必須、`HF_TOKEN` 必要
 - ABCI には singularity があるため llm-jp-eval のコード実行系 (mbpp/jhumaneval)

@@ -1,0 +1,6 @@
+# Benchmark data is distributed separately (LLM_Safety_Eva_Web-main.zip) and
+# must not be committed: it is large (~160MB) and includes data derived from
+# gated datasets (AnswerCarefully). Place it here before running install.sh.
+/LLM_Safety_Eva/benchmark_data/
+/LLM_Safety_Eva/data_test/
+/logs/

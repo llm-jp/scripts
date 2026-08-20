@@ -29,7 +29,7 @@ export AZURE_OPENAI_ENDPOINT=https://dummy.openai.azure.com/
 export AZURE_OPENAI_API_KEY=dummy-azure-key
 export OPENAI_API_VERSION=2025-04-01-preview
 unset OPENAI_BASE_URL AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_REGION \
-    INTG_EVAL_EXPERIMENT_DIR 2> /dev/null || true
+    AZURE_OPENAI_DEPLOYMENT_NAME INTG_EVAL_EXPERIMENT_DIR 2> /dev/null || true
 
 UPDATE=false
 if [ "${1:-}" = "--update" ]; then UPDATE=true; fi

@@ -4,6 +4,28 @@
 [VALIDATION.md](./VALIDATION.md) を、vllm-serve モードの設計は
 [vllm-serve/README.md](./vllm-serve/README.md) を参照。
 
+## 2026-08-20
+
+- **追加**: 安全性評価コンポーネント `safety-eval` と `--safety-eval` /
+  `--safety-eval-benchmarks` / `--safety-eval-judge-model` /
+  `--safety-eval-benchmark-size` (qsub.py / sbatch.py)。安全性WG受領の評価
+  コード (LLM_Safety_Eva) で JBBQ / JTruthfulQA / AnswerCarefully /
+  JSocialFact / safety_boundary を評価する。生成はローカル vLLM (venv は
+  動作確認済みの vllm 0.11.2 / transformers 4.57.6 を固定)、採点は JBBQ /
+  JTruthfulQA がローカル (JTruthfulQA 分類器はインストール時プリフェッチ +
+  オフライン参照)、他3ベンチマークがジャッジAPI (Azure OpenAI または
+  OpenAI互換エンドポイント; クレデンシャルはジョブへ転送)。受領コードは
+  原則無改変だが、ジャッジ評価器にのみ OpenAI互換エンドポイント対応
+  (`OPENAI_BASE_URL` / `OPENAI_API_KEY` / モデル名指定) を追加している。
+  集計結果は `<output_dir>/safety-eval/evaluate_count/`。`--vllm-serve` とは
+  非対応。**ベンチマークデータは配布 zip から手動配置が必要** (gated データ
+  由来のためリポジトリ非同梱; 未配置時はインストールを警告スキップ)。詳細は
+  [safety-eval/README.md](./safety-eval/README.md)
+- **訂正 (運用ノート)**: 07-31 の「ABCI 計算ノードは外部ネットワーク不可」は
+  誤り (当時 DNS が不安定だったための誤認)。計算ノードから外部へは到達できる。
+  ただし計算ノードでダウンロード等を行わない方針は維持し、依存物の
+  インストール時プリフェッチは今後も必須とする
+
 ## 2026-08-12
 
 - **修正 (swallow_v202411-tf5)**: `vllm_causallms-vllm010-compat.patch` が

@@ -1,0 +1,165 @@
+models:
+##############################[Qwen]################################
+  # - name: "Qwen/Qwen3-14B"
+  # - name: "Qwen/Qwen3-30B-A3B-Thinking-2507"
+  # - name: "Qwen/Qwen3-30B-A3B"
+##############################[Qwen]################################
+
+##############################[deepseek-ai]################################
+  # - name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+##############################[deepseek-ai]################################
+
+##############################[zai-org]################################
+  # - name: "zai-org/GLM-32B-0414"
+##############################[zai-org]################################
+
+##############################[google]################################
+  # - name: "google/gemma-3-27b-it"
+##############################[google]################################
+
+##############################[meta-llama]################################
+  # - name: "meta-llama/Llama-3.1-8B-Instruct"
+##############################[meta-llama]################################
+
+##############################[microsoft]################################
+  # - name: "microsoft/phi-4"
+##############################[microsoft]################################
+
+##############################[mistralai]################################
+  # - name: 'mistralai/Mistral-7B-Instruct-v0.2'
+##############################[mistralai]################################
+
+##############################[llm-jp]################################      not yet
+  # - name: 'llm-jp/llm-jp-3.1-8x13b-instruct4'
+##############################[llm-jp]################################
+
+##############################[inclusionAI]################################    not yet
+  # - name: 'inclusionAI/Ling-mini-2.0'
+##############################[inclusionAI]################################
+
+##############################[Kwaipilot]################################
+  # - name: 'Kwaipilot/KAT-Dev'
+##############################[Kwaipilot]################################
+
+##############################[jp_model]################################
+  # - name: 'sbintuitions/sarashina2.2-3b-instruct-v0.1'
+  # - name: 'weblab-GENIAC/Tanuki-8x8B-dpo-v1.0'             no Moe
+  # - name: 'cyberagent/calm3-22b-chat-selfimprove-experimental'
+  # - name: 'llm-jp/llm-jp-3-13b-instruct3'
+  # - name: 'llm-jp/llm-jp-3-13b'
+  # - name: 'AXCXEPT/llm-jp-3-3.7b-instruct-EZO-Humanities'
+  # - name: 'llm-jp/llm-jp-13b-v2.0'     wait
+  # - name: 'Fugaku-LLM/Fugaku-LLM-13B'   can not use
+  # - name: 'llm-jp/llm-jp-13b-instruct-full-dolly_en-dolly_ja-ichikara_003_001-oasst_en-oasst_ja-v1.1'    wait
+  # - name: 'llm-jp/llm-jp-13b-v1.0'     wait
+  # - name: 'pfnet/plamo-13b'     wait
+  # - name: 'llm-jp/llm-jp-4-8b-instruct'   
+  # - name: 'llm-jp/llm-jp-4-8b-thinking'   
+  # - name: 'llm-jp/llm-jp-4-32b-a3b-thinking'   
+  # - name: 'Rakuten/RakutenAI-3.0'   
+  # - name: 'elyza/ELYZA-Shortcut-1.0-Qwen-32B'   
+  # - name: 'tokyotech-llm/Llama-3.3-Swallow-70B-Instruct-v0.4'   
+  # - name: 'rinna/qwq-bakeneko-32b'   
+  # - name: 'shisa-ai/shisa-v2-llama3.3-70b'   
+# ##############################[jp_model]################################
+
+##############################[iroiro]################################
+  # - name: 'LiquidAI/LFM2-2.6B'
+  # - name: 'openai/gpt-oss-20b'
+  # - name: 'Rakuten/RakutenAI-7B-chat-awq-g128-int4-asym-onnx-hybrid'   no vllm
+  # - name: 'ibm-granite/granite-3.3-8b-instruct'
+  # - name: 'elyza/ELYZA-Thinking-1.0-Qwen-32B'
+  # - name: 'tokyotech-llm/Llama-3.3-Swallow-70B-Instruct-v0.4'
+  # - name: 'cyberagent/DeepSeek-R1-Distill-Qwen-32B-Japanese'
+  # - name: 'ServiceNow-AI/Apriel-1.5-15b-Thinker'
+  # - name: 'nvidia/NVIDIA-Nemotron-Nano-12B-v2'
+  # - name: 'nvidia/Llama-3_3-Nemotron-Super-49B-v1_5'
+  # - name: 'Alibaba-NLP/gte-Qwen2-7B-instruct'    not yet   ↓
+  # - name: 'leia-llm/Leia-Swallow-13b'
+  # - name: 'cyberagent/Mistral-Nemo-Japanese-Instruct-2408'
+  # - name: 'tokyotech-llm/Gemma-2-Llama-Swallow-9b-pt-v0.1'
+  # - name: 'tokyotech-llm/Llama-3.1-Swallow-8B-v0.5'
+##############################[iroiro]################################
+
+##############################[arimori]################################
+  # - name: 'llm-jp/llm-jp-3.1-13b-instruct4'
+  # - name: 'microsoft/Phi-4-reasoning-plus'    not yet
+  # - name: 'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B'
+  # - name: 'elyza/ELYZA-Shortcut-1.0-Qwen-32B'
+  # - name: 'elyza/ELYZA-Thinking-1.0-Qwen-32B'
+  # - name: 'cyberagent/Mistral-Nemo-Japanese-Instruct-2408'
+  # - name: 'tokyotech-llm/Llama-3.1-Swallow-8B-Instruct-v0.5'
+  # - name: 'tokyotech-llm/Gemma-2-Llama-Swallow-27b-it-v0.1'
+  # - name: 'rinna/qwen2.5-bakeneko-32b-instruct-v2-awq'
+  # - name: 'rinna/qwen2.5-bakeneko-32b-instruct'
+  # - name: 'rinna/deepseek-r1-distill-qwen2.5-bakeneko-32b'
+  # - name: 'Qwen/Qwen3-Omni-30B-A3B-Instruct'
+##############################[arimori]################################
+
+#############################[ended model]################################
+models:
+  # - name: "Qwen/Qwen3-14B"
+  # - name: "Qwen/Qwen3-30B-A3B-Thinking-2507"
+  # - name: "Qwen/Qwen3-30B-A3B"
+  # - name: "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B"
+  # - name: "google/gemma-3-27b-it"     太慢太慢太慢
+  # - name: "meta-llama/Llama-3.1-8B-Instruct"
+  # - name: "microsoft/phi-4"       头不能被8整除
+  # - name: 'mistralai/Mistral-7B-Instruct-v0.2'
+  # - name: 'Kwaipilot/KAT-Dev'
+  # - name: 'cyberagent/calm3-22b-chat-selfimprove-experimental'
+  # - name: 'llm-jp/llm-jp-3-13b-instruct3'
+  # - name: 'llm-jp/llm-jp-3-13b'
+  # - name: 'AXCXEPT/llm-jp-3-3.7b-instruct-EZO-Humanities'
+  # - name: 'sbintuitions/sarashina2.2-3b-instruct-v0.1'
+# jtrustfulqa开始
+  - name: 'LiquidAI/LFM2-2.6B'
+  - name: 'openai/gpt-oss-20b' 
+  # - name: 'ibm-granite/granite-3.3-8b-instruct'
+  # - name: 'elyza/ELYZA-Thinking-1.0-Qwen-32B'
+  # - name: 'cyberagent/DeepSeek-R1-Distill-Qwen-32B-Japanese'
+  # - name: 'ServiceNow-AI/Apriel-1.5-15b-Thinker'
+  # - name: 'nvidia/NVIDIA-Nemotron-Nano-12B-v2'
+  # - name: 'nvidia/Llama-3_3-Nemotron-Super-49B-v1_5'
+  # - name: 'cyberagent/Mistral-Nemo-Japanese-Instruct-2408'
+  # - name: 'tokyotech-llm/Llama-3.1-Swallow-8B-v0.5'
+  # - name: 'llm-jp/llm-jp-3.1-13b-instruct4'
+  # - name: 'deepseek-ai/DeepSeek-R1-0528-Qwen3-8B'
+  # - name: 'tokyotech-llm/Llama-3.1-Swallow-8B-Instruct-v0.5'
+  # - name: 'tokyotech-llm/Gemma-2-Llama-Swallow-27b-it-v0.1'
+  # - name: 'rinna/qwen2.5-bakeneko-32b-instruct-v2-awq'
+  # - name: 'rinna/qwen2.5-bakeneko-32b-instruct'
+  # - name: 'rinna/deepseek-r1-distill-qwen2.5-bakeneko-32b'
+  # - name: 'Qwen/Qwen3-Omni-30B-A3B-Instruct'
+#############################[ended model]################################
+
+evaluation_items:
+#  - toxicity
+#  - jailbreak
+#  - privacy
+#  - bias
+  # - llm_as_a_judge_chatgpt
+  - jbbq
+  # - jtruthfulqa
+
+generate_url: 'http://127.0.0.1:8000/generate'
+load_model_url: 'http://127.0.0.1:8000/load_model'
+
+benchmark_data:
+ # - safety_boundary
+ # - answer_carefully_test
+ - JSocialFact-01-test
+ # - jbbq_age
+ # - jtruthfulqa
+
+eva_prompt:
+  - V1
+  # - safety_boundary_1_0_1
+
+ask_times: 3
+
+tensor_parallel_size: 8
+batch_size: 64
+max_tokens: 4096
+temperature: 1.0
+top_p: 0.95

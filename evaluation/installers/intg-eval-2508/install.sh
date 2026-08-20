@@ -71,4 +71,22 @@ bash install.sh $TARGET_DIR/llm-jp-judge \
   2> ../logs/install-llm-jp-judge.err
 popd
 
+# Safety evaluation (LLM_Safety_Eva). Its benchmark data is not part of this
+# repository (large; includes data derived from the gated AnswerCarefully
+# dataset): stage it from the distribution zip under
+# safety-eval/LLM_Safety_Eva/benchmark_data/ (or point
+# SAFETY_EVAL_BENCHMARK_DATA at it) to enable this component; otherwise it is
+# skipped with a warning. See safety-eval/README.md.
+SAFETY_EVAL_BENCHMARK_DATA=${SAFETY_EVAL_BENCHMARK_DATA:-./safety-eval/LLM_Safety_Eva/benchmark_data}
+if [ -d "${SAFETY_EVAL_BENCHMARK_DATA}" ]; then
+  SAFETY_EVAL_BENCHMARK_DATA=$(realpath "${SAFETY_EVAL_BENCHMARK_DATA}")
+  pushd ./safety-eval/
+  bash install.sh $TARGET_DIR/safety-eval "${SAFETY_EVAL_BENCHMARK_DATA}" \
+    > ../logs/install-safety-eval.out \
+    2> ../logs/install-safety-eval.err
+  popd
+else
+  >&2 echo "WARNING: safety-eval benchmark data not found (${SAFETY_EVAL_BENCHMARK_DATA}); skipping the safety-eval installation. See safety-eval/README.md."
+fi
+
 cp -r scripts/ $TARGET_DIR

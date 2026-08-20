@@ -1,0 +1,2 @@
+ValueError: --safety-eval is not supported with --vllm-serve (its generation phase uses offline vLLM, not the shared server).
+exit_code: 1

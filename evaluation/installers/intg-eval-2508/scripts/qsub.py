@@ -31,6 +31,8 @@ Outputs:
     Swallow evaluation artifacts are written under <output_dir>/swallow (logs in <output_dir>/logs/).
     For each llm-jp-eval version, writes the final evaluation result to
     <output_dir>/llm-jp-eval/<version>/results/result.json (one file per version).
+    With --safety-eval, aggregated safety scores are written to
+    <output_dir>/safety-eval/evaluate_count/.
 """
 import argparse
 import json
@@ -74,6 +76,8 @@ pushd {experiment_dir}/environment
 {llm_jp_eval_template}
 
 {llm_jp_judge_template}
+
+{safety_eval_template}
 """
 
 SWALLOW_TEMPLATE = """\
@@ -135,6 +139,20 @@ bash run_llm-jp-judge.sh \\
 popd
 """
 
+SAFETY_EVAL_TEMPLATE = """\
+# Run the safety evaluation (LLM_Safety_Eva): generation on local vLLM
+# (offline inference), then local evaluators (JBBQ / JTruthfulQA) and a
+# judge API (Azure OpenAI or an OpenAI-compatible endpoint) for the other
+# benchmarks (see safety-eval/README.md).
+pushd safety-eval/
+SAFETY_EVAL_OPTS=({safety_eval_opts})
+bash run_safety-eval.sh \\
+    $MODEL_NAME_OR_PATH \\
+    $OUTPUT_DIR/safety-eval \\
+    "${{SAFETY_EVAL_OPTS[@]}}" > $LOG_DIR/safety-eval.log 2> $LOG_DIR/safety-eval.err
+popd
+"""
+
 # The same output subdirectory structure as qsub_nonbreaking.py
 LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
     "v1.4.1": "llm-jp-eval",
@@ -142,6 +160,11 @@ LLM_JP_EVAL_OUTPUT_SUBDIR_NONBREAKING = {
     "v2.1.3": "llm-jp-eval_v2.1.3",
     "v2.1.5": "llm-jp-eval_v2.1.5",
 }
+
+# Benchmarks of the safety evaluation (safety-eval, LLM_Safety_Eva). The
+# judge benchmarks are scored via the judge API; the others locally.
+SAFETY_EVAL_BENCHMARKS = ("jbbq_age", "jtruthfulqa", "answer_carefully_test", "JSocialFact-01-test", "safety_boundary")
+SAFETY_EVAL_JUDGE_BENCHMARKS = ("answer_carefully_test", "JSocialFact-01-test", "safety_boundary")
 
 # Versions whose run script takes option-style flags (--max_num_samples,
 # --apply_chat_template, ...). v1.4.1 and v2.1.0 take positional arguments.
@@ -181,6 +204,9 @@ def eval_output_targets(args):
     if args.llm_jp_judge:
         targets.append("llm-jp-judge")
         parts.append("llm-jp-judge")
+    if args.safety_eval:
+        targets.append("safety-eval")
+        parts.append("safety-eval")
     return targets, "+".join(parts) or "job"
 
 
@@ -232,6 +258,12 @@ def load_args():
     parser.add_argument("--judge-gen-reasoning-parser", type=str, default=None, help="vLLM reasoning parser for the llm-jp-judge generation server (e.g. 'openai_gptoss'), so the judge reads only the final channel of a thinking model. With --vllm-serve this is applied to the shared server (chat API only; llm-jp-eval/swallow use the completions API and are unaffected).")
     parser.add_argument("--disable-mt-bench", action="store_true", help="Skip mt_bench_en / mt_bench_ja in llm-jp-judge.")
 
+    # Safety evaluation (LLM_Safety_Eva)
+    parser.add_argument("--safety-eval", action="store_true", help="Run the safety evaluation (LLM_Safety_Eva) after the other evaluations. Requires the safety-eval environment installed under <experiment-dir>/environment/safety-eval. The judge-scored benchmarks use Azure OpenAI (AZURE_OPENAI_*) or an OpenAI-compatible endpoint (OPENAI_API_KEY / OPENAI_BASE_URL); the credentials are forwarded into the job. Not supported with --vllm-serve (the generation phase uses offline vLLM).")
+    parser.add_argument("--safety-eval-benchmarks", type=str, nargs="+", default=None, choices=list(SAFETY_EVAL_BENCHMARKS), help=f"Safety-eval benchmarks to run (default: all of {list(SAFETY_EVAL_BENCHMARKS)}). jbbq_age / jtruthfulqa are scored locally; the others via the judge API.")
+    parser.add_argument("--safety-eval-judge-model", type=str, default=None, help="Judge model for the safety-eval judge-scored benchmarks (Azure: deployment name, default gpt-4o-2024-11-20; OpenAI-compatible endpoint: a model name served there).")
+    parser.add_argument("--safety-eval-benchmark-size", type=int, default=None, help="Use only the first N samples of each safety-eval benchmark (default: all samples). Mainly for smoke tests.")
+
     # vllm-serve mode (EXPERIMENTAL)
     parser.add_argument("--vllm-serve", action="store_true", help="Run all evaluations against a single shared vLLM server so the model is loaded once per job (useful for large models). Requires the vllm-serve scripts installed under <experiment-dir>/environment/vllm-serve. --reasoning-parser is not yet implemented in the serve client. Scores follow the vLLM version of the server venv.")
     parser.add_argument("--serve-venv", type=str, default=None, help="venv that provides `vllm serve` (only with --vllm-serve; default: auto-detect, see vllm-serve/README.md).")
@@ -269,6 +301,19 @@ def check_args(args):
             logging.warning("OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
         if args.judge_client == "azure" and not os.environ.get("AZURE_OPENAI_API_KEY"):
             logging.warning("AZURE_OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
+
+    if not args.safety_eval:
+        if args.safety_eval_benchmarks or args.safety_eval_judge_model or args.safety_eval_benchmark_size:
+            raise ValueError("--safety-eval-benchmarks, --safety-eval-judge-model and --safety-eval-benchmark-size require --safety-eval.")
+    else:
+        if args.vllm_serve:
+            raise ValueError("--safety-eval is not supported with --vllm-serve (its generation phase uses offline vLLM, not the shared server).")
+        benchmarks = args.safety_eval_benchmarks or list(SAFETY_EVAL_BENCHMARKS)
+        judge_benchmarks = [b for b in benchmarks if b in SAFETY_EVAL_JUDGE_BENCHMARKS]
+        has_judge_credentials = os.environ.get("AZURE_OPENAI_API_KEY") or (
+            os.environ.get("OPENAI_API_KEY") and os.environ.get("OPENAI_BASE_URL"))
+        if judge_benchmarks and not has_judge_credentials:
+            logging.warning(f"No judge API credentials (AZURE_OPENAI_API_KEY, or OPENAI_API_KEY + OPENAI_BASE_URL) are set; the safety-eval judge phase for {judge_benchmarks} will fail. Set them, or restrict --safety-eval-benchmarks to jbbq_age/jtruthfulqa.")
 
     if args.llm_jp_eval_reasoning_content_length:
         if not args.reasoning_parser:
@@ -331,6 +376,16 @@ def main():
     swallow_template = ""
     llm_jp_eval_template = ""
     llm_jp_judge_template = ""
+    safety_eval_template = ""
+    if args.safety_eval:
+        safety_eval_opts = [f"--tensor-parallel-size {args.tensor_parallel_size}"]
+        if args.safety_eval_benchmarks:
+            safety_eval_opts.append("--benchmarks " + ",".join(args.safety_eval_benchmarks))
+        if args.safety_eval_judge_model:
+            safety_eval_opts.append(f"--judge-model {args.safety_eval_judge_model}")
+        if args.safety_eval_benchmark_size:
+            safety_eval_opts.append(f"--benchmark-size {args.safety_eval_benchmark_size}")
+        safety_eval_template = SAFETY_EVAL_TEMPLATE.format(safety_eval_opts=" ".join(safety_eval_opts))
     if args.llm_jp_judge and not args.vllm_serve:
         judge_opts = [
             f"--judge-client {args.judge_client}",
@@ -474,10 +529,11 @@ def main():
     # Forward judge API credentials into the job script (compute nodes do not
     # inherit the submission environment).
     judge_env_lines = ""
-    if args.llm_jp_judge:
+    if args.llm_jp_judge or args.safety_eval:
         judge_env_vars = (
             "OPENAI_API_KEY", "OPENAI_BASE_URL",
             "AZURE_OPENAI_ENDPOINT", "AZURE_OPENAI_API_KEY", "OPENAI_API_VERSION",
+            "AZURE_OPENAI_DEPLOYMENT_NAME",
             "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION",
         )
         for name in judge_env_vars:
@@ -502,6 +558,7 @@ def main():
         swallow_template=swallow_template,
         llm_jp_eval_template=llm_jp_eval_template,
         llm_jp_judge_template=llm_jp_judge_template,
+        safety_eval_template=safety_eval_template,
         judge_env_lines=judge_env_lines,
         pbs_queue=args.pbs_queue,
     )

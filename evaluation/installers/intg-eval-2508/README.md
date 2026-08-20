@@ -1,6 +1,6 @@
 # 統合評価基盤インストーラ (v2508)
 
-llm-jp-eval、swallow英語評価、llm-jp-judge (LLM-as-a-Judge) を実行可能な統合基盤をインストールするスクリプトです。
+llm-jp-eval、swallow英語評価、llm-jp-judge (LLM-as-a-Judge)、安全性評価 (safety-eval) を実行可能な統合基盤をインストールするスクリプトです。
 
 - 利用者向けの変更履歴: [CHANGELOG.md](./CHANGELOG.md)
 - 実クラスタ (ABCI / さくら) での検証記録 — どのクラスタ・環境でどのコマンドを実行し
@@ -101,6 +101,14 @@ export HF_TOKEN=<HuggingFaceのアクセストークン>
 > 取得できない場合は該当ベンチマークをスキップしてインストールを継続します (詳細は `llm-jp-judge/README.md`)。
 
 > [!NOTE]
+> 安全性評価 (safety-eval) のベンチマークデータはリポジトリに含まれません
+> (gatedデータセット由来のデータを含むため)。安全性WGからの配布zip
+> (`LLM_Safety_Eva_Web-main.zip`) の `benchmark_data/` を
+> `safety-eval/LLM_Safety_Eva/benchmark_data/` に配置してから `install.sh` を
+> 実行してください。未配置の場合、safety-evalコンポーネントは警告してスキップ
+> されます (詳細は `safety-eval/README.md`)。
+
+> [!NOTE]
 > 評価用データセット類は**インストール時に**取得します:
 > - swallow: 全タスクのデータセットと evaluate メトリクスモジュールを環境内キャッシュ (`environment/data/hf/`) にプリフェッチし、評価時は `HF_DATASETS_OFFLINE=1` / `HF_EVALUATE_OFFLINE=1` でHubに接続しません (プリフェッチ済み環境のみ。GPQAはgatedのためインストール時に承認済み `HF_TOKEN` が必要)。
 > - llm-jp-eval v2.1.5: 評価フェーズで使うCOMETチェックポイントを環境内 (`data/llm-jp-eval/cache`) に、BERTScoreモデル等をHFキャッシュにプリフェッチします。**インストール時と評価時で同じ `HF_HOME` を使ってください。**
@@ -180,6 +188,38 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
 > - singularity等のコンテナランタイムがないノードでは、llm-jp-eval v2系のコード実行系データセット (`mbpp`, `jhumaneval`) とCGカテゴリは自動的にスキップされます (`DISABLE_CODE_EXEC=1` で明示的な無効化も可能)。そのためAVGスコアはコード実行を含む環境での結果と直接比較できません。なおllm-jp-eval v1.4.1のmbppはインプロセスの`exec()`で評価されるため、コンテナランタイムなしでも実行されます。
 > - llm-jp-eval v2.1.0はvllm 0.9.0.1 / torch 2.7.0 (cu126) に依存しており、Blackwell世代 (B200等, sm_100) のGPUでは動作しない可能性があります。その場合はvllm 0.11.2 / torch 2.9.0 (cu128) を使用するv2.1.3、またはvllm 0.19.1 / torch 2.10.0を使用するv2.1.5を利用してください。
 > - llm-jp-eval v2.1.5は本インストーラ作成時点 (2026-07-20) の最新リリースです。llm-jp-eval-inferenceにはリリースタグがないため、同時点の最新コミット (`c6cd0fa`) を固定しています。v2.1.3までで必要だったHarmony再エンコードパッチはupstreamに取り込み済みのため適用しません。v2.1.5ではデータセットに`jculture_mcq`・`jfinqa`・`structeval`が追加されているため、AVGスコアはv2.1.3以前と直接比較できません。
+
+### 安全性評価 (safety-eval) の実行
+
+安全性WG受領の安全性評価 (JBBQ / JTruthfulQA / AnswerCarefully /
+JSocialFact / safety_boundary) を実行する場合は `--safety-eval` を指定します。
+
+```bash
+# ジャッジAPI (judge採点系ベンチマークに必要、いずれか):
+export AZURE_OPENAI_API_KEY=... AZURE_OPENAI_ENDPOINT=...   # Azure OpenAI
+export OPENAI_API_KEY=... OPENAI_BASE_URL=...               # OpenAI互換サーバー
+
+python3 $INSTALL_DIR/scripts/sbatch.py \
+  <model_name_or_absolute_path> \
+  <output_dir_absolute_path> \
+  --experiment-dir <実験ディレクトリ> \
+  --safety-eval \
+  [--safety-eval-benchmarks jbbq_age jtruthfulqa answer_carefully_test JSocialFact-01-test safety_boundary] \
+  [--safety-eval-judge-model <ジャッジモデル名>] \
+  [--safety-eval-benchmark-size N]
+```
+
+- 生成はローカルvLLM (オフライン推論)、採点は `jbbq_age` / `jtruthfulqa` が
+  ローカル評価器、その他3ベンチマークがジャッジAPI (Azure OpenAI または
+  OpenAI互換エンドポイント。両方設定時はAzure優先) です。クレデンシャルは
+  投入時の環境変数からジョブスクリプトへ埋め込まれます。OpenAI互換サーバーを
+  使う場合は `--safety-eval-judge-model` でそのサーバーが提供するモデル名を
+  指定してください。ジャッジAPIを使わない場合は
+  `--safety-eval-benchmarks jbbq_age jtruthfulqa` を指定してください。
+- 集計結果は `<output_dir>/safety-eval/evaluate_count/` に出力されます。
+- `--vllm-serve` とは併用できません (生成がオフライン推論のため)。
+- 詳細 (単体実行、出力レイアウト、実装メモ) は `safety-eval/README.md` を
+  参照してください。
 
 ### ジョブ形式での実行 (on ABCI)
 

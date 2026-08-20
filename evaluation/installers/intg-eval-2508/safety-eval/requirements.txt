@@ -1,0 +1,12 @@
+# Pinned to the versions the safety evaluation was verified with
+# (LLM_Safety_Eva/llm_safety_latest_versions.txt; torch 2.9.0+cu128 is pulled
+# in by the vllm pin). The full verified freeze is kept for reference in
+# LLM_Safety_Eva/llm_safety_latest_working.txt.
+vllm==0.11.2
+transformers==4.57.6
+tokenizers==0.22.2
+huggingface_hub==0.36.2
+pyyaml
+jinja2
+tqdm
+requests

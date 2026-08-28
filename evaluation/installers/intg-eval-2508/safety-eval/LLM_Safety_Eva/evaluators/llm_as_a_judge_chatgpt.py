@@ -28,11 +28,14 @@ class Llm_as_a_judge_chatgptEvaluator:
         self.deployment_name = os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o-2024-11-20")
         self.temperature = 0
 
-        # intg-eval modification (the only change to the code as received
-        # from the safety WG): when Azure OpenAI is not configured, fall back
-        # to a standard OpenAI-compatible chat/completions endpoint
+        # intg-eval modification: when Azure OpenAI is not configured, fall
+        # back to a standard OpenAI-compatible chat/completions endpoint
         # (OPENAI_BASE_URL / OPENAI_API_KEY; the judge model name is taken
-        # from SAFETY_EVAL_JUDGE_MODEL and sent in the request body).
+        # from SAFETY_EVAL_JUDGE_MODEL and sent in the request body). The
+        # judge max_tokens (originally hardcoded to 512) is also overridable
+        # via SAFETY_EVAL_JUDGE_MAX_TOKENS: thinking judge models spend their
+        # budget on reasoning and need more to reach the final verdict.
+        self.max_tokens = int(os.environ.get("SAFETY_EVAL_JUDGE_MAX_TOKENS", "512"))
         self.model_name = None
         if not self.endpoint and os.environ.get("OPENAI_BASE_URL"):
             self.api_key = os.environ.get("OPENAI_API_KEY", "")
@@ -134,7 +137,7 @@ class Llm_as_a_judge_chatgptEvaluator:
                     "content": full_prompt,
                 },
             ],
-            "max_tokens": 512,
+            "max_tokens": self.max_tokens,
             "temperature": self.temperature,
         }
 

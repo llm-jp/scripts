@@ -1,2 +1,2 @@
-ValueError: --safety-eval-benchmarks, --safety-eval-judge-model and --safety-eval-benchmark-size require --safety-eval.
+ValueError: --safety-eval-benchmarks, --safety-eval-judge-model, --safety-eval-judge-max-tokens and --safety-eval-benchmark-size require --safety-eval.
 exit_code: 1

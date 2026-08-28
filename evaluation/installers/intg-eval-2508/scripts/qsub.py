@@ -262,6 +262,7 @@ def load_args():
     parser.add_argument("--safety-eval", action="store_true", help="Run the safety evaluation (LLM_Safety_Eva) after the other evaluations. Requires the safety-eval environment installed under <experiment-dir>/environment/safety-eval. The judge-scored benchmarks use Azure OpenAI (AZURE_OPENAI_*) or an OpenAI-compatible endpoint (OPENAI_API_KEY / OPENAI_BASE_URL); the credentials are forwarded into the job. Not supported with --vllm-serve (the generation phase uses offline vLLM).")
     parser.add_argument("--safety-eval-benchmarks", type=str, nargs="+", default=None, choices=list(SAFETY_EVAL_BENCHMARKS), help=f"Safety-eval benchmarks to run (default: all of {list(SAFETY_EVAL_BENCHMARKS)}). jbbq_age / jtruthfulqa are scored locally; the others via the judge API.")
     parser.add_argument("--safety-eval-judge-model", type=str, default=None, help="Judge model for the safety-eval judge-scored benchmarks (Azure: deployment name, default gpt-4o-2024-11-20; OpenAI-compatible endpoint: a model name served there).")
+    parser.add_argument("--safety-eval-judge-max-tokens", type=int, default=None, help="max_tokens for each safety-eval judge request (default: 512). Thinking judge models spend the budget on reasoning first and need more (e.g. 2048) to reach the final verdict.")
     parser.add_argument("--safety-eval-benchmark-size", type=int, default=None, help="Use only the first N samples of each safety-eval benchmark (default: all samples). Mainly for smoke tests.")
 
     # vllm-serve mode (EXPERIMENTAL)
@@ -303,8 +304,8 @@ def check_args(args):
             logging.warning("AZURE_OPENAI_API_KEY is not set; the judge phase will fail unless credentials are provided via a .env file in the llm-jp-judge checkout.")
 
     if not args.safety_eval:
-        if args.safety_eval_benchmarks or args.safety_eval_judge_model or args.safety_eval_benchmark_size:
-            raise ValueError("--safety-eval-benchmarks, --safety-eval-judge-model and --safety-eval-benchmark-size require --safety-eval.")
+        if args.safety_eval_benchmarks or args.safety_eval_judge_model or args.safety_eval_judge_max_tokens or args.safety_eval_benchmark_size:
+            raise ValueError("--safety-eval-benchmarks, --safety-eval-judge-model, --safety-eval-judge-max-tokens and --safety-eval-benchmark-size require --safety-eval.")
     else:
         if args.vllm_serve:
             raise ValueError("--safety-eval is not supported with --vllm-serve (its generation phase uses offline vLLM, not the shared server).")
@@ -383,6 +384,8 @@ def main():
             safety_eval_opts.append("--benchmarks " + ",".join(args.safety_eval_benchmarks))
         if args.safety_eval_judge_model:
             safety_eval_opts.append(f"--judge-model {args.safety_eval_judge_model}")
+        if args.safety_eval_judge_max_tokens:
+            safety_eval_opts.append(f"--judge-max-tokens {args.safety_eval_judge_max_tokens}")
         if args.safety_eval_benchmark_size:
             safety_eval_opts.append(f"--benchmark-size {args.safety_eval_benchmark_size}")
         safety_eval_template = SAFETY_EVAL_TEMPLATE.format(safety_eval_opts=" ".join(safety_eval_opts))

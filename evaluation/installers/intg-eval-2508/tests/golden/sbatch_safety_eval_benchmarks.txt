@@ -54,7 +54,7 @@ pushd /data/experiments/0219_dev_eval_script/environment
 # judge API (Azure OpenAI or an OpenAI-compatible endpoint) for the other
 # benchmarks (see safety-eval/README.md).
 pushd safety-eval/
-SAFETY_EVAL_OPTS=(--tensor-parallel-size 1 --benchmarks jbbq_age,jtruthfulqa --judge-model dummy/judge-model --benchmark-size 5)
+SAFETY_EVAL_OPTS=(--tensor-parallel-size 1 --benchmarks jbbq_age,jtruthfulqa --judge-model dummy/judge-model --judge-max-tokens 2048 --benchmark-size 5)
 bash run_safety-eval.sh \
     $MODEL_NAME_OR_PATH \
     $OUTPUT_DIR/safety-eval \

@@ -4,6 +4,29 @@
 [VALIDATION.md](./VALIDATION.md) を、vllm-serve モードの設計は
 [vllm-serve/README.md](./vllm-serve/README.md) を参照。
 
+## 2026-08-28
+
+- **修正 (safety-eval)**: JTruthfulQA の評価フェーズが
+  `ImportError: You need to install rhoknp to use JumanppTokenizer` で失敗する
+  問題を解消 (ABCI e2e で発覚)。分類器 `nlp-waseda/roberta_jtruthfulqa` の
+  トークナイザは Juman++ 前提 (`word_tokenizer_type: jumanpp`) のため、
+  インストーラが `rhoknp` (venv) と Juman++ v2.0.0-rc4 (環境内ソースビルド、
+  cmake + C++ コンパイラ必要) を導入し、プリフェッチ時に分類器のロード +
+  1件分類のスモークテストを行うようにした。`run_safety-eval.sh` は
+  JTruthfulQA パスで環境内 jumanpp を PATH に追加する。
+  **反映には safety-eval の再インストールが必要**
+- **修正 (safety-eval)**: JTruthfulQA 分類器の入力を先頭1000文字に制限
+  (受領コードへの変更としてコメント明示)。トークナイザは128トークンで切る
+  ためスコアは不変だが、無制限だと長大な生成 (thinking モデルやベースモデルの
+  暴走出力) に対する Juman++ 前処理が「returned empty result」で失敗し、
+  該当サンプルが invalid 扱いになっていた (ABCI e2e で 11/15 件が invalid)
+- **追加 (safety-eval)**: `--safety-eval-judge-max-tokens` (qsub.py /
+  sbatch.py) と `--judge-max-tokens` (run_safety-eval.sh)。ジャッジ1リクエスト
+  の max_tokens (受領コードでは512固定) を上書きする。**thinking系のジャッジ
+  モデルは reasoning で512を使い切り本文 (「評価：[[N]]」) が空になる**ため、
+  その場合は 2048 程度が必須 (ABCI内部サーバーの gemma-4-31B-it で実測:
+  reasoning ~1900トークン → 512では全件 None、2048で正常採点)
+
 ## 2026-08-20
 
 - **追加**: 安全性評価コンポーネント `safety-eval` と `--safety-eval` /

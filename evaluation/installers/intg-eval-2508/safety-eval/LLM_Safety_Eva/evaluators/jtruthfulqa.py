@@ -55,6 +55,14 @@ class JtruthfulqaEvaluator:
         model_output = "" if response is None else str(response)
         eval_input = f"{original_question} {model_output}"
 
+        # intg-eval modification: cap the classifier input length. The
+        # tokenizer truncates to 128 tokens anyway, but its Juman++
+        # pre-tokenization runs on the full string first and fails with
+        # "Juman++ returned empty result" on very long generations, which
+        # would be recorded as invalid samples. 1000 chars safely covers
+        # 128 tokens, so scores of previously-working inputs are unchanged.
+        eval_input = eval_input[:1000]
+
         # Keep classifier calls serialized. This is slower but avoids surprises
         # when evaluate.py uses ThreadPoolExecutor.
         with self._predict_lock:

@@ -124,15 +124,56 @@ set > installer_envvar.log
 uv venv venv --python 3.10
 uv pip install --python venv/bin/python -r requirements.txt
 
-# Prefetch the JTruthfulQA classifier into the environment-local HF cache;
-# run_safety-eval.sh points HF_HOME here (with HF_HUB_OFFLINE=1) during the
-# JTruthfulQA evaluation phase.
-mkdir -p ${ENV_DIR}/data/hf
-HF_HOME=${ENV_DIR}/data/hf venv/bin/python - <<'PYEOF'
-from huggingface_hub import snapshot_download
+# Build Juman++ into the environment: the JTruthfulQA classifier's tokenizer
+# (BertJapaneseTokenizer with word_tokenizer_type "jumanpp") shells out to
+# the `jumanpp` binary through rhoknp. Requires cmake and a C++ compiler.
+# NOTE: the dictionary path (libexec/jumanpp/jumandic.jppmdl) is baked into
+# the binary from CMAKE_INSTALL_PREFIX at build time — always build with the
+# final prefix; a binary copied from elsewhere fails with "Juman++ exited
+# unexpectedly" once its original prefix disappears.
+JUMANPP_VERSION=2.0.0-rc4
+if [ ! -x ${ENV_DIR}/jumanpp/bin/jumanpp ]; then
+  mkdir -p src
+  pushd src
+  if [ ! -d jumanpp-${JUMANPP_VERSION} ]; then
+    curl -LsSf -o jumanpp-${JUMANPP_VERSION}.tar.xz \
+      https://github.com/ku-nlp/jumanpp/releases/download/v${JUMANPP_VERSION}/jumanpp-${JUMANPP_VERSION}.tar.xz
+    tar -xf jumanpp-${JUMANPP_VERSION}.tar.xz
+  fi
+  pushd jumanpp-${JUMANPP_VERSION}
+  # Always configure from a clean build dir: a build tree cached for another
+  # prefix would keep the old baked-in dictionary path (see the NOTE above).
+  rm -rf build
+  mkdir -p build
+  pushd build
+  cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${ENV_DIR}/jumanpp
+  make install -j $(nproc)
+  popd  # build
+  popd  # jumanpp-${JUMANPP_VERSION}
+  popd  # src
+fi
 
-snapshot_download("nlp-waseda/roberta_jtruthfulqa")
-print("prefetched: nlp-waseda/roberta_jtruthfulqa")
+# Prefetch the JTruthfulQA classifier into the environment-local HF cache and
+# verify it loads (tokenizer + one classification, CPU); run_safety-eval.sh
+# points HF_HOME here (with HF_HUB_OFFLINE=1) during the JTruthfulQA
+# evaluation phase.
+mkdir -p ${ENV_DIR}/data/hf
+PATH=${ENV_DIR}/jumanpp/bin:${PATH} HF_HOME=${ENV_DIR}/data/hf venv/bin/python - <<'PYEOF'
+from huggingface_hub import snapshot_download
+from transformers import AutoModelForSequenceClassification, AutoTokenizer, pipeline
+
+name = "nlp-waseda/roberta_jtruthfulqa"
+snapshot_download(name)
+print(f"prefetched: {name}")
+
+classifier = pipeline(
+    "text-classification",
+    model=AutoModelForSequenceClassification.from_pretrained(name),
+    tokenizer=AutoTokenizer.from_pretrained(name, truncation=True, model_max_length=128),
+    device=-1,
+    truncation=True,
+)
+print("classifier smoke test:", classifier("日本の首都はどこですか。 東京です。")[0])
 PYEOF
 
 popd  # $ENV_DIR

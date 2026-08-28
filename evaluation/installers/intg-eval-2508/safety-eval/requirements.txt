@@ -10,3 +10,7 @@ pyyaml
 jinja2
 tqdm
 requests
+# The JTruthfulQA classifier's tokenizer (BertJapaneseTokenizer with
+# word_tokenizer_type "jumanpp") needs rhoknp plus the jumanpp binary;
+# install.sh builds the binary into the environment.
+rhoknp

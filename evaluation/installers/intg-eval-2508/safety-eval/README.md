@@ -58,6 +58,10 @@ bash install.sh $INSTALL_DIR/safety-eval [BENCHMARK_DATA_DIR] \
   環境内キャッシュ (`environment/data/hf/`) にプリフェッチされ、評価時は
   `HF_HUB_OFFLINE=1` で参照します (計算ノードでのダウンロード作業を避けるため)。
   インストールはログインノード等で実行してください。
+- この分類器のトークナイザは Juman++ を必要とするため (`word_tokenizer_type:
+  jumanpp`)、インストーラが Juman++ v2.0.0-rc4 を環境内
+  (`environment/jumanpp/`) にソースビルドします (cmake と C++ コンパイラが
+  必要)。評価時は `run_safety-eval.sh` が PATH に追加します。
 
 ## 実行
 
@@ -91,6 +95,9 @@ bash $INSTALL_DIR/safety-eval/run_safety-eval.sh \
 - `--judge-model` はジャッジのモデル名です (Azure: デプロイメント名、既定
   `gpt-4o-2024-11-20`; OpenAI互換: そのサーバーが提供するモデル名。OpenAI互換
   サーバーでは通常指定が必要です)。
+- `--judge-max-tokens N` はジャッジ1リクエストの max_tokens です (既定 512)。
+  **thinking系のジャッジモデルは reasoning で予算を使い切って本文が空になる**
+  ため、2048 程度を指定してください (例: ABCI内部サーバーの `gemma-4-31B-it`)。
 - `--benchmark-size N` は各ベンチマークの先頭Nサンプルだけで実行します
   (スモークテスト用。生成済み `model_output/` はそのまま再利用される点に注意)。
 - 生成済みの `model_output/` があるベンチマークはスキップされるため、中断後の
@@ -110,12 +117,20 @@ bash $INSTALL_DIR/safety-eval/run_safety-eval.sh \
 
 ## 実装メモ
 
-- 受領コードは原則無改変で使う方針です。唯一の変更は
-  `evaluators/llm_as_a_judge_chatgpt.py` への OpenAI互換エンドポイント対応の
-  追加です (`AZURE_OPENAI_ENDPOINT` 未設定かつ `OPENAI_BASE_URL` 設定時に
-  標準の `chat/completions` + Bearer認証で呼び、モデル名は環境変数
-  `SAFETY_EVAL_JUDGE_MODEL` から取る。変更箇所には
-  「intg-eval modification」コメントを付与)。CWD相対でconfig/データ/出力を解決するため、
+- 受領コードは原則無改変で使う方針です。変更は以下の3点のみで、変更箇所には
+  「intg-eval modification」コメントを付与しています:
+  1. `evaluators/llm_as_a_judge_chatgpt.py`: OpenAI互換エンドポイント対応
+     (`AZURE_OPENAI_ENDPOINT` 未設定かつ `OPENAI_BASE_URL` 設定時に標準の
+     `chat/completions` + Bearer認証で呼び、モデル名は環境変数
+     `SAFETY_EVAL_JUDGE_MODEL` から取る)
+  2. `evaluators/llm_as_a_judge_chatgpt.py`: ジャッジの max_tokens
+     (元は512固定) を環境変数 `SAFETY_EVAL_JUDGE_MAX_TOKENS` で上書き可能に
+     (thinking系ジャッジ対応)
+  3. `evaluators/jtruthfulqa.py`: 分類器入力を先頭1000文字に制限 (トークナイザ
+     は128トークンで切るためスコア不変。無制限だと長大な生成に対する Juman++
+     前処理が「empty result」で失敗し、該当サンプルが invalid になる)
+
+  CWD相対でconfig/データ/出力を解決するため、
   `run_safety-eval.sh` は `<output_dir>/work/` にコードの作業コピーを作り
   (benchmark_data はインストール先への symlink、出力3ディレクトリは
   `<output_dir>` 直下への symlink)、そこから実行します。共有インストール

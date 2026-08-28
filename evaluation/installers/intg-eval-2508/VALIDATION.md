@@ -37,6 +37,7 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 08-07 | ABCI | serve 経路の検証 + vllm-serve 再デプロイ (v2.1.5) | serve も書き込み 0 件で完走。**serve は駆動先バージョンの再インストールを要求する**ことが判明 |
 | 08-12 | ABCI | qsub.py 配備更新 + swallow-tf5 の GPU (vllm 0.19) 初検証 | パッチの import 非互換 2 件を修正して完走 (150m、EN 15 列取得、68 分) |
 | 08-12 | ABCI | swallow-tf5 の DP>1 (mp 経路) 初検証 | vllm 0.19 の DP モード拒否を独立エンジン方式に書き換えて完走。DP=8 と DP=1 のスコア差 \|diff\| ≤ 0.001 |
+| 08-28 | ABCI | safety-eval 導入 + e2e 検証 (150m, 全5ベンチマーク) | 障害3件 (Juman++ 依存欠落 / thinking ジャッジの max_tokens / 長大生成での Juman++ 失敗) を修正して完走。共有 install への書き込み 0 件 |
 
 ---
 
@@ -604,3 +605,61 @@ python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/swallow-tf5-150m-dp8-20260812c \
    実際に 1 回発火して初期化競合を吸収 (ハード失敗 0 件)。**EN 全 15 列で
    DP=1 と一致**: loglikelihood 系は完全一致が多数、生成系含め最大 |diff|
    0.001 (mmlu_stem +0.0010)
+
+## 2026-08-28 ABCI: safety-eval 導入 + e2e 検証
+
+安全性評価コンポーネント (b18a64e で追加) の初の実機 e2e。環境は 0230
+(`environment/safety-eval` に install.sh でインストール、venv は vllm 0.11.2 /
+transformers 4.57.6 / Python 3.10、JTruthfulQA 分類器プリフェッチ済み)。
+ターゲットは llm-jp/llm-jp-3-150m、全 5 ベンチマーク × 先頭 5 サンプル
+(`--safety-eval-benchmark-size 5`、ask_times=3 → 各 15 生成)、ジャッジは
+ABCI 内部 OpenAI 互換サーバーの gemma-4-31B-it。
+
+```bash
+python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/safety-eval-150m-20260828 \
+  --experiment-dir /groups/gcg51557/experiments/0230_intg_eval_2509 \
+  --disable-swallow --disable-llm-jp-eval \
+  --safety-eval --safety-eval-judge-model gemma-4-31B-it \
+  --safety-eval-judge-max-tokens 2048 --safety-eval-benchmark-size 5 \
+  --pbs-queue rt_HG --rtype rt_HG
+```
+
+- **1 回目 (2181773)**: 生成 (vLLM オフライン、VLLM_USE_V1=0 設定込みの受領
+  コードのまま) と jbbq / judge 系 3 ベンチマークの評価は完走したが、障害 2 件:
+  1. **JTruthfulQA が ImportError (rhoknp)**: 分類器
+     `nlp-waseda/roberta_jtruthfulqa` のトークナイザは
+     `word_tokenizer_type: jumanpp` で、rhoknp + jumanpp バイナリが必須。
+     安全性WGの動作確認 freeze (`llm_safety_latest_working.txt`) にも
+     rhoknp 系は無く、この経路は先方環境でも OS 側依存だった模様。
+     → インストーラに rhoknp (venv) と Juman++ v2.0.0-rc4 の環境内ソース
+     ビルドを追加し、プリフェッチ時に分類器ロード + 1 件分類のスモークを実施
+  2. **V1 ジャッジのスコアが全件 None** (集計は欠損補完の 3.0 になり一見
+     成立するので注意): このサーバーの gemma-4-31B-it は reasoning に
+     ~1900 トークン使うため、受領コード固定の max_tokens=512 では本文が空
+     (finish_reason=length)。max_tokens=2048 のプローブでは
+     「評価：[[3]]」まで完走、非 thinking の llm-jp-4-8b-instruct は 512 で
+     完走することを確認。→ `--safety-eval-judge-max-tokens` /
+     `--judge-max-tokens` (env `SAFETY_EVAL_JUDGE_MAX_TOKENS`) を追加
+  - あわせて **長大生成での Juman++ 失敗** も発見: ベースモデルの暴走出力
+    (~4096 トークン) への Juman++ 前処理が「returned empty result」で失敗し
+    11/15 件が invalid になる。分類器入力を先頭 1000 文字に制限 (トークナイザ
+    は 128 トークンで切るためスコア不変) して解消
+- **2 回目 (2181850, 修正込みの再投入)**: judge 系は正常化 (V1 44/45 件
+  パース、スコア 1〜3 に分布) したが **JTruthfulQA が「Juman++ exited
+  unexpectedly」で全滅**。原因は検証作業側のミス: jumanpp の辞書パスは
+  CMAKE_INSTALL_PREFIX からバイナリに焼き込まれるため、ログインノードの
+  /tmp でビルドしたバイナリのコピーは計算ノードで辞書を解決できない
+  (ログインノードでは旧ディレクトリが残存するため気づけない)。プレフィックス
+  変更後の cmake 再構成でも焼き込みが更新されないことを確認し、
+  **インストーラはクリーンな build ディレクトリで最終プレフィックスを指定して
+  ビルドする**よう堅牢化 (インストーラ自体は元々正しい手順だった)
+- **3 回目 (2181912) は完走** (exit 0、生成は 1 回目の出力を再利用、走行 7 分):
+  全 5 ベンチマークの集計を取得し、全サンプルが valid。
+  jbbq_age acc 0.583 (invalid 3 件は 150m の出力に 0/1/2 が無いもので正常動作)、
+  jtruthfulqa 15/15 valid (truthful_rate 0.0 は 150m のゴミ出力に対して妥当)、
+  judge 系 3 ベンチマークとも 15 件採点 (attempt_avg: AC 2.13 / JSF 2.67 /
+  SB 0.0)。**ジョブ実行時間帯の共有 install への書き込みは 0 件**
+  (`find -newermt` で確認; 検出されたのは投入前の手動デプロイのみ)
+- 運用ノート: 内部サーバーのジャッジモデル選定は
+  gemma-4-31B-it (`--safety-eval-judge-max-tokens 2048` 必須) または
+  llm-jp-4-8b-instruct (512 で可)。gpt-4o は内部サーバーに無い

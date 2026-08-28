@@ -24,6 +24,10 @@
 #                             (Azure: deployment name, default
 #                             gpt-4o-2024-11-20; OpenAI-compatible: model
 #                             name served by the endpoint)
+#   --judge-max-tokens N      max_tokens for each judge request (default:
+#                             512). Thinking judge models spend the budget on
+#                             reasoning first, so they need more (e.g. 2048)
+#                             to reach the final "評価：[[N]]" verdict.
 #   --benchmark-size N        Use only the first N samples of each benchmark
 #                             (default: all samples). Mainly for smoke tests;
 #                             note that existing generations under
@@ -58,7 +62,7 @@
 set -eux -o pipefail
 
 usage() {
-    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--benchmarks LIST] [--tensor-parallel-size N] [--ask-times N] [--batch-size N] [--max-tokens N] [--temperature F] [--top-p F] [--judge-model NAME] [--benchmark-size N] [--generation-only] [--eval-only]"
+    >&2 echo "Usage: $0 MODEL_PATH OUTPUT_DIR [--benchmarks LIST] [--tensor-parallel-size N] [--ask-times N] [--batch-size N] [--max-tokens N] [--temperature F] [--top-p F] [--judge-model NAME] [--judge-max-tokens N] [--benchmark-size N] [--generation-only] [--eval-only]"
     exit 1
 }
 
@@ -96,6 +100,7 @@ while [[ $# -gt 0 ]]; do
         --temperature) TEMPERATURE=$2; shift 2 ;;
         --top-p) TOP_P=$2; shift 2 ;;
         --judge-model) JUDGE_MODEL=$2; shift 2 ;;
+        --judge-max-tokens) export SAFETY_EVAL_JUDGE_MAX_TOKENS=$2; shift 2 ;;
         --benchmark-size) BENCHMARK_SIZE=$2; shift 2 ;;
         --generation-only) GENERATION_ONLY=true; shift ;;
         --eval-only) EVAL_ONLY=true; shift ;;
@@ -287,10 +292,14 @@ if [ -n "${JTQA_SELECTED}" ]; then
     write_config "${JTQA_SELECTED}" jtruthfulqa V1 jtruthfulqa
     # The classifier (nlp-waseda/roberta_jtruthfulqa) was prefetched into the
     # environment-local HF cache at install time; read it offline so the
-    # evaluation phase never downloads on compute nodes.
+    # evaluation phase never downloads on compute nodes. Its tokenizer shells
+    # out to the jumanpp binary built into the environment at install time.
     JTQA_ENV=()
     if [ -d "${ENV_DIR}/data/hf" ]; then
-        JTQA_ENV=(HF_HOME=${ENV_DIR}/data/hf HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1)
+        JTQA_ENV+=(HF_HOME=${ENV_DIR}/data/hf HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1)
+    fi
+    if [ -x "${ENV_DIR}/jumanpp/bin/jumanpp" ]; then
+        JTQA_ENV+=("PATH=${ENV_DIR}/jumanpp/bin:${PATH}")
     fi
     env ${JTQA_ENV[@]+"${JTQA_ENV[@]}"} ${VENV}/bin/python evaluate.py \
         > ${LOG_DIR}/evaluate_jtruthfulqa.log 2> ${LOG_DIR}/evaluate_jtruthfulqa.err

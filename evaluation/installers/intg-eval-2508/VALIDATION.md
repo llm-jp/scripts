@@ -38,6 +38,7 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 08-12 | ABCI | qsub.py 配備更新 + swallow-tf5 の GPU (vllm 0.19) 初検証 | パッチの import 非互換 2 件を修正して完走 (150m、EN 15 列取得、68 分) |
 | 08-12 | ABCI | swallow-tf5 の DP>1 (mp 経路) 初検証 | vllm 0.19 の DP モード拒否を独立エンジン方式に書き換えて完走。DP=8 と DP=1 のスコア差 \|diff\| ≤ 0.001 |
 | 08-28 | ABCI | safety-eval 導入 + e2e 検証 (150m, 全5ベンチマーク) | 障害3件 (Juman++ 依存欠落 / thinking ジャッジの max_tokens / 長大生成での Juman++ 失敗) を修正して完走。共有 install への書き込み 0 件 |
+| 09-02 | ABCI | safety-eval × thinking モデル (llm-jp-4-8b-thinking) | 修正なしで完走・全75サンプル valid。raw Harmony 出力を各評価器が処理できることを確認 |
 
 ---
 
@@ -664,3 +665,43 @@ python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/safety-eval-150m-20260828 \
 - 運用ノート: mdx のジャッジサーバーでのモデル選定は
   gemma-4-31B-it (`--safety-eval-judge-max-tokens 2048` 必須) または
   llm-jp-4-8b-instruct (512 で可)。gpt-4o はこのサーバーに無い
+
+## 2026-09-02 ABCI: safety-eval × thinking モデル (llm-jp-4-8b-thinking)
+
+08-28 と同一構成 (0230 環境、全 5 ベンチマーク × 先頭 5 サンプル、ask_times=3、
+ジャッジ = mdx の gemma-4-31B-it + `--safety-eval-judge-max-tokens 2048`) で、
+ターゲットを thinking モデル (llm-jp/llm-jp-4-8b-thinking) に替えた検証。
+受領コードは reasoning 抽出を行わず raw の Harmony 形式出力
+(`analysis ... assistant final ...`; オフライン生成の skip_special_tokens で
+チャネルトークン自体は除去済み) をそのまま評価する設計のため、その経路が
+thinking モデルで成立するかが観察対象。ジョブ 2210266、走行 ~13 分、修正なしで完走。
+
+```bash
+python3 qsub.py llm-jp/llm-jp-4-8b-thinking $RESULTS/safety-eval-8b-thinking-20260902 \
+  --experiment-dir /groups/gcg51557/experiments/0230_intg_eval_2509 \
+  --disable-swallow --disable-llm-jp-eval \
+  --safety-eval --safety-eval-judge-model gemma-4-31B-it \
+  --safety-eval-judge-max-tokens 2048 --safety-eval-benchmark-size 5 \
+  --pbs-queue rt_HG --rtype rt_HG
+```
+
+- **生成**: 全 75 件が受領コードのハードコード上限 (max_model_len=4096) 内で
+  final マーカーまで到達 (打ち切り 0 件; 出力長 244〜5594 文字)。今回の 5 件
+  サンプルでは reasoning が収まったが、より長考するモデル/プロンプトでは
+  4096 で final 前に切れる可能性は残る (受領コード無改変の制約)
+- **jbbq_age**: 15/15 valid、acc 0.733。受領コードの thinking 向け
+  ヒューリスティック (特殊トークン除去 + 最後の 0/1/2 を採用;
+  evaluators/jbbq.py) が `... assistant final 1` 形式を正しく拾うことを確認
+  (150m では 3 件 invalid だったのと対照的)
+- **judge 系**: answer_carefully 15/15 パース (avg 4.0)、JSocialFact 15/15
+  (avg 3.13)、safety_boundary 13/15 (avg 1.73; None 2 件は gemma の reasoning が
+  2048 でも尽きて本文が空になったもので、欠損補完 1.5 で集計)。ジャッジは
+  reasoning 込みの回答全文を読んで採点している (V1 プロンプトの仕様どおり)
+- **jtruthfulqa**: 15/15 valid、truthful_rate 0.2。ただし**この分類器は入力の
+  先頭 128 トークンしか読まないため、thinking モデルでは英語 reasoning の
+  冒頭を分類しており、スコアの妥当性は要検討** (受領コードの設計由来。
+  final のみを評価したい場合は extract-final 相当の後処理が必要になる —
+  未実装、WG 手法との乖離になるため要相談)
+- 運用ノート: gemma-4-31B-it ジャッジは `--safety-eval-judge-max-tokens 2048`
+  でも稀に不足する (今回 2/45)。取りこぼしを無くすなら 4096、または
+  非 thinking の llm-jp-4-8b-instruct を使う

@@ -97,7 +97,7 @@ bash $INSTALL_DIR/safety-eval/run_safety-eval.sh \
   サーバーでは通常指定が必要です)。
 - `--judge-max-tokens N` はジャッジ1リクエストの max_tokens です (既定 512)。
   **thinking系のジャッジモデルは reasoning で予算を使い切って本文が空になる**
-  ため、2048 程度を指定してください (例: ABCI内部サーバーの `gemma-4-31B-it`)。
+  ため、2048 程度を指定してください (例: mdx 上の OpenAI 互換サーバーの `gemma-4-31B-it`)。
 - `--benchmark-size N` は各ベンチマークの先頭Nサンプルだけで実行します
   (スモークテスト用。生成済み `model_output/` はそのまま再利用される点に注意)。
 - 生成済みの `model_output/` があるベンチマークはスキップされるため、中断後の

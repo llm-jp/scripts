@@ -303,7 +303,7 @@ python3 qsub.py llm-jp/llm-jp-4-8b-thinking \
 - **インフラ知見**:
   - **ABCI 計算ノードは外部ネットワーク不可** (github.com / HF の DNS 解決不能)。
     インストール・プリフェッチは必ずログインノードで行うこと。ジャッジ API
-    (OPENAI_BASE_URL) は内部エンドポイントのため計算ノードから到達可能
+    (OPENAI_BASE_URL = mdx 上で稼働する OpenAI 互換サーバー) は計算ノードから到達可能
   - この日のログインノードは DNS が断続的に不安定 (数分おきに瞬断)。
     インストーラは再実行で前進する (ダウンロード済み分は再利用) ため、
     リトライループで凌げる
@@ -363,7 +363,7 @@ python3 qsub.py llm-jp/llm-jp-4-8b-thinking $RESULTS/judge-thinking-{offline,ser
   mt_bench_ja 8.21 / quality 4.89 → **final のみを読ませるとスコアが変わる**。
   比較には応答範囲の統一が必須 (llm-jp-judge のクライアントは
   message.content しか読まないため、upstream の想定は final のみ)
-- serve ジョブのジャッジフェーズは内部 API への一時的な疎通断で失敗 →
+- serve ジョブのジャッジフェーズはジャッジ API (mdx) への一時的な疎通断で失敗 →
   ログインノードから `--judge-only` で再実行 (07-29 に続き 2 回目。
   リカバリ手順として定着)
 
@@ -613,7 +613,8 @@ python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/swallow-tf5-150m-dp8-20260812c \
 transformers 4.57.6 / Python 3.10、JTruthfulQA 分類器プリフェッチ済み)。
 ターゲットは llm-jp/llm-jp-3-150m、全 5 ベンチマーク × 先頭 5 サンプル
 (`--safety-eval-benchmark-size 5`、ask_times=3 → 各 15 生成)、ジャッジは
-ABCI 内部 OpenAI 互換サーバーの gemma-4-31B-it。
+mdx 上で稼働する OpenAI 互換サーバー (~/.zshrc.local の OPENAI_BASE_URL) の
+gemma-4-31B-it。
 
 ```bash
 python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/safety-eval-150m-20260828 \
@@ -660,6 +661,6 @@ python3 qsub.py llm-jp/llm-jp-3-150m $RESULTS/safety-eval-150m-20260828 \
   judge 系 3 ベンチマークとも 15 件採点 (attempt_avg: AC 2.13 / JSF 2.67 /
   SB 0.0)。**ジョブ実行時間帯の共有 install への書き込みは 0 件**
   (`find -newermt` で確認; 検出されたのは投入前の手動デプロイのみ)
-- 運用ノート: 内部サーバーのジャッジモデル選定は
+- 運用ノート: mdx のジャッジサーバーでのモデル選定は
   gemma-4-31B-it (`--safety-eval-judge-max-tokens 2048` 必須) または
-  llm-jp-4-8b-instruct (512 で可)。gpt-4o は内部サーバーに無い
+  llm-jp-4-8b-instruct (512 で可)。gpt-4o はこのサーバーに無い

@@ -24,7 +24,7 @@
   sbatch.py) と `--judge-max-tokens` (run_safety-eval.sh)。ジャッジ1リクエスト
   の max_tokens (受領コードでは512固定) を上書きする。**thinking系のジャッジ
   モデルは reasoning で512を使い切り本文 (「評価：[[N]]」) が空になる**ため、
-  その場合は 2048 程度が必須 (ABCI内部サーバーの gemma-4-31B-it で実測:
+  その場合は 2048 程度が必須 (mdx 上の OpenAI 互換サーバーの gemma-4-31B-it で実測:
   reasoning ~1900トークン → 512では全件 None、2048で正常採点)
 
 ## 2026-08-20

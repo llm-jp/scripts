@@ -60,8 +60,14 @@ while read -r name script args; do
     seen="$seen $name"
     total=$((total + 1))
 
+    # --dry-run belongs to the script under test: insert it before a '--'
+    # separator (qsub_sft_eval.py forwards everything after '--' to qsub.py).
+    case " $args " in
+        *" -- "*) args="${args/ -- / --dry-run -- }" ;;
+        *) args="$args --dry-run" ;;
+    esac
     # shellcheck disable=SC2086  # word splitting of $args is intended
-    out=$(python3 "../scripts/${script}" $args --dry-run 2>&1)
+    out=$(python3 "../scripts/${script}" $args 2>&1)
     status=$?
     out=$(printf '%s\n' "$out" | normalize_output)
     if [ $status -ne 0 ]; then

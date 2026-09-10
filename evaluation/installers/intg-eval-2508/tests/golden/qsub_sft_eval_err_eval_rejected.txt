@@ -1,0 +1,10 @@
+# [1/2] SFT job (simple_tuning):
+python3 /groups/gcg51557/experiments/0366_simple_tuning/simple_tuning/qsub_sft.py --run-name sft-eval-out --param-name llmjp4_8b_4K --input-hf-path /models/dummy-base --output-dir /nonexistent/sft-eval-out/sft --sft-config-name sft_simple --pbs-job-name 0195_intg_eval --num-nodes 1 --pbs-queue R9920261000 --pbs-group gcg51557 --walltime 10:00:00 --override exp_manager.create_wandb_logger=False
+
+# [2/2] Evaluation job (qsub.py), submitted with a dependency on the SFT job:
+python3 qsub.py /nonexistent/sft-eval-out/sft/converted/final_hf /nonexistent/sft-eval-out/eval --job-name 0195_intg_eval --pbs-group gcg51557 --options '#PBS -W depend=afterok:<SFT_JOB_ID>' --llm-jp-eval-versions v2.1.5 --apply-chat-template --reasoning-parser llmjp4 --llm-jp-judge --judge-gen-extract-final --chat-template-args reasoning_effort=low --judge-gen-reasoning-effort low --judge-gen-max-tokens 2048 --basemodel
+
+# Rendered evaluation job script:
+ValueError: --basemodel cannot be combined with --apply-chat-template / --chat-template-args.
+ValueError: qsub.py rejected the evaluation arguments (see the output above); nothing was submitted.
+exit_code: 1

@@ -4,6 +4,31 @@
 [VALIDATION.md](./VALIDATION.md) を、vllm-serve モードの設計は
 [vllm-serve/README.md](./vllm-serve/README.md) を参照。
 
+## 2026-09-09
+
+- **追加 (ABCI)**: `scripts/qsub_sft_eval.py`。事前学習チェックポイントに
+  [llm-jp/simple_tuning](https://github.com/llm-jp/simple_tuning) の簡易SFT
+  (`sft_simple`) を当て、その最終チェックポイントを統合評価する 2 ジョブ連鎖
+  (SFT は rt_HF、評価は qsub.py のデフォルト) を 1 コマンドで投入する薄いラッパー。
+  評価ジョブは `-W depend=afterok:<SFT job>` で投入され、SFT 投入前に qsub.py の
+  `--dry-run` で評価側の引数を事前検証する。simple_tuning 出力 (llm-jp-4 系
+  Harmony) 向けの評価設定はラッパー側に固定し、`--` 以降を qsub.py へ転送する
+  方式にしたため、**qsub.py / sbatch.py 自体の変更はない**。simple_tuning の
+  checkout は `--simple-tuning-dir` / `SIMPLE_TUNING_DIR` (デフォルト
+  `/groups/gcg51557/experiments/0366_simple_tuning/simple_tuning`) を参照する
+  (インストーラへの取り込みはしていない)。README「簡易SFT後の統合評価」参照
+- **運用ノート (重要・llm-jp-4 系 × llm-jp-eval v2.1.5)**: v2.1.5 のオフライン推論で
+  llm-jp-4 系 (Harmony 出力) を評価する場合、`--reasoning-parser` は
+  **`llmjp4`** (llm-jp-eval-inference c6cd0fa の専用アダプタ) を指定すること。
+  `openai_gptoss` を直接指定すると llm-jp-4 のトークン ID が gpt-oss の Harmony
+  パーサに渡され、**全サンプルの generated / reasoning_content が空 (スコア ≈0)**
+  になる (ABCI 実機で確認)。v2.1.3 まで (`openai_gptoss` + インストーラの再エンコード
+  パッチ) とは指定が異なる。また *_4K の簡易SFTモデルに 8b-thinking 向けの
+  `--max-model-len 16384` を付けると judge の vLLM サーバーが起動を拒否する
+  (`max_position_embeddings=4096`)
+- **テスト**: `tests/run_regression.sh` が `--dry-run` を `--` セパレータの前に
+  挿入するようになった (qsub_sft_eval.py のケース用。既存ケースの出力は不変)
+
 ## 2026-08-28
 
 - **修正 (safety-eval)**: JTruthfulQA の評価フェーズが

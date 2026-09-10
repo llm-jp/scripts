@@ -1,0 +1,2 @@
+ValueError: Forwarded qsub.py arguments must start with an option (model and output directory are set by this script): ['/models/other']
+exit_code: 1

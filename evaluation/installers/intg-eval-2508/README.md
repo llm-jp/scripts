@@ -221,6 +221,55 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
 - 詳細 (単体実行、出力レイアウト、実装メモ) は `safety-eval/README.md` を
   参照してください。
 
+### 簡易SFT後の統合評価 (on ABCI)
+
+事前学習チェックポイントに [llm-jp/simple_tuning](https://github.com/llm-jp/simple_tuning)
+の簡易SFT (`sft_simple` 設定) を当ててから統合評価を行う場合は、
+`qsub_sft_eval.py` を使います。qsub.py 自体には SFT 用のオプションはなく、
+このスクリプトが (1) simple_tuning の `qsub_sft.py` で SFT ジョブ (HF→NeMo→SFT→HF、rt_HF)
+を投入し、(2) その完了を `-W depend=afterok` で待つ評価ジョブを qsub.py で投入します。
+
+```bash
+export HF_HOME=... HF_TOKEN=...                      # qsub.py と同じ
+export OPENAI_API_KEY=... OPENAI_BASE_URL=...        # llm-jp-judge のジャッジAPI
+
+python3 $INSTALL_DIR/scripts/qsub_sft_eval.py \
+  <base_model_absolute_path> \
+  <output_dir_absolute_path> \
+  [--param-name llmjp4_8b_4K] \
+  [--sft-num-nodes 1] \
+  [--reasoning-effort low] \
+  [--pbs-queue R9920261000] \
+  -- [qsub.py に渡す追加オプション...]
+```
+
+- 出力は `<output_dir>/sft/` (SFT 成果物、最終チェックポイントは `sft/converted/final_hf`) と
+  `<output_dir>/eval/` (qsub.py の出力) に分かれます。両ジョブIDと実行コマンドは
+  `<output_dir>/qsub_sft_eval.json` に記録されます。
+- 評価側には simple_tuning の出力 (llm-jp-4 系、Harmony chat template) 向けの設定が固定で付きます:
+  llm-jp-eval v2.1.5 + `--apply-chat-template --reasoning-parser llmjp4`、
+  llm-jp-judge + `--judge-gen-extract-final`。
+  reasoning parser は llm-jp-eval-inference (v2.1.5 で固定しているコミット c6cd0fa) の
+  llm-jp-4 専用アダプタ `llmjp4` です。llm-jp-4 は Harmony 形式で出力しますが語彙が gpt-oss と
+  異なるため、vLLM の `openai_gptoss` をそのまま指定すると v2.1.5 のオフライン推論では
+  全サンプルの generated が空になります (v2.1.3 までとは挙動が異なります)。ジャッジ生成の `--judge-gen-max-tokens` は
+  `--param-name` の文脈長サフィックスから導出します (`_4K` → 2048、上限 8192。プロンプト + 生成長が
+  文脈長に収まる必要があるため)。文脈長 (`--max-model-len`) はチェックポイントの config.json に
+  任せます (4K 設定のモデルに 16384 を指定すると vLLM が起動を拒否します)。
+  `--reasoning-effort` は llm-jp-eval とジャッジ生成の両方に適用されます (デフォルト `low`。
+  `sft_simple` の学習データが reasoning_low 系のため)。
+- `--` 以降は qsub.py にそのまま渡されます (例: `--judge-model <名前> --pbs-queue rt_HG --rtype rt_HG --disable-swallow`)。
+  評価ジョブのキュー・リソースは qsub.py のデフォルト (R9920261000 / rt_HG) で、SFT ジョブ側とは独立です。
+- SFT の投入前に qsub.py を `--dry-run` で事前検証するため、評価側の引数ミスで SFT ジョブだけが残ることはありません。
+  SFT ジョブが失敗した場合は PBS が評価ジョブを削除します。
+- simple_tuning の checkout は `--simple-tuning-dir` または環境変数 `SIMPLE_TUNING_DIR` で指定します
+  (デフォルト: `/groups/gcg51557/experiments/0366_simple_tuning/simple_tuning`。SFT 環境・学習データ・
+  tokenizer はこのディレクトリ配下のものを参照します)。wandb ロガーは投入者に資格情報が無い前提で
+  無効化しています (`--sft-override exp_manager.create_wandb_logger=True` で戻せます)。
+- スモークテストには `--sft-override trainer.sft.max_steps=20` が使えます。8b・1ノードで
+  変換込み約12分です (本番の1エポックは約40分)。SFT の中間生成物 (`sft/converted/input_nemo`, `sft/train`)
+  は 8b で約70GBあるので、評価が終わったら不要なら削除してください。
+
 ### ジョブ形式での実行 (on ABCI)
 
 ```

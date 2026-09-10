@@ -1,0 +1,2 @@
+ValueError: input-hf-path must be an absolute path: models/dummy-base
+exit_code: 1

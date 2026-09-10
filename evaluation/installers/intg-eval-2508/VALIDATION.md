@@ -39,6 +39,7 @@ elapsed を表示する。所要時間はジョブスクリプトが `logs/sbatc
 | 08-12 | ABCI | swallow-tf5 の DP>1 (mp 経路) 初検証 | vllm 0.19 の DP モード拒否を独立エンジン方式に書き換えて完走。DP=8 と DP=1 のスコア差 \|diff\| ≤ 0.001 |
 | 08-28 | ABCI | safety-eval 導入 + e2e 検証 (150m, 全5ベンチマーク) | 障害3件 (Juman++ 依存欠落 / thinking ジャッジの max_tokens / 長大生成での Juman++ 失敗) を修正して完走。共有 install への書き込み 0 件 |
 | 09-02 | ABCI | safety-eval × thinking モデル (llm-jp-4-8b-thinking) | 修正なしで完走・全75サンプル valid。raw Harmony 出力を各評価器が処理できることを確認 |
+| 09-09 | ABCI | 簡易SFT→評価ラッパー `qsub_sft_eval.py` (simple_tuning 連携) の e2e + 評価 preset 検証 | SFT→評価の afterok 連鎖は完走。preset の障害 2 件 (4K モデルに `--max-model-len 16384` / llm-jp-4 の parser は `llmjp4`) を修正し、フル簡易SFT 8b で JA AVG 0.452・judge 成立 |
 
 ---
 
@@ -705,3 +706,76 @@ python3 qsub.py llm-jp/llm-jp-4-8b-thinking $RESULTS/safety-eval-8b-thinking-202
 - 運用ノート: gemma-4-31B-it ジャッジは `--safety-eval-judge-max-tokens 2048`
   でも稀に不足する (今回 2/45)。取りこぼしを無くすなら 4096、または
   非 thinking の llm-jp-4-8b-instruct を使う
+
+## 2026-09-09 ABCI: 簡易SFT→統合評価ラッパー (qsub_sft_eval.py) の e2e と評価 preset の検証
+
+宮尾先生指示の評価パイプライン 3 (簡易SFT後の統合評価) 向けに、
+[llm-jp/simple_tuning](https://github.com/llm-jp/simple_tuning) の `qsub_sft.py`
+(ABCI 上の checkout: `/groups/gcg51557/experiments/0366_simple_tuning/simple_tuning`) で
+SFT ジョブを投入し、その完了に `-W depend=afterok` で連鎖する qsub.py ジョブを投入する
+薄いラッパー `scripts/qsub_sft_eval.py` を追加した。qsub.py / sbatch.py は無変更。
+
+### SFT 単体の動作確認 (2255985.pbs1)
+
+別ユーザー所有の 0366 環境 (NeMo venv・データキャッシュ・tokenizer) を読み取りで流用し、
+自分のアカウントから `qsub_sft.py --param-name llmjp4_8b_4K --sft-config-name sft_simple
+--override trainer.sft.max_steps=20 exp_manager.create_wandb_logger=False` を rt_HF 1 ノードで
+実行 → exit 0、walltime 11:53 (HF→NeMo 変換 ~4 分が大半)。`converted/final_hf` に
+safetensors + Harmony chat template + tokenizer 一式が生成される。出力は 72GB (NeMo 中間物)。
+wandb 資格情報が無い投入者ではロガー無効化が必須 (ラッパーの既定 override にした)。
+
+### ラッパー e2e (2257479 → 2257480)
+
+```bash
+python3 qsub_sft_eval.py \
+  /groups/gcg51557/experiments/0297_v4-8b-phase2/tasks/decay4t/checkpoints_hf/iter_0500000 \
+  $RESULTS/sft-eval-e2e-20260909 --job-name 0219_dev_eval_script --pbs-queue rt_HF \
+  --sft-walltime 2:00:00 --sft-override trainer.sft.max_steps=20 \
+  -- --pbs-queue rt_HG --rtype rt_HG --disable-swallow --llm-jp-eval-max-num-samples 10 \
+     --judge-model gemma-4-31B-it --judge-benchmark-size 5 --disable-mt-bench
+```
+
+- 評価ジョブは投入直後 `H` (afterok 待ち) → SFT exit 0 で解放 → exit 0。**連鎖機構は成立**
+- 初回投入時はシェルにジャッジ API 資格情報が載っておらず (qsub.py は WARNING のみで
+  投入を続ける)、実行前に qdel して再投入した。ラッパー側で止める判断はしていない
+  (judge を使わない運用もあるため qsub.py の挙動に合わせた)
+- しかし評価内容は 2 点とも無効だった:
+  1. **judge: vLLM サーバ起動拒否**。8b-thinking の完動設定から流用した
+     `--max-model-len 16384` が、4K 設定の簡易SFTモデル (`max_position_embeddings=4096`)
+     で `User-specified max_model_len (16384) is greater than the derived max_model_len` →
+     preset から外し、`--judge-gen-max-tokens` を param 名の文脈長サフィックスから導出
+     (4K → 2048) するようにした
+  2. **llm-jp-eval: 全 630 サンプルの generated が空** (JA AVG 0.024。非零は MT のみで、
+     空文字列に対する metric の下駄)。20 ステップ打ち切りモデルのせいか切り分けるため、
+     0366 側のフル簡易SFT済み同ベースモデル `tasks/llmjp4_8b_pre2-10.5T_4K_simple/converted/final_hf`
+     で評価 preset のみ再検証した (tokenizer 関連 3 ファイルがグループ読み取り不可のため、
+     重みを symlink し tokenizer 一式を 0366 の公開 tokenizer ディレクトリから複製した
+     `0219_dev_eval_script/models/llmjp4_8b_pre2-10.5T_4K_simple-final_hf-ref` を使用)
+
+### 評価 preset の検証 (フル簡易SFT 8b, 2257929 → 2258289)
+
+| ジョブ | reasoning parser | llm-jp-eval (10件) | judge (5件) |
+|---|---|---|---|
+| 2257929 | `openai_gptoss` | JA AVG 0.024、**630/630 generated 空** | quality_ja 総合 4.67 (成立) |
+| 2258289 | `llmjp4` | **JA AVG 0.452 / EN 0.432、630/630 非空、612 に reasoning** | quality_ja 総合 4.0、safety_ja 3.0、culture_ja 2.0 |
+
+- **真因**: llm-jp-eval v2.1.5 が固定する llm-jp-eval-inference (c6cd0fa) の
+  `reasoning_adapters.py` に llm-jp-4 専用の `Llmjp4ReasoningAdapter` (parser 名 `llmjp4`)
+  がある。llm-jp-4 は Harmony 形式だが語彙が gpt-oss と異なるため、`openai_gptoss` を
+  直接指定するとモデルのトークン ID がそのまま `parse_chat_output` に渡り reasoning/final
+  とも None になる。`llmjp4` アダプタは特殊トークンを保持して decode → openai-harmony で
+  再エンコード → パースする。v2.1.3 まで (`openai_gptoss` + インストーラの再エンコードパッチ)
+  とは指定が異なるので注意 (0366 側の `llm-jp-eval.sh` は v2.1.3 + `openai_gptoss`)
+- generated の例 (alt-e-to-j): reasoning "We need translate. Provide Japanese translation."
+  → final に日本語訳のみ。`--chat-template-args reasoning_effort=low` が効いている
+- judge は max-model-len 未指定 (config.json の 4096) + gen 2048 で全ベンチマーク成立。
+  4K 文脈では mt_bench の 2 ターン目がプロンプト超過で失敗し得るため、本検証では
+  `--disable-mt-bench`。本番で mt_bench を含める場合は 16K/64K の param 名を使うか
+  `-- --judge-gen-max-tokens` を下げる
+- 所要: 評価ジョブ (rt_HG 1 GPU) 25 分 (llm-jp-eval 10 件 + judge 5 件、swallow なし)
+
+### 配備
+
+`qsub_sft_eval.py` と `scripts/README.md` を `/groups/gcg51557/experiments/0230_intg_eval_2509/environment/scripts/`
+に配置 (同ディレクトリの qsub.py を呼ぶ)。simple_tuning はインストーラに取り込まず、
+0366 の checkout を `--simple-tuning-dir` / `SIMPLE_TUNING_DIR` で参照する運用。

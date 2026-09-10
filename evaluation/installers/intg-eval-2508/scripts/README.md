@@ -15,6 +15,12 @@ This directory hosts the ABCI job submission helpers that we distribute under
   existing automation keeps working. The only intended change is the minimal
   logic required to run llm-jp-eval v2.1.0 without forcing any of the breaking
   updates introduced in `qsub.py`.
+- `qsub_sft_eval.py` is a thin orchestrator for the "lightweight SFT then
+  evaluate" pipeline: it submits a simple_tuning SFT job
+  (`<simple-tuning-dir>/qsub_sft.py`, HF -> NeMo -> SFT -> HF) and then a
+  `qsub.py` job on the resulting checkpoint with `-W depend=afterok`. The
+  evaluation preset for simple_tuning outputs lives here, and anything after
+  `--` is forwarded to `qsub.py`, so `qsub.py` itself carries no SFT options.
 
 Use `qsub.py` when you can adopt the new directory layout, and fall back to
 `qsub_nonbreaking.py` when you must stay compatible with the legacy setup while

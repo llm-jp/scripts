@@ -1,5 +1,6 @@
 # Regression test cases: <name> <script> <args...>
 # Each case is run as: python3 ../scripts/<script> <args> --dry-run
+# (for qsub_sft_eval.py, --dry-run is inserted before the '--' separator).
 # Names must be unique; they name the snapshot files under golden/.
 
 # --- sbatch.py (Slurm / Sakura cluster) ---
@@ -43,3 +44,10 @@ qsub_safety_eval qsub.py /models/dummy /nonexistent/eval-out --disable-swallow -
 sbatch_safety_eval_benchmarks sbatch.py /models/dummy /nonexistent/eval-out --disable-swallow --disable-llm-jp-eval --safety-eval --safety-eval-benchmarks jbbq_age jtruthfulqa --safety-eval-judge-model dummy/judge-model --safety-eval-judge-max-tokens 2048 --safety-eval-benchmark-size 5
 qsub_err_safety_eval_serve qsub.py /models/dummy /nonexistent/eval-out --vllm-serve --llm-jp-eval-versions v2.1.5 --safety-eval
 sbatch_err_safety_eval_benchmarks_without_flag sbatch.py /models/dummy /nonexistent/eval-out --safety-eval-benchmarks jbbq_age
+
+# --- qsub_sft_eval.py (simple_tuning SFT -> dependent qsub.py evaluation) ---
+qsub_sft_eval_default qsub_sft_eval.py /models/dummy-base /nonexistent/sft-eval-out
+qsub_sft_eval_forward qsub_sft_eval.py /models/dummy-base /nonexistent/sft-eval-out --param-name llmjp4_32b_4K --sft-num-nodes 2 --sft-walltime 24:00:00 --sft-override trainer.sft.max_steps=20 --reasoning-effort medium --pbs-queue rt_HF -- --disable-swallow --judge-model dummy/judge-model --pbs-queue rt_HF --rtype rt_HF --tensor-parallel-size 8
+qsub_sft_eval_err_relative_path qsub_sft_eval.py models/dummy-base /nonexistent/sft-eval-out
+qsub_sft_eval_err_forward_positional qsub_sft_eval.py /models/dummy-base /nonexistent/sft-eval-out -- /models/other
+qsub_sft_eval_err_eval_rejected qsub_sft_eval.py /models/dummy-base /nonexistent/sft-eval-out -- --basemodel

@@ -142,6 +142,108 @@ python3 $INSTALL_DIR/scripts/sbatch.py \
 - `--experiment-dir` は評価環境をインストールした実験ディレクトリ (`environment/` の親) を指定します。環境変数 `INTG_EVAL_EXPERIMENT_DIR` でも指定可能です。
 - その他のオプションは `qsub.py` と共通です (`--help` を参照)。
 
+### ジョブ形式での実行 (on ABCI)
+
+ABCI では `scripts/qsub.py` の複製を `/groups/gcg51557/evaluation2/qsub.py` に置いています。
+評価環境は `/groups/gcg51557/experiments/0230_intg_eval_2509/environment` にインストール済みのため、
+利用者がインストールする必要はありません。
+
+```bash
+export HF_HOME=/groups/gcg51557/experiments/<experiment_dir>/.cache/huggingface
+export HF_TOKEN=<HuggingFaceのアクセストークン>
+
+python3 /groups/gcg51557/evaluation2/qsub.py \
+  <model_name_or_absolute_path> \
+  <output_dir_absolute_path> \
+  [--llm-jp-eval-versions v2.1.5] \
+  [--llm-jp-eval-max-num-samples 100] \
+  [--disable-swallow] \
+  [--pbs-queue rt_HG --rtype rt_HG] \
+  [--dry-run]
+```
+
+- オプションを何も指定しない場合は、swallow v202411 と llm-jp-eval v1.4.1 / v2.1.0 を実行します
+  (旧スクリプトとの互換のためのデフォルトです)。最新の v2.1.5 を使う場合は `--llm-jp-eval-versions v2.1.5` を明示してください。
+- `HF_HOME` は `/groups/gcg51557/experiments` 以下である必要があります。`HF_HOME` と `HF_TOKEN` は投入時の値がジョブスクリプトに埋め込まれます。
+- `--dry-run` を付けると、生成したジョブスクリプトを表示して投入せずに終了します。
+- 旧版 `/groups/gcg51557/evaluation/qsub.py` とは、オプション名の区切り (`--experiment_dir` → `--experiment-dir` など)、
+  デフォルトの評価環境 (0182 → 0230)、出力レイアウトが異なります。旧レイアウトで出力する場合は `--legacy-output` を指定してください。
+
+主なオプション (全オプションは `--help` を参照):
+
+| 分類 | オプション | 説明 (デフォルト) |
+|---|---|---|
+| 評価対象 | `--llm-jp-eval-versions` | `v1.4.1` `v2.1.0` `v2.1.3` `v2.1.5` から複数指定可 (`v1.4.1 v2.1.0`) |
+| | `--disable-llm-jp-eval` | llm-jp-eval を実行しない |
+| | `--swallow-version` | `v202411` / `v202411-tf5` (`v202411`)。tf5 は transformers>=5.6 が必要なモデル向けの実験的な変種 |
+| | `--disable-swallow` | swallow を実行しない |
+| | `--llm-jp-judge` | llm-jp-judge を実行する ([llm-jp-judge の実行](#llm-jp-judge-llm-as-a-judge-の実行)) |
+| | `--safety-eval` | 安全性評価を実行する ([安全性評価の実行](#安全性評価-safety-eval-の実行)) |
+| llm-jp-eval | `--llm-jp-eval-max-num-samples` | データセットごとの最大サンプル数。`-1` で全件 (`100`) |
+| | `--apply-chat-template` | chat template を適用して推論する |
+| | `--chat-template-args` | chat template への追加引数 (例: `reasoning_effort=low`)。`--apply-chat-template` が必要 |
+| | `--reasoning-parser` | reasoning と最終応答を分離するパーサ ([thinking モデルの評価](#thinking-モデル-llm-jp-4-系-の評価)) |
+| | `--llm-jp-eval-max-tokens` | 生成トークン数の上限を全データセット共通で上書き (データセットごとの output_length)。v2.1.5 のみ |
+| | `--llm-jp-eval-reasoning-content-length` | output_length に加算する reasoning 用のトークン数。`--reasoning-parser` が必要。v2.1.5 のオフライン推論のみ |
+| | `--basemodel` | ベースモデル用設定で評価する ([チェックポイント評価](#事前学習モデル-ベースモデル-のチェックポイント評価))。v2.1.5 のみ |
+| | `--max-model-len` | 文脈長の上限。llm-jp-eval v2.1.5 (`4096`) と llm-jp-judge のローカルサーバに適用 |
+| ジョブ | `--experiment-dir` | 評価環境のある実験ディレクトリ (`/groups/gcg51557/experiments/0230_intg_eval_2509`) |
+| | `--pbs-queue` | `R9920261000` / `rt_HG` / `rt_HF` (`R9920261000`) |
+| | `--rtype` | `rt_HG` (H200 1枚) / `rt_HF` (1ノード H200×8) (`rt_HG`) |
+| | `--select` | ノード数。`rt_HG` では 1 のみ (`1`) |
+| | `--job-name` | ジョブ名 (`0195_intg_eval`) |
+| | `--pbs-group` | `-P` に渡すグループ (`gcg51557`) |
+| | `--options` | ジョブスクリプトに追加する行 (例: `"#PBS -W depend=afterok:<job_id>"`) |
+| 推論リソース | `--tensor-parallel-size` / `--data-parallel-size` | vLLM の並列数 (`1` / `1`) |
+| | `--gpu-memory-utilization` | vLLM の GPU メモリ使用率 (`0.9`) |
+| その他 | `--vllm-serve` | 全評価で 1 つの vLLM サーバを共有する実験的モード (詳細は `vllm-serve/README.md`) |
+
+予約キュー `R9920261000` が埋まっている場合は `--pbs-queue rt_HG --rtype rt_HG` でスポット実行できます。
+
+出力レイアウト:
+
+```
+<output_dir>/
+├── logs/                                  # PBS ジョブのログ
+├── swallow/                               # swallow の評価結果
+├── llm-jp-eval/<version>/results/result.json
+├── llm-jp-judge/evaluation/score_table.json  # --llm-jp-judge 指定時
+└── safety-eval/evaluate_count/            # --safety-eval 指定時
+```
+
+同じ出力ディレクトリに同じ評価対象の結果が既にある場合、上書きを避けるため投入時にエラーになります。
+
+### thinking モデル (llm-jp-4 系) の評価
+
+llm-jp-4 の thinking モデルなど、Harmony 形式で reasoning を出力するモデルの評価設定です。
+いずれも ABCI で動作を確認しています (VALIDATION.md 2026-07-31・2026-09-09)。
+
+- **llm-jp-eval**: v2.1.5 で `--apply-chat-template --reasoning-parser llmjp4` を指定します。
+  `llmjp4` は llm-jp-eval-inference の llm-jp-4 専用アダプタです。v2.1.5 で vLLM の `openai_gptoss` を
+  指定すると、全サンプルの generated が空になります (v2.1.3 までは `openai_gptoss` が正しい指定です)。
+  reasoning effort は `--chat-template-args reasoning_effort=<low|medium|high>` で指定します。
+  reasoning が output_length の範囲で終わらず打ち切られる場合は、`--llm-jp-eval-reasoning-content-length` で生成長を加算します。
+- **llm-jp-judge**: `--judge-gen-max-tokens 8192 --judge-gen-reasoning-effort medium --judge-gen-extract-final --max-model-len 16384`
+  を指定します。デフォルトの生成長 (1024) では reasoning の途中で打ち切られ、無効なスコアになります。
+  `--judge-gen-extract-final` はジャッジに最終応答だけを読ませる指定で、これを付けない場合とはスコアが変わります。
+  `--max-model-len` は llm-jp-eval v2.1.5 の文脈長 (デフォルト 4096) にも適用されます。
+  文脈長が 4K のモデルでは `--max-model-len 16384` を指定すると vLLM が起動しません。
+  `--max-model-len` を外し、`--judge-gen-max-tokens` を 2048 に下げてください
+  ([簡易SFT後の統合評価](#簡易sft後の統合評価-on-abci) と同じ設定です)。
+- `--vllm-serve` モードでは `--reasoning-parser` は未実装です。thinking モデルの llm-jp-eval はオフラインモードで実行してください。
+
+```bash
+python3 /groups/gcg51557/evaluation2/qsub.py \
+  llm-jp/llm-jp-4-8b-thinking \
+  <output_dir_absolute_path> \
+  --llm-jp-eval-versions v2.1.5 \
+  --apply-chat-template --reasoning-parser llmjp4 \
+  --chat-template-args reasoning_effort=medium \
+  --llm-jp-judge --judge-model <ジャッジモデル名> \
+  --judge-gen-max-tokens 8192 --judge-gen-reasoning-effort medium \
+  --judge-gen-extract-final --max-model-len 16384
+```
+
 ### 事前学習モデル (ベースモデル) のチェックポイント評価
 
 llm-jp-eval v2.1.5のベースモデル評価用設定 (upstreamの`config_basemodel.yaml`/`vllm_inference_basemodel.yaml`相当) でチェックポイント評価を行う場合は `--basemodel` を指定します。
@@ -269,31 +371,3 @@ python3 $INSTALL_DIR/scripts/qsub_sft_eval.py \
 - スモークテストには `--sft-override trainer.sft.max_steps=20` が使えます。8b・1ノードで
   変換込み約12分です (本番の1エポックは約40分)。SFT の中間生成物 (`sft/converted/input_nemo`, `sft/train`)
   は 8b で約70GBあるので、評価が終わったら不要なら削除してください。
-
-### ジョブ形式での実行 (on ABCI)
-
-```
-python3 $INSTALL_DIR/scripts/qsub.py \
-  <model_name_or_absolute_path> \
-  <output_dir_absolute_path> \
-  [--experiment_dir /groups/gcg51557/experiments/0182_intg_eval_2507] \
-  [--swallow_version v202411] \
-  [--llm_jp_eval_version v1.4.1] \
-  [--job_name 0182_intg_eval] \
-  [--rtype rt_HG] \
-  [--select 1] \
-  [--options ""]
-```
-
-必須引数:
-- `<model_name_or_absolute_path>` モデル名またはモデルの絶対パス
-- `<output_dir_absolute_path>` 結果出力先の絶対パス
-
-オプション引数:
-- `--experiment_dir` 評価環境がインストールされた実験ディレクトリのパス (デフォルト: `/groups/gcg51557/experiments/0182_intg_eval_2507`)
-- `--swallow_version` swallowバージョン（デフォルト: `v202411`）現状は`v202411`のみに対応。
-- `--llm_jp_eval_version` llm-jp-evalバージョン（デフォルト: `v1.4.1`）現状は`v1.4.1`のみに対応。
-- `--job_name` ジョブ名（デフォルト: `0182_intg_eval`）
-- `--rtype` リソースタイプ（デフォルト: `rt_HG`）
-- `--select` GPU数またはノード数（デフォルト: 1）
-- `--options` qsubスクリプトへの追加オプション

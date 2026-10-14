@@ -4,6 +4,15 @@
 [VALIDATION.md](./VALIDATION.md) を、vllm-serve モードの設計は
 [vllm-serve/README.md](./vllm-serve/README.md) を参照。
 
+## 2026-10-14
+
+- **ドキュメント (ABCI)**: README の「ジョブ形式での実行 (on ABCI)」節を現行の
+  qsub.py に合わせて書き直した (旧版 `evaluation/qsub.py` のオプション
+  `--experiment_dir` 等と 0182 環境の記述が残っていた)。主なオプションの表、
+  出力レイアウト、thinking モデル (llm-jp-4 系) の評価設定の節を追加。
+  `/groups/gcg51557/evaluation2/README.md` も同じ内容の要約に更新し、詳細は
+  この README を参照する形にした
+
 ## 2026-09-09
 
 - **追加 (ABCI)**: `scripts/qsub_sft_eval.py`。事前学習チェックポイントに

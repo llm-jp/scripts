@@ -50,8 +50,6 @@ ALL_PARAMS+=(
 
 # MoE
 ALL_PARAMS+=(
-    --manual-gc
-    --manual-gc-interval 10
     --moe-aux-loss-coeff 1e-2
     --moe-grouped-gemm
     --moe-permute-fusion
@@ -123,6 +121,9 @@ ALL_PARAMS+=(
     --accumulate-allreduce-grads-in-fp32
     --cross-entropy-fusion-impl native
     --cross-entropy-loss-fusion
+
+    --manual-gc
+    --manual-gc-interval 50
 )
 
 # NOTE(odashi):

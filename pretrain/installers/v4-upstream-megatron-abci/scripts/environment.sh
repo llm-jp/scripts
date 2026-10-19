@@ -21,7 +21,9 @@ export PRETRAIN_FLASH_ATTENTION_VERSION=27f501d
 export PRETRAIN_TRANSFORMER_ENGINE_VERSION=2.3.0
 
 # export PRETRAIN_MEGATRON_TAG=v4
-export PRETRAIN_MEGATRON_TAG=main
+# NOTE: Pinned to the llm-jp/Megatron-LM commit actually used for the LLM-jp-4
+# dense runs (2B/8B/33B: pre-training Phase 1-2 and mid-training).
+export PRETRAIN_MEGATRON_TAG=ea80de79
 # Ensure the appropriate Huggingface tokenizer is included
 # https://github.com/llm-jp/scripts/pull/12#discussion_r1708415209
 export PRETRAIN_TOKENIZER_TAG=v3.0b2

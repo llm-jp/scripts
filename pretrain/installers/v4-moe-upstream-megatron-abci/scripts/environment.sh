@@ -17,13 +17,20 @@ export PRETRAIN_GDRCOPY_VERSION=2.4.1
 export PRETRAIN_PYTHON_VERSION=3.10.4
 export PRETRAIN_TORCH_VERSION=2.8.0
 export PRETRAIN_APEX_COMMIT=e13873debc4699d39c6861074b9a3b2a02327f92
+# NOTE: The versions below are those used for LLM-jp-4 32B-A3B mid-training.
+# Pre-training Phase 1-2 of 32B-A3B used an older environment:
+#   PRETRAIN_FLASH_ATTENTION_VERSION=060c9188beec3a8b62b33a3bfa6d5d2d44975fab
+#   PRETRAIN_TRANSFORMER_ENGINE_VERSION=2.5.0
+#   (without NVSHMEM/DeepEP)
 export PRETRAIN_FLASH_ATTENTION_VERSION=2.8.1
 export PRETRAIN_TRANSFORMER_ENGINE_VERSION=2.8.0
 export PRETRAIN_NVSHMEM_VERSION=3.4.5
 export PRETRAIN_DEEPEP_VERSION=9af0e0d0e74f3577af1979c9b9e1ac2cad0104ee
 
 # export PRETRAIN_MEGATRON_TAG=v4
-export PRETRAIN_MEGATRON_TAG=main
+# NOTE: Pinned to the llm-jp/Megatron-LM commit actually used for the LLM-jp-4
+# 32B-A3B runs (pre-training Phase 1-2 and mid-training).
+export PRETRAIN_MEGATRON_TAG=3d93944da
 # Ensure the appropriate Huggingface tokenizer is included
 # https://github.com/llm-jp/scripts/pull/12#discussion_r1708415209
 export PRETRAIN_TOKENIZER_TAG=v3.0b2

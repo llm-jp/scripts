@@ -371,3 +371,22 @@ python3 $INSTALL_DIR/scripts/qsub_sft_eval.py \
 - スモークテストには `--sft-override trainer.sft.max_steps=20` が使えます。8b・1ノードで
   変換込み約12分です (本番の1エポックは約40分)。SFT の中間生成物 (`sft/converted/input_nemo`, `sft/train`)
   は 8b で約70GBあるので、評価が終わったら不要なら削除してください。
+
+## 評価結果の横断分析 (evalviz)
+
+複数の実行の評価結果を Web UI で比べるには [evalviz](./evalviz/README.md) を使います。
+qsub.py の出力ディレクトリを並べた親ディレクトリを `EVALVIZ_ROOTS` に指定してログインノードで起動し、
+手元から `ssh -L 8766:localhost:8766 <login node>` で `http://localhost:8766/` を開きます。
+
+```bash
+bash evalviz/build.sh                                         # UI のビルド (初回のみ。node と pnpm が必要)
+EVALVIZ_ROOTS=/groups/gcg51557/experiments/<experiment_dir>/eval bash evalviz/restart.sh
+```
+
+- リーダーボード (トップページ): 主要なモデルを同じ条件 (llm-jp-eval のバージョン・サンプル数) で比べます。
+  載せるモデルは `/groups/gcg51557/evaluation2/evalviz/featured.json` に書きます (書式は `evalviz/featured.example.json`)。
+- 総合比較: llm-jp-eval (日本語・英語の AVG、カテゴリ別)、swallow、llm-jp-judge、safety-eval の代表値を実行間で比べ、
+  出力の長さとスコアの関係、チェックポイント (実行名の step・iter 番号) ごとの推移を描きます。
+- データセット別・誤りパターン・サンプル比較: llm-jp-eval v2 の推論結果 (`offline/*.eval-generated.json`) を
+  サンプル単位で分類し (正解・不正解・選択肢外・抽出不可・出力が空)、推論の打ち切り・反復・中国語の混入などの
+  兆候を実行間で比べます。同じサンプルに対する各実行の推論と最終出力を並べて見られます。
